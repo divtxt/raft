@@ -4,7 +4,30 @@
 
 package raft
 
-func _processRpc_AppendEntries(appendEntries AppendEntries) bool {
+func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries AppendEntries) bool {
+
+	leaderCurrentTerm := appendEntries.term
+	prevLogIndex := appendEntries.prevLogIndex
+
 	// 1. Reply false if term < currentTerm (#5.1)
-	return false
+	if leaderCurrentTerm < cm.persistentState.currentTerm {
+		return false
+	}
+
+	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose term
+	//      matches prevLogTerm (#5.3)
+	log := cm.persistentState.log
+	if log.getIndexOfLastEntry() < prevLogIndex {
+		return false
+	}
+
+	// 3. If an existing entry conflicts with a new one (same index
+	// but different terms), delete the existing entry and all that
+	// follow it (#5.3)
+	if log.getTermAtIndex(prevLogIndex) != leaderCurrentTerm {
+		log.deleteFromIndexToEnd(prevLogIndex)
+		return false
+	}
+
+	return true
 }

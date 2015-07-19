@@ -10,15 +10,17 @@ const (
 )
 
 func setupTestFollower(logTerms []TermNo) ConsensusModule {
-	return ConsensusModule{PersistentState{TEST_CURRENT_TERM}}
+	imle := new(inMemoryLog)
+	imle.terms = []TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6, 6}
+	return ConsensusModule{PersistentState{TEST_CURRENT_TERM, imle}}
 }
 
 func makeAEWithTerm(term TermNo) AppendEntries {
 	return AppendEntries{term, 0, 0}
 }
 
-func makeAEWithTermAndPrevLogIndex(term TermNo, li LogIndex) AppendEntries {
-	return AppendEntries{term, li, 0}
+func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm TermNo) AppendEntries {
+	return AppendEntries{term, prevli, prevterm}
 }
 
 // 1. Reply false if term < currentTerm (#5.1)
@@ -49,7 +51,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 	follower := setupTestFollower([]TermNo{1, 1, 1, 4})
 	followerTerm := follower.persistentState.currentTerm
 
-	appendEntries := makeAEWithTermAndPrevLogIndex(TEST_CURRENT_TERM, 10)
+	appendEntries := makeAEWithTermAndPrevLogDetails(TEST_CURRENT_TERM, 10, 6)
 
 	var reply AppendEntriesReply
 	reply = follower.processRpc(appendEntries)
@@ -61,4 +63,29 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 		t.Error()
 	}
 
+}
+
+// 3. If an existing entry conflicts with a new one (same index
+// but different terms), delete the existing entry and all that
+// follow it (#5.3)
+// Note: this test case based on Figure 7, case (f) in the Raft paper
+func TestRpcAEConflictingLogEntry(t *testing.T) {
+	follower := setupTestFollower([]TermNo{1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 3})
+	followerTerm := follower.persistentState.currentTerm
+
+	appendEntries := makeAEWithTermAndPrevLogDetails(TEST_CURRENT_TERM, 10, 6)
+
+	var reply AppendEntriesReply
+	reply = follower.processRpc(appendEntries)
+
+	if reply.term != followerTerm {
+		t.Error()
+	}
+	if reply.success != false {
+		t.Error()
+	}
+
+	if follower.persistentState.log.getIndexOfLastEntry() != 9 {
+		t.Error()
+	}
 }
