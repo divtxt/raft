@@ -21,5 +21,7 @@ type Log interface {
 	// An index of 0 indicates no entries present.
 	getIndexOfLastEntry() LogIndex
 	getTermAtIndex(LogIndex) TermNo
+	getLogEntryAtIndex(LogIndex) LogEntry
+	appendEntriesAfterIndex([]LogEntry, LogIndex) error
 	deleteFromIndexToEnd(LogIndex)
 }
