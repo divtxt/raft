@@ -10,17 +10,16 @@ const (
 )
 
 func setupTestFollower(logTerms []TermNo) ConsensusModule {
-	imle := new(inMemoryLog)
-	imle.terms = []TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6, 6}
+	imle := makeIMLEWithDummyCommands(logTerms)
 	return ConsensusModule{PersistentState{TEST_CURRENT_TERM, imle}}
 }
 
 func makeAEWithTerm(term TermNo) AppendEntries {
-	return AppendEntries{term, 0, 0}
+	return AppendEntries{term, 0, 0, nil}
 }
 
 func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm TermNo) AppendEntries {
-	return AppendEntries{term, prevli, prevterm}
+	return AppendEntries{term, prevli, prevterm, nil}
 }
 
 // 1. Reply false if term < currentTerm (#5.1)
@@ -30,8 +29,10 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
 
-	var reply AppendEntriesReply
-	reply = follower.processRpc(appendEntries)
+	reply, err := follower.processRpc(appendEntries)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if reply.term != followerTerm {
 		t.Error()
@@ -53,8 +54,10 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(TEST_CURRENT_TERM, 10, 6)
 
-	var reply AppendEntriesReply
-	reply = follower.processRpc(appendEntries)
+	reply, err := follower.processRpc(appendEntries)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if reply.term != followerTerm {
 		t.Error()
@@ -75,8 +78,10 @@ func TestRpcAEConflictingLogEntry(t *testing.T) {
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(TEST_CURRENT_TERM, 10, 6)
 
-	var reply AppendEntriesReply
-	reply = follower.processRpc(appendEntries)
+	reply, err := follower.processRpc(appendEntries)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if reply.term != followerTerm {
 		t.Error()
@@ -85,7 +90,43 @@ func TestRpcAEConflictingLogEntry(t *testing.T) {
 		t.Error()
 	}
 
-	if follower.persistentState.log.getIndexOfLastEntry() != 9 {
+	if iole := follower.persistentState.log.getIndexOfLastEntry(); iole != 9 {
+		t.Error(iole)
+	}
+}
+
+// 4. Append any new entries not already in the log
+// Note: this is not specified, but I'm assuimg that the RPC reply should
+// have success set to true.
+// Note: this test case based on Figure 7, case (a) in the Raft paper
+func TestRpcAEAppendNewEntries(t *testing.T) {
+	follower := setupTestFollower([]TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6})
+	followerTerm := follower.persistentState.currentTerm
+
+	sentLogEntries := []LogEntry{LogEntry{6, "c10"}}
+
+	appendEntries := AppendEntries{TEST_CURRENT_TERM, 9, 6, sentLogEntries}
+
+	reply, err := follower.processRpc(appendEntries)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if reply.term != followerTerm {
+		t.Error()
+	}
+	if !reply.success {
+		t.Error(reply.success)
+	}
+
+	if iole := follower.persistentState.log.getIndexOfLastEntry(); iole != 10 {
+		t.Fatal(iole)
+	}
+	addedLogEntry := follower.persistentState.log.getLogEntryAtIndex(10)
+	if addedLogEntry.TermNo != 6 {
+		t.Error()
+	}
+	if addedLogEntry.Command != "c10" {
 		t.Error()
 	}
 }
