@@ -26,15 +26,17 @@ func LogBlackboxTest(t *testing.T, log Log) {
 		t.Fatal(le.Command)
 	}
 
-	// append test
-	if log.appendEntriesAfterIndex(nil, 11) == nil {
+	var logEntries []LogEntry
+
+	// set test - invalid index
+	logEntries = []LogEntry{LogEntry{8, "c12"}}
+	if log.setEntriesAfterIndex(11, logEntries) == nil {
 		t.Fatal()
 	}
-	if log.appendEntriesAfterIndex(nil, 9) == nil {
-		t.Fatal()
-	}
-	logEntries := []LogEntry{LogEntry{7, "c11"}, LogEntry{8, "c12"}}
-	if e := log.appendEntriesAfterIndex(logEntries, 10); e != nil {
+
+	// set test - no replacing
+	logEntries = []LogEntry{LogEntry{7, "c11"}, LogEntry{8, "c12"}}
+	if e := log.setEntriesAfterIndex(10, logEntries); e != nil {
 		t.Fatal(e)
 	}
 	if log.getIndexOfLastEntry() != 12 {
@@ -48,11 +50,22 @@ func LogBlackboxTest(t *testing.T, log Log) {
 		t.Fatal(le.Command)
 	}
 
-	// delete test
-	log.deleteFromIndexToEnd(4)
-	if i := log.getIndexOfLastEntry(); i != 3 {
-		t.Fatal(i)
+	// set test - partial replacing
+	logEntries = []LogEntry{LogEntry{7, "c11"}, LogEntry{9, "c12'"}, LogEntry{9, "c13'"}}
+	if e := log.setEntriesAfterIndex(10, logEntries); e != nil {
+		t.Fatal(e)
 	}
+	if log.getIndexOfLastEntry() != 13 {
+		t.Fatal()
+	}
+	le = log.getLogEntryAtIndex(12)
+	if le.TermNo != 9 {
+		t.Fatal(le.TermNo)
+	}
+	if le.Command != "c12'" {
+		t.Fatal(le.Command)
+	}
+
 }
 
 // In-memory implementation of LogEntries - meant only for tests
@@ -72,17 +85,18 @@ func (imle *inMemoryLog) getLogEntryAtIndex(li LogIndex) LogEntry {
 	return imle.entries[li-1]
 }
 
-func (imle *inMemoryLog) appendEntriesAfterIndex(entries []LogEntry, li LogIndex) error {
+func (imle *inMemoryLog) setEntriesAfterIndex(li LogIndex, entries []LogEntry) error {
 	iole := imle.getIndexOfLastEntry()
-	if iole != li {
-		return fmt.Errorf("inMemoryLog: appendEntriesAfterIndex(..., %d) but iole=%d", iole)
+	if iole < li {
+		return fmt.Errorf("inMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", iole)
 	}
+	// delete entries after index
+	if iole > li {
+		imle.entries = imle.entries[:li]
+	}
+	// append entries
 	imle.entries = append(imle.entries, entries...)
 	return nil
-}
-
-func (imle *inMemoryLog) deleteFromIndexToEnd(li LogIndex) {
-	imle.entries = imle.entries[:li-1]
 }
 
 func makeIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {

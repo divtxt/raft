@@ -20,8 +20,34 @@ type LogIndex uint64
 type Log interface {
 	// An index of 0 indicates no entries present.
 	getIndexOfLastEntry() LogIndex
-	getTermAtIndex(LogIndex) TermNo
+
+	// TODO: return values for invalid params or log errors
 	getLogEntryAtIndex(LogIndex) LogEntry
-	appendEntriesAfterIndex([]LogEntry, LogIndex) error
-	deleteFromIndexToEnd(LogIndex)
+
+	// Get the term of the entry at the given index.
+	// Equivalent to getLogEntryAtIndex(...).TermNo but this call allows
+	// the Log implementation to not fetch the Command if that's a useful
+	// optimization.
+	// TODO: return values for invalid params or log errors
+	getTermAtIndex(LogIndex) TermNo
+
+	// Set the entries after the given index.
+	//
+	// Theoretically, the Log can just delete all existing entries
+	// following the given index and then append the given new
+	// entries after that index.
+	//
+	// However, Raft properties means that the Log can follow do this:
+	// - (AppendEntries receiver step 3.) If an existing entry conflicts with
+	// a new one (same index but different terms), delete the existing entry
+	// and all that follow it (#5.3)
+	// - (AppendEntries receiver step 4.) Append any new entries not already
+	// in the log
+	//
+	// I.e. the Log can choose to set only the entries starting from
+	// the first index where the terms of the existing entry and the new
+	// entry don't match.
+	//
+	// TODO: return values for invalid params or log errors
+	setEntriesAfterIndex(LogIndex, []LogEntry) error
 }
