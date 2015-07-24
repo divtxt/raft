@@ -11,15 +11,18 @@ const (
 
 func setupTestFollower(logTerms []TermNo) ConsensusModule {
 	imle := makeIMLEWithDummyCommands(logTerms)
-	return ConsensusModule{PersistentState{TEST_CURRENT_TERM, imle}}
+	return ConsensusModule{
+		PersistentState{TEST_CURRENT_TERM, imle},
+		VolatileState{},
+	}
 }
 
 func makeAEWithTerm(term TermNo) AppendEntries {
-	return AppendEntries{term, 0, 0, nil}
+	return AppendEntries{term, 0, 0, nil, 0}
 }
 
 func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm TermNo) AppendEntries {
-	return AppendEntries{term, prevli, prevterm, nil}
+	return AppendEntries{term, prevli, prevterm, nil, 0}
 }
 
 // 1. Reply false if term < currentTerm (#5.1)
@@ -96,16 +99,19 @@ func TestRpcAEConflictingLogEntry(t *testing.T) {
 }
 
 // 4. Append any new entries not already in the log
+// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit,
+// index of last new entry)
 // Note: this is not specified, but I'm assuimg that the RPC reply should
 // have success set to true.
 // Note: this test case based on Figure 7, case (a) in the Raft paper
 func TestRpcAEAppendNewEntries(t *testing.T) {
 	follower := setupTestFollower([]TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6})
+	follower.volatileState.commitIndex = 5
 	followerTerm := follower.persistentState.currentTerm
 
 	sentLogEntries := []LogEntry{LogEntry{6, "c10"}}
 
-	appendEntries := AppendEntries{TEST_CURRENT_TERM, 9, 6, sentLogEntries}
+	appendEntries := AppendEntries{TEST_CURRENT_TERM, 9, 6, sentLogEntries, 8}
 
 	reply, err := follower.processRpc(appendEntries)
 	if err != nil {
@@ -127,6 +133,11 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 		t.Error()
 	}
 	if addedLogEntry.Command != "c10" {
+		t.Error()
+	}
+
+	// FIXME: need to test permutations in step 5
+	if follower.volatileState.commitIndex != 8 {
 		t.Error()
 	}
 }

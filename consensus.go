@@ -2,6 +2,7 @@ package raft
 
 type ConsensusModule struct {
 	persistentState PersistentState
+	volatileState   VolatileState
 }
 
 func (cm *ConsensusModule) processRpc(appendEntries AppendEntries) (AppendEntriesReply, error) {
