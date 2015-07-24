@@ -17,7 +17,8 @@ type AppendEntries struct {
 	// implied?: term in each new entry >= term of previous entry
 	entries []LogEntry
 
-	// leaderCommit
+	// leader's commitIndex
+	leaderCommit LogIndex
 }
 
 type AppendEntriesReply struct {
