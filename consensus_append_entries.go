@@ -14,8 +14,8 @@ func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries AppendEntries
 		return false, nil
 	}
 
-	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose term
-	//      matches prevLogTerm (#5.3)
+	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose
+	// term matches prevLogTerm (#5.3)
 	log := cm.persistentState.log
 	if log.getIndexOfLastEntry() < prevLogIndex {
 		return false, nil
@@ -24,13 +24,8 @@ func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries AppendEntries
 	// 3. If an existing entry conflicts with a new one (same index
 	// but different terms), delete the existing entry and all that
 	// follow it (#5.3)
-	if log.getTermAtIndex(prevLogIndex) != appendEntries.prevLogTerm {
-		log.deleteFromIndexToEnd(prevLogIndex)
-		return false, nil
-	}
-
 	// 4. Append any new entries not already in the log
-	err := log.appendEntriesAfterIndex(appendEntries.entries, prevLogIndex)
+	err := log.setEntriesAfterIndex(prevLogIndex, appendEntries.entries)
 	if err != nil {
 		return false, err
 	}
