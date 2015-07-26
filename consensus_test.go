@@ -11,7 +11,7 @@ func TestCMStartsAsFollower(t *testing.T) {
 	if cm == nil {
 		t.Fatal()
 	}
-	if cm.GetServerMode() != FOLLOWER {
+	if cm.GetServerState() != FOLLOWER {
 		t.Fatal()
 	}
 }

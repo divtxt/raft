@@ -1,11 +1,12 @@
 package raft
 
 type ConsensusModule interface {
-	GetServerMode() ServerMode
+	// Get the current server state
+	GetServerState() ServerState
 }
 
 type consensusModuleImpl struct {
-	serverMode      ServerMode
+	serverState     ServerState
 	persistentState PersistentState
 	log             Log
 	volatileState   VolatileState
@@ -26,8 +27,8 @@ func newConsensusModuleImpl(persistentState PersistentState, log Log) *consensus
 	}
 }
 
-func (cm *consensusModuleImpl) GetServerMode() ServerMode {
-	return cm.serverMode
+func (cm *consensusModuleImpl) GetServerState() ServerState {
+	return cm.serverState
 }
 
 func (cm *consensusModuleImpl) processRpc(appendEntries AppendEntries) (AppendEntriesReply, error) {

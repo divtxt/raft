@@ -1,10 +1,10 @@
 package raft
 
 // Server states.
-type ServerMode uint
+type ServerState uint
 
 const (
-	FOLLOWER ServerMode = iota
+	FOLLOWER ServerState = iota
 	CANDIDATE
 	LEADER
 )
