@@ -3,7 +3,6 @@ package raft
 // Persistent state on all servers
 type PersistentState struct {
 	currentTerm TermNo
-	log         Log
 }
 
 // Volatile state on all servers

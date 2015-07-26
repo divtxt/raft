@@ -11,8 +11,8 @@ const (
 
 func setupTestFollower(logTerms []TermNo) *ConsensusModule {
 	imle := makeIMLEWithDummyCommands(logTerms)
-    ps := PersistentState{TEST_CURRENT_TERM, imle}
-	return NewConsensusModule(ps)
+	ps := PersistentState{TEST_CURRENT_TERM}
+	return NewConsensusModule(ps, imle)
 }
 
 func makeAEWithTerm(term TermNo) AppendEntries {
@@ -84,7 +84,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 	follower.volatileState.commitIndex = 3
 	followerTerm := follower.persistentState.currentTerm
 
-	if follower.persistentState.log.getLogEntryAtIndex(6).Command != "c6" {
+	if follower.log.getLogEntryAtIndex(6).Command != "c6" {
 		t.Error()
 	}
 
@@ -104,10 +104,10 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 		t.Error(reply.success)
 	}
 
-	if iole := follower.persistentState.log.getIndexOfLastEntry(); iole != 8 {
+	if iole := follower.log.getIndexOfLastEntry(); iole != 8 {
 		t.Fatal(iole)
 	}
-	addedLogEntry := follower.persistentState.log.getLogEntryAtIndex(6)
+	addedLogEntry := follower.log.getLogEntryAtIndex(6)
 	if addedLogEntry.TermNo != 5 {
 		t.Error()
 	}
