@@ -30,7 +30,7 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
 
-	reply, err := follower.processRpc(appendEntries)
+	reply, err := follower.ProcessRpc(appendEntries)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(TEST_CURRENT_TERM, 10, 6)
 
-	reply, err := follower.processRpc(appendEntries)
+	reply, err := follower.ProcessRpc(appendEntries)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 
 	appendEntries := AppendEntries{TEST_CURRENT_TERM, 5, 4, sentLogEntries, 7}
 
-	reply, err := follower.processRpc(appendEntries)
+	reply, err := follower.ProcessRpc(appendEntries)
 	if err != nil {
 		t.Fatal(err)
 	}
