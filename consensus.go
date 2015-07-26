@@ -6,6 +6,16 @@ type ConsensusModule struct {
 	volatileState   VolatileState
 }
 
+// Initialize a consensus module with the given persistent state
+func NewConsensusModule(persistentState PersistentState) *ConsensusModule {
+	return &ConsensusModule{
+		// #5.2-p1s2: When servers start up, they begin as followers
+		FOLLOWER,
+		persistentState,
+		VolatileState{},
+	}
+}
+
 func (cm *ConsensusModule) processRpc(appendEntries AppendEntries) (AppendEntriesReply, error) {
 	success, err := cm._processRpc_AppendEntries(appendEntries)
 	return AppendEntriesReply{cm.persistentState.currentTerm, success}, err

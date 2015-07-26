@@ -9,13 +9,10 @@ const (
 	TEST_CURRENT_TERM = 8
 )
 
-func setupTestFollower(logTerms []TermNo) ConsensusModule {
+func setupTestFollower(logTerms []TermNo) *ConsensusModule {
 	imle := makeIMLEWithDummyCommands(logTerms)
-	return ConsensusModule{
-		FOLLOWER,
-		PersistentState{TEST_CURRENT_TERM, imle},
-		VolatileState{},
-	}
+    ps := PersistentState{TEST_CURRENT_TERM, imle}
+	return NewConsensusModule(ps)
 }
 
 func makeAEWithTerm(term TermNo) AppendEntries {
