@@ -12,6 +12,7 @@ const (
 func setupTestFollower(logTerms []TermNo) ConsensusModule {
 	imle := makeIMLEWithDummyCommands(logTerms)
 	return ConsensusModule{
+		FOLLOWER,
 		PersistentState{TEST_CURRENT_TERM, imle},
 		VolatileState{},
 	}
