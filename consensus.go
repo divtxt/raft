@@ -20,5 +20,5 @@ func NewConsensusModule(persistentState PersistentState, log Log) *ConsensusModu
 
 func (cm *ConsensusModule) processRpc(appendEntries AppendEntries) (AppendEntriesReply, error) {
 	success, err := cm._processRpc_AppendEntries(appendEntries)
-	return AppendEntriesReply{cm.persistentState.currentTerm, success}, err
+	return AppendEntriesReply{cm.persistentState.GetCurrentTerm(), success}, err
 }
