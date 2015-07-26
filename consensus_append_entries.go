@@ -11,7 +11,7 @@ func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries AppendEntries
 	log := cm.log
 
 	// 1. Reply false if term < currentTerm (#5.1)
-	if leaderCurrentTerm < cm.persistentState.currentTerm {
+	if leaderCurrentTerm < cm.persistentState.GetCurrentTerm() {
 		return false, nil
 	}
 

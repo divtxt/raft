@@ -1,10 +1,5 @@
 package raft
 
-// Persistent state on all servers
-type PersistentState struct {
-	currentTerm TermNo
-}
-
 // Volatile state on all servers
 type VolatileState struct {
 	// index of highest log entry known to be committed

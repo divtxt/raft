@@ -10,8 +10,8 @@ const (
 )
 
 func setupTestFollower(logTerms []TermNo) *ConsensusModule {
-	imle := makeIMLEWithDummyCommands(logTerms)
-	ps := PersistentState{TEST_CURRENT_TERM}
+	imle := newIMLEWithDummyCommands(logTerms)
+	ps := newIMPSWithCurrentTerm(TEST_CURRENT_TERM)
 	return NewConsensusModule(ps, imle)
 }
 
@@ -26,7 +26,7 @@ func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm Term
 // 1. Reply false if term < currentTerm (#5.1)
 func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 	follower := setupTestFollower(nil)
-	followerTerm := follower.persistentState.currentTerm
+	followerTerm := follower.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
 
@@ -51,7 +51,7 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 // Note: this test based on Figure 7, server (b)
 func TestRpcAENoMatchingLogEntry(t *testing.T) {
 	follower := setupTestFollower([]TermNo{1, 1, 1, 4})
-	followerTerm := follower.persistentState.currentTerm
+	followerTerm := follower.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(TEST_CURRENT_TERM, 10, 6)
 
@@ -82,7 +82,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 func TestRpcAEAppendNewEntries(t *testing.T) {
 	follower := setupTestFollower([]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4})
 	follower.volatileState.commitIndex = 3
-	followerTerm := follower.persistentState.currentTerm
+	followerTerm := follower.persistentState.GetCurrentTerm()
 
 	if follower.log.getLogEntryAtIndex(6).Command != "c6" {
 		t.Error()

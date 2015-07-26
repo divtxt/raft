@@ -99,7 +99,7 @@ func (imle *inMemoryLog) setEntriesAfterIndex(li LogIndex, entries []LogEntry) e
 	return nil
 }
 
-func makeIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {
+func newIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {
 	imle := new(inMemoryLog)
 	entries := []LogEntry{}
 	for i, term := range logTerms {
@@ -113,6 +113,6 @@ func makeIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {
 func TestInMemoryLogEntries(t *testing.T) {
 	// Log with 10 entries with terms as shown in Figure 7, leader line
 	terms := []TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6, 6}
-	imle := makeIMLEWithDummyCommands(terms)
+	imle := newIMLEWithDummyCommands(terms)
 	LogBlackboxTest(t, imle)
 }
