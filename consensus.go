@@ -1,6 +1,7 @@
 package raft
 
 type ConsensusModule struct {
+	serverMode      ServerMode
 	persistentState PersistentState
 	volatileState   VolatileState
 }
