@@ -8,6 +8,7 @@ func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries AppendEntries
 
 	leaderCurrentTerm := appendEntries.term
 	prevLogIndex := appendEntries.prevLogIndex
+	log := cm.log
 
 	// 1. Reply false if term < currentTerm (#5.1)
 	if leaderCurrentTerm < cm.persistentState.currentTerm {
@@ -16,7 +17,6 @@ func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries AppendEntries
 
 	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose
 	// term matches prevLogTerm (#5.3)
-	log := cm.persistentState.log
 	if log.getIndexOfLastEntry() < prevLogIndex {
 		return false, nil
 	}
