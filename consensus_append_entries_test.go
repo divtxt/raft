@@ -12,7 +12,8 @@ const (
 func setupTestFollower(logTerms []TermNo) *consensusModuleImpl {
 	imle := newIMLEWithDummyCommands(logTerms)
 	ps := newIMPSWithCurrentTerm(TEST_CURRENT_TERM)
-	return newConsensusModuleImpl(ps, imle)
+	th := new(mockTimeoutHelper)
+	return newConsensusModuleImpl(ps, imle, th)
 }
 
 func makeAEWithTerm(term TermNo) AppendEntries {
