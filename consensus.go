@@ -1,24 +1,5 @@
 package raft
 
-type ConsensusModule interface {
-	// Get the current server state
-	GetServerState() ServerState
-
-	// Process the given RPC
-	ProcessRpc(AppendEntries) (AppendEntriesReply, error)
-
-	// Election timeout occurred
-	ElectionTimeout()
-}
-
-// Initialize a consensus module with the given persistent state
-func NewConsensusModule(
-	persistentState PersistentState,
-	log Log,
-) ConsensusModule {
-	return newConsensusModuleImpl(persistentState, log, nil)
-}
-
 // Internal implementation structure
 type consensusModuleImpl struct {
 	serverState     ServerState
