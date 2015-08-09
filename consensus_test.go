@@ -2,13 +2,14 @@ package raft
 
 import (
 	"testing"
+	"time"
 )
 
 // #5.2-p1s2: When servers start up, they begin as followers
 func TestCMStartsAsFollower(t *testing.T) {
 	ps := newIMPSWithCurrentTerm(TEST_CURRENT_TERM)
-	th := new(mockTimeoutHelper)
-	cm := newConsensusModuleImpl(ps, nil, th)
+	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
+	cm := NewConsensusModule(ps, nil, ts)
 
 	if cm == nil {
 		t.Fatal()
@@ -16,15 +17,6 @@ func TestCMStartsAsFollower(t *testing.T) {
 	if cm.GetServerState() != FOLLOWER {
 		t.Fatal()
 	}
-}
-
-//
-type mockTimeoutHelper struct {
-	resetElectionTimeoutCalled bool
-}
-
-func (mth *mockTimeoutHelper) resetElectionTimeout() {
-	mth.resetElectionTimeoutCalled = true
 }
 
 // #5.2-p1s5: If a follower receives no communication over a period of time
@@ -34,8 +26,8 @@ func (mth *mockTimeoutHelper) resetElectionTimeout() {
 // and transitions to candidate state.
 func TestCMElectionTimeout(t *testing.T) {
 	ps := newIMPSWithCurrentTerm(TEST_CURRENT_TERM)
-	th := new(mockTimeoutHelper)
-	cm := newConsensusModuleImpl(ps, nil, th)
+	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
+	cm := NewConsensusModule(ps, nil, ts)
 
 	if cm == nil {
 		t.Fatal()
@@ -44,14 +36,19 @@ func TestCMElectionTimeout(t *testing.T) {
 		t.Fatal()
 	}
 
-	// Test that the election timeout callback is reset on creation
-	if !th.resetElectionTimeoutCalled {
+	// Test that a tick before election timeout causes no state change.
+	time.Sleep(5 * time.Millisecond)
+	// cm.pause()
+	if ps.GetCurrentTerm() != TEST_CURRENT_TERM {
+		t.Fatal()
+	}
+	if cm.GetServerState() != FOLLOWER {
 		t.Fatal()
 	}
 
 	// Test that election timeout causes a new election
-	th.resetElectionTimeoutCalled = false
-	cm.ElectionTimeout()
+	time.Sleep(55 * time.Millisecond)
+	// cm.pause()
 	if ps.GetCurrentTerm() != TEST_CURRENT_TERM+1 {
 		t.Fatal()
 	}

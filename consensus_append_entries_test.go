@@ -2,6 +2,7 @@ package raft
 
 import (
 	"testing"
+	"time"
 )
 
 const (
@@ -9,11 +10,11 @@ const (
 	TEST_CURRENT_TERM = 8
 )
 
-func setupTestFollower(logTerms []TermNo) *consensusModuleImpl {
+func setupTestFollower(logTerms []TermNo) *ConsensusModule {
 	imle := newIMLEWithDummyCommands(logTerms)
 	ps := newIMPSWithCurrentTerm(TEST_CURRENT_TERM)
-	th := new(mockTimeoutHelper)
-	return newConsensusModuleImpl(ps, imle, th)
+	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
+	return NewConsensusModule(ps, imle, ts)
 }
 
 func makeAEWithTerm(term TermNo) AppendEntries {

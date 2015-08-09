@@ -9,5 +9,6 @@ type PersistentState interface {
 	GetCurrentTerm() TermNo
 
 	// TODO: should this call error for decreasing/same term
+	// TODO: persistence error?!
 	SetCurrentTerm(currentTerm TermNo)
 }
