@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"sync/atomic"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type ConsensusModule struct {
 	timeSettings    TimeSettings
 
 	// State
+	stopped             int32
 	serverState         ServerState
 	volatileState       VolatileState
 	electionTimeoutTime time.Time
@@ -40,10 +42,12 @@ func NewConsensusModule(
 	now := time.Now()
 	rpcChannel := make(chan bool, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.tickerDuration)
+
 	cm := &ConsensusModule{
 		persistentState,
 		log,
 		timeSettings,
+		0,
 		// #5.2-p1s2: When servers start up, they begin as followers
 		FOLLOWER,
 		VolatileState{},
@@ -60,6 +64,12 @@ func NewConsensusModule(
 	return cm
 }
 
+// Check if the goroutine is shutdown
+func (cm *ConsensusModule) IsStopped() bool {
+	stopped := atomic.LoadInt32(&cm.stopped)
+	return stopped != 0
+}
+
 // Get the current server state
 func (cm *ConsensusModule) GetServerState() ServerState {
 	// FIXME: thread safety
@@ -72,10 +82,10 @@ func (cm *ConsensusModule) ProcessRpc(appendEntries AppendEntries) (AppendEntrie
 	return AppendEntriesReply{cm.persistentState.GetCurrentTerm(), success}, err
 }
 
-// Stop the consensus module.
-// Stops the goroutine that does the processing.
-func (cm *ConsensusModule) StopSync() {
-	close(cm.rpcChannel)
+// Stop the consensus module. Stops the goroutine that does the
+// processing and prevents any further
+func (cm *ConsensusModule) StopAsync() {
+	close(cm.rpcChannel) // atomic & will panic if already closed
 }
 
 // -- protected methods
@@ -85,18 +95,24 @@ func (cm *ConsensusModule) resetElectionTimeoutTime() {
 }
 
 func (cm *ConsensusModule) processor() {
+	defer func() {
+		atomic.StoreInt32(&cm.stopped, 1)
+	}()
+
+loop:
 	for {
 		select {
 		case _, ok := <-cm.rpcChannel:
 			if !ok {
 				// WARN: rpc channel closed - exiting processor()
-				break
+				break loop
 			}
 		case now, ok := <-cm.ticker.C:
 			if !ok {
 				// FATAL: ticker channel closed - exiting processor()
-				close(cm.rpcChannel)
-				break
+				// FIXME: better handling than panic()
+				panic("ticker channel closed - exiting processor()")
+				break loop
 			}
 			cm.tick(now)
 		}
