@@ -28,6 +28,7 @@ func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm Term
 // 1. Reply false if term < currentTerm (#5.1)
 func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 	follower := setupTestFollower(nil)
+	defer follower.StopSync()
 	followerTerm := follower.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
@@ -53,6 +54,7 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 // Note: this test based on Figure 7, server (b)
 func TestRpcAENoMatchingLogEntry(t *testing.T) {
 	follower := setupTestFollower([]TermNo{1, 1, 1, 4})
+	defer follower.StopSync()
 	followerTerm := follower.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(TEST_CURRENT_TERM, 10, 6)
@@ -83,6 +85,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 // some extra entries to also test step 3
 func TestRpcAEAppendNewEntries(t *testing.T) {
 	follower := setupTestFollower([]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4})
+	defer follower.StopSync()
 	follower.volatileState.commitIndex = 3
 	followerTerm := follower.persistentState.GetCurrentTerm()
 
