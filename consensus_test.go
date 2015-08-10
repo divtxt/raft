@@ -10,6 +10,7 @@ func TestCMStartsAsFollower(t *testing.T) {
 	ps := newIMPSWithCurrentTerm(TEST_CURRENT_TERM)
 	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
 	cm := NewConsensusModule(ps, nil, ts)
+	defer cm.StopSync()
 
 	if cm == nil {
 		t.Fatal()
@@ -18,6 +19,8 @@ func TestCMStartsAsFollower(t *testing.T) {
 		t.Fatal()
 	}
 }
+
+// TODO: stop test
 
 // #5.2-p1s5: If a follower receives no communication over a period of time
 // called the election timeout, then it assumes there is no viable leader
@@ -28,6 +31,7 @@ func TestCMElectionTimeout(t *testing.T) {
 	ps := newIMPSWithCurrentTerm(TEST_CURRENT_TERM)
 	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
 	cm := NewConsensusModule(ps, nil, ts)
+	defer cm.StopSync()
 
 	if cm == nil {
 		t.Fatal()
@@ -37,7 +41,7 @@ func TestCMElectionTimeout(t *testing.T) {
 	}
 
 	// Test that a tick before election timeout causes no state change.
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 	// cm.pause()
 	if ps.GetCurrentTerm() != TEST_CURRENT_TERM {
 		t.Fatal()
@@ -47,7 +51,7 @@ func TestCMElectionTimeout(t *testing.T) {
 	}
 
 	// Test that election timeout causes a new election
-	time.Sleep(55 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	// cm.pause()
 	if ps.GetCurrentTerm() != TEST_CURRENT_TERM+1 {
 		t.Fatal()
