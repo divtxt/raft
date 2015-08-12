@@ -66,14 +66,12 @@ func NewConsensusModule(
 
 // Check if the goroutine is shutdown
 func (cm *ConsensusModule) IsStopped() bool {
-	stopped := atomic.LoadInt32(&cm.stopped)
-	return stopped != 0
+	return atomic.LoadInt32(&cm.stopped) != 0
 }
 
 // Get the current server state
 func (cm *ConsensusModule) GetServerState() ServerState {
-	// FIXME: thread safety
-	return cm.serverState
+	return ServerState(atomic.LoadUint32((*uint32)(&cm.serverState)))
 }
 
 // Process the given RPC
@@ -90,12 +88,18 @@ func (cm *ConsensusModule) StopAsync() {
 
 // -- protected methods
 
+// Set the current server state
+func (cm *ConsensusModule) setServerState(serverState ServerState) {
+	atomic.StoreUint32((*uint32)(&cm.serverState), (uint32)(serverState))
+}
+
 func (cm *ConsensusModule) resetElectionTimeoutTime() {
 	cm.electionTimeoutTime = time.Now().Add(cm.timeSettings.electionTimeout)
 }
 
 func (cm *ConsensusModule) processor() {
 	defer func() {
+		// Mark the server as shutdown
 		atomic.StoreInt32(&cm.stopped, 1)
 	}()
 
@@ -121,7 +125,7 @@ loop:
 
 func (cm *ConsensusModule) tick(now time.Time) {
 
-	switch cm.serverState {
+	switch cm.GetServerState() {
 	case FOLLOWER:
 		// #5.2-p1s5: If a follower receives no communication over a period
 		// of time called the election timeout, then it assumes there is no
@@ -131,7 +135,7 @@ func (cm *ConsensusModule) tick(now time.Time) {
 			// current term and transitions to candidate state.
 			newTerm := cm.persistentState.GetCurrentTerm() + 1
 			cm.persistentState.SetCurrentTerm(newTerm)
-			cm.serverState = CANDIDATE
+			cm.setServerState(CANDIDATE)
 		}
 	case CANDIDATE:
 	case LEADER:

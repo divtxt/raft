@@ -1,7 +1,7 @@
 package raft
 
 // Server states.
-type ServerState uint
+type ServerState uint32
 
 const (
 	FOLLOWER ServerState = iota
