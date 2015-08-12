@@ -15,28 +15,31 @@ const (
 )
 
 type ConsensusModule struct {
-	// External things & config
+	// -- External components - these fields meant to be immutable
 	persistentState PersistentState
 	log             Log
-	timeSettings    TimeSettings
 
-	// State
+	// -- Config - these fields meant to be immutable
+	serverId     ServerId
+	timeSettings TimeSettings
+
+	// -- State
 	stopped             int32
 	serverState         ServerState
 	volatileState       VolatileState
 	electionTimeoutTime time.Time
 
-	// Channels
+	// -- Channels
 	rpcChannel chan bool
 	ticker     *time.Ticker
 }
 
-// Initialize a consensus module wrapping the given persistent state,
-// log implementation, and raft time settings.
+// Initialize a consensus module with the given components and settings.
 // A goroutine that handles consensus processing is created.
 func NewConsensusModule(
 	persistentState PersistentState,
 	log Log,
+	serverId ServerId,
 	timeSettings TimeSettings,
 ) *ConsensusModule {
 	now := time.Now()
@@ -44,14 +47,22 @@ func NewConsensusModule(
 	ticker := time.NewTicker(timeSettings.tickerDuration)
 
 	cm := &ConsensusModule{
+		// -- External components
 		persistentState,
 		log,
+
+		// -- Config
+		serverId,
 		timeSettings,
+
+		// -- State
 		0,
 		// #5.2-p1s2: When servers start up, they begin as followers
 		FOLLOWER,
 		VolatileState{},
 		now, // temporary value
+
+		// -- Channels
 		rpcChannel,
 		ticker,
 	}
@@ -133,8 +144,10 @@ func (cm *ConsensusModule) tick(now time.Time) {
 		if now.After(cm.electionTimeoutTime) {
 			// #5.2-p2s1: To begin an election, a follower increments its
 			// current term and transitions to candidate state.
+			// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
+			// in parallel to each of the other servers in the cluster.
 			newTerm := cm.persistentState.GetCurrentTerm() + 1
-			cm.persistentState.SetCurrentTerm(newTerm)
+			cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.serverId)
 			cm.setServerState(CANDIDATE)
 		}
 	case CANDIDATE:
