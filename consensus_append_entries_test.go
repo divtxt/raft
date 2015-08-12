@@ -6,15 +6,16 @@ import (
 )
 
 const (
+	testServerId = "s1"
 	// Note: value for tests based on Figure 7
-	TEST_CURRENT_TERM = 8
+	testCurrentTerm = 8
 )
 
 func setupTestFollower(logTerms []TermNo) *ConsensusModule {
 	imle := newIMLEWithDummyCommands(logTerms)
-	ps := newIMPSWithCurrentTerm(TEST_CURRENT_TERM)
+	ps := newIMPSWithCurrentTerm(testCurrentTerm)
 	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
-	return NewConsensusModule(ps, imle, ts)
+	return NewConsensusModule(ps, imle, testServerId, ts)
 }
 
 func makeAEWithTerm(term TermNo) AppendEntries {
@@ -57,7 +58,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 	defer follower.StopAsync()
 	followerTerm := follower.persistentState.GetCurrentTerm()
 
-	appendEntries := makeAEWithTermAndPrevLogDetails(TEST_CURRENT_TERM, 10, 6)
+	appendEntries := makeAEWithTermAndPrevLogDetails(testCurrentTerm, 10, 6)
 
 	reply, err := follower.ProcessRpc(appendEntries)
 	if err != nil {
@@ -95,7 +96,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 
 	sentLogEntries := []LogEntry{LogEntry{5, "c6'"}, LogEntry{5, "c7'"}, LogEntry{6, "c8'"}}
 
-	appendEntries := AppendEntries{TEST_CURRENT_TERM, 5, 4, sentLogEntries, 7}
+	appendEntries := AppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
 
 	reply, err := follower.ProcessRpc(appendEntries)
 	if err != nil {
