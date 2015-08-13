@@ -5,25 +5,38 @@ import (
 	"time"
 )
 
-// #5.2-p1s2: When servers start up, they begin as followers
-func TestCMStartsAsFollower(t *testing.T) {
+const (
+	testServerId = "s1"
+	// Note: value for tests based on Figure 7
+	testCurrentTerm = 8
+)
+
+func setupTestFollower(t *testing.T, logTerms []TermNo) *ConsensusModule {
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
+	imle := newIMLEWithDummyCommands(logTerms)
 	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
-	cm := NewConsensusModule(ps, nil, testServerId, ts)
-	defer cm.StopAsync()
+
+	cm := NewConsensusModule(ps, imle, testServerId, ts)
 
 	if cm == nil {
 		t.Fatal()
 	}
+
+	return cm
+}
+
+// #5.2-p1s2: When servers start up, they begin as followers
+func TestCMStartsAsFollower(t *testing.T) {
+	cm := setupTestFollower(t, nil)
+	defer cm.StopAsync()
+
 	if cm.GetServerState() != FOLLOWER {
 		t.Fatal()
 	}
 }
 
 func TestCMStop(t *testing.T) {
-	ps := newIMPSWithCurrentTerm(testCurrentTerm)
-	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
-	cm := NewConsensusModule(ps, nil, testServerId, ts)
+	cm := setupTestFollower(t, nil)
 
 	if cm.IsStopped() {
 		t.Error()
@@ -44,15 +57,10 @@ func TestCMStop(t *testing.T) {
 // and transitions to candidate state.
 // #5.2-p2s2: It then votes for itself and issues RequestVote RPCs in parallel
 // to each of the other servers in the cluster.
-func TestCMElectionTimeout(t *testing.T) {
-	ps := newIMPSWithCurrentTerm(testCurrentTerm)
-	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
-	cm := NewConsensusModule(ps, nil, "server42", ts)
+func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
+	cm := setupTestFollower(t, nil)
 	defer cm.StopAsync()
 
-	if cm == nil {
-		t.Fatal()
-	}
 	if cm.GetServerState() != FOLLOWER {
 		t.Fatal()
 	}
@@ -62,7 +70,7 @@ func TestCMElectionTimeout(t *testing.T) {
 
 	// Test that a tick before election timeout causes no state change.
 	time.Sleep(1 * time.Millisecond)
-	if ps.GetCurrentTerm() != testCurrentTerm {
+	if cm.persistentState.GetCurrentTerm() != testCurrentTerm {
 		t.Fatal()
 	}
 	if cm.GetServerState() != FOLLOWER {
@@ -71,14 +79,14 @@ func TestCMElectionTimeout(t *testing.T) {
 
 	// Test that election timeout causes a new election
 	time.Sleep(50 * time.Millisecond)
-	if ps.GetCurrentTerm() != testCurrentTerm+1 {
+	if cm.persistentState.GetCurrentTerm() != testCurrentTerm+1 {
 		t.Fatal()
 	}
 	if cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 	// candidate has voted for itself
-	if cm.persistentState.GetVotedFor() != "server42" {
+	if cm.persistentState.GetVotedFor() != testServerId {
 		t.Fatal()
 	}
 
