@@ -2,21 +2,7 @@ package raft
 
 import (
 	"testing"
-	"time"
 )
-
-const (
-	testServerId = "s1"
-	// Note: value for tests based on Figure 7
-	testCurrentTerm = 8
-)
-
-func setupTestFollower(logTerms []TermNo) *ConsensusModule {
-	imle := newIMLEWithDummyCommands(logTerms)
-	ps := newIMPSWithCurrentTerm(testCurrentTerm)
-	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
-	return NewConsensusModule(ps, imle, testServerId, ts)
-}
 
 func makeAEWithTerm(term TermNo) AppendEntries {
 	return AppendEntries{term, 0, 0, nil, 0}
@@ -28,7 +14,7 @@ func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm Term
 
 // 1. Reply false if term < currentTerm (#5.1)
 func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
-	follower := setupTestFollower(nil)
+	follower := setupTestFollower(t, nil)
 	defer follower.StopAsync()
 	followerTerm := follower.persistentState.GetCurrentTerm()
 
@@ -54,7 +40,7 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 // prevLogIndex since step 3 covers the alternate conflicting entry case.
 // Note: this test based on Figure 7, server (b)
 func TestRpcAENoMatchingLogEntry(t *testing.T) {
-	follower := setupTestFollower([]TermNo{1, 1, 1, 4})
+	follower := setupTestFollower(t, []TermNo{1, 1, 1, 4})
 	defer follower.StopAsync()
 	followerTerm := follower.persistentState.GetCurrentTerm()
 
@@ -85,7 +71,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 // Note: this test case based on Figure 7, case (e) in the Raft paper but adds
 // some extra entries to also test step 3
 func TestRpcAEAppendNewEntries(t *testing.T) {
-	follower := setupTestFollower([]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4})
+	follower := setupTestFollower(t, []TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4})
 	defer follower.StopAsync()
 	follower.volatileState.commitIndex = 3
 	followerTerm := follower.persistentState.GetCurrentTerm()
