@@ -12,7 +12,7 @@ type PersistentState interface {
 	GetCurrentTerm() TermNo
 
 	// Get the canidate id this server has voted for. ("" if none)
-	// The ConsensusModule will only ever use call this method from a
+	// The ConsensusModule will only ever call this method from it's
 	// single goroutine.
 	// (However, tests will call from a different goroutine)
 	GetVotedFor() ServerId
@@ -22,6 +22,19 @@ type PersistentState interface {
 	// The ConsensusModule will only ever use call this method from a
 	// single goroutine.
 	// TODO: should this call error for decreasing/same term
-	// TODO: persistence error?!
+	// TODO: sync/async semantics & persistence error?!
 	SetCurrentTermAndVotedFor(currentTerm TermNo, votedFor ServerId)
+}
+
+// "RPC" sending layer.
+// This is called "RPC" for raft terminology, but the semantics we expect
+type RpcSender interface {
+	// Send the given RPC message to the given server without blocking
+	// the caller.
+	// The ConsensusModule will only ever call this method from it's
+	// single goroutine.
+	// TODO: should this call error if unable to *not* block?
+	// TODO: should this call error if rpc type is unknown?
+	// TODO: should this call error if bad server id?
+	SendAsync(rpc interface{}, toServer ServerId)
 }
