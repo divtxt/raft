@@ -18,9 +18,11 @@ type ConsensusModule struct {
 	// -- External components - these fields meant to be immutable
 	persistentState PersistentState
 	log             Log
+	rpcSender       RpcSender
 
 	// -- Config - these fields meant to be immutable
-	serverId     ServerId
+	thisServerId ServerId
+	allServerIds []ServerId
 	timeSettings TimeSettings
 
 	// -- State
@@ -39,9 +41,13 @@ type ConsensusModule struct {
 func NewConsensusModule(
 	persistentState PersistentState,
 	log Log,
-	serverId ServerId,
+	rpcSender RpcSender,
+	thisServerId ServerId,
+	allServerIds []ServerId,
 	timeSettings TimeSettings,
 ) *ConsensusModule {
+	// FIXME: param checks
+
 	now := time.Now()
 	rpcChannel := make(chan bool, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.tickerDuration)
@@ -50,9 +56,11 @@ func NewConsensusModule(
 		// -- External components
 		persistentState,
 		log,
+		rpcSender,
 
 		// -- Config
-		serverId,
+		thisServerId,
+		allServerIds,
 		timeSettings,
 
 		// -- State
@@ -122,6 +130,7 @@ loop:
 				// WARN: rpc channel closed - exiting processor()
 				break loop
 			}
+			// FIXME: implement rpc receive here!
 		case now, ok := <-cm.ticker.C:
 			if !ok {
 				// FATAL: ticker channel closed - exiting processor()
@@ -147,8 +156,12 @@ func (cm *ConsensusModule) tick(now time.Time) {
 			// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 			// in parallel to each of the other servers in the cluster.
 			newTerm := cm.persistentState.GetCurrentTerm() + 1
-			cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.serverId)
 			cm.setServerState(CANDIDATE)
+			cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.thisServerId)
+			for _, serverId := range cm.allServerIds {
+				rpcRequestVote := &RpcRequestVote{newTerm}
+				cm.rpcSender.SendAsync(rpcRequestVote, serverId)
+			}
 		}
 	case CANDIDATE:
 	case LEADER:

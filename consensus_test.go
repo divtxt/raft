@@ -11,18 +11,26 @@ const (
 	testCurrentTerm = 8
 )
 
+var testPeerIds = []ServerId{"s2", "s3", "s4", "s5"}
+
 func setupTestFollower(t *testing.T, logTerms []TermNo) *ConsensusModule {
+	cm, _ := setupTestFollowerR2(t, logTerms)
+	return cm
+}
+
+func setupTestFollowerR2(
+	t *testing.T,
+	logTerms []TermNo,
+) (*ConsensusModule, *mockRpcSender) {
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
 	imle := newIMLEWithDummyCommands(logTerms)
+	mrs := newMockRpcSender()
 	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
-
-	cm := NewConsensusModule(ps, imle, testServerId, ts)
-
+	cm := NewConsensusModule(ps, imle, mrs, testServerId, testPeerIds, ts)
 	if cm == nil {
 		t.Fatal()
 	}
-
-	return cm
+	return cm, mrs
 }
 
 // #5.2-p1s2: When servers start up, they begin as followers
@@ -58,7 +66,7 @@ func TestCMStop(t *testing.T) {
 // #5.2-p2s2: It then votes for itself and issues RequestVote RPCs in parallel
 // to each of the other servers in the cluster.
 func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
-	cm := setupTestFollower(t, nil)
+	cm, mrs := setupTestFollowerR2(t, nil)
 	defer cm.StopAsync()
 
 	if cm.GetServerState() != FOLLOWER {
@@ -89,5 +97,29 @@ func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
 	if cm.persistentState.GetVotedFor() != testServerId {
 		t.Fatal()
 	}
-
+	// candidate has issued RequestVote RPCs to all other servers.
+	expectedIds := make(map[ServerId]bool)
+	for _, peerId := range testPeerIds {
+		expectedIds[peerId] = true
+	}
+loop:
+	for {
+		select {
+		case sentRpc := <-mrs.c:
+			switch rpc := sentRpc.rpc.(type) {
+			case *RpcRequestVote:
+				if rpc.term != testCurrentTerm+1 {
+					t.Error(rpc)
+				}
+				delete(expectedIds, sentRpc.toServer)
+			default:
+				t.Error("Unexpected rpc:", rpc)
+			}
+		default:
+			for peerId, _ := range expectedIds {
+				t.Error("Missing rpc for peer:", peerId)
+			}
+			break loop
+		}
+	}
 }
