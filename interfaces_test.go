@@ -1,11 +1,12 @@
 package raft
 
 import (
+	"reflect"
 	"sync"
 	"testing"
 )
 
-// Blackbox test
+// PersistentState blackbox test
 // Send a PersistentState in new / reset state.
 func PersistentStateBlackboxTest(t *testing.T, persistentState PersistentState) {
 	// Initial data tests
@@ -70,4 +71,53 @@ func newIMPSWithCurrentTerm(currentTerm TermNo) *inMemoryPersistentState {
 func TestInMemoryPersistentState(t *testing.T) {
 	imps := newIMPSWithCurrentTerm(0)
 	PersistentStateBlackboxTest(t, imps)
+}
+
+// Mock in-memory implementation of RpcSender - meant only for tests
+type mockRpcSender struct {
+	c chan mockSentRpc
+}
+
+type mockSentRpc struct {
+	rpc      interface{}
+	toServer ServerId
+}
+
+func newMockRpcSender() *mockRpcSender {
+	return &mockRpcSender{make(chan mockSentRpc, 100)}
+}
+
+func (mrs *mockRpcSender) SendAsync(rpc interface{}, toServer ServerId) {
+	select {
+	default:
+		panic("oops!")
+	case mrs.c <- mockSentRpc{rpc, toServer}:
+		// nothing more to do!
+	}
+}
+
+func TestMockRpcSender(t *testing.T) {
+	mrs := newMockRpcSender()
+
+	mrs.SendAsync("foo", "s1")
+	mrs.SendAsync(42, "s2")
+
+	actual := make([]mockSentRpc, 0, 2)
+loop:
+	for {
+		select {
+		case v := <-mrs.c:
+			n := len(actual)
+			actual = actual[0 : n+1]
+			actual[n] = v
+		default:
+			break loop
+		}
+	}
+
+	expected := []mockSentRpc{mockSentRpc{"foo", "s1"}, mockSentRpc{42, "s2"}}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatal()
+	}
 }
