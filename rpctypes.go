@@ -25,3 +25,12 @@ type AppendEntriesReply struct {
 	term    TermNo
 	success bool
 }
+
+type RpcRequestVote struct {
+	// - candidate's term
+	term TermNo
+
+	// candidateId
+	// lastLogIndex LogIndex
+	// lastLogTerm TermNo
+}
