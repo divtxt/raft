@@ -66,9 +66,11 @@ func TestCMStop(t *testing.T) {
 // and transitions to candidate state.
 // #5.2-p2s2: It then votes for itself and issues RequestVote RPCs in parallel
 // to each of the other servers in the cluster.
-func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
-	cm, mrs := setupTestFollowerR2(t, nil)
-	defer cm.StopAsync()
+func testCMFollowerStartsElectionOnElectionTimeout(
+	t *testing.T,
+	cm *ConsensusModule,
+	mrs *mockRpcSender,
+) {
 
 	if cm.GetServerState() != FOLLOWER {
 		t.Fatal()
@@ -110,7 +112,13 @@ func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
 		t.Error()
 	}
 
-	expectedRpc := &RpcRequestVote{testCurrentTerm + 1, 0, 0}
+	lastLogIndex := cm.log.getIndexOfLastEntry()
+	var lastLogTerm TermNo = 0
+	if lastLogIndex > 0 {
+		lastLogTerm = cm.log.getTermAtIndex(lastLogIndex)
+	}
+
+	expectedRpc := &RpcRequestVote{testCurrentTerm + 1, lastLogIndex, lastLogTerm}
 
 	for i, peerId := range testPeerIds {
 		sentRpc := sentRpcs[i]
@@ -121,4 +129,20 @@ func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
 			t.Fatal(sentRpc.rpc, expectedRpc)
 		}
 	}
+}
+
+func TestCMFollowerStartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
+	cm, mrs := setupTestFollowerR2(t, nil)
+	defer cm.StopAsync()
+
+	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
+}
+
+func TestCMFollowerStartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
+	// Log with 10 entries with terms as shown in Figure 7, leader line
+	terms := testLogTerms_Figure7LeaderLine()
+	cm, mrs := setupTestFollowerR2(t, terms)
+	defer cm.StopAsync()
+
+	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
 }
