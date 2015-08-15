@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -109,19 +110,15 @@ func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
 		t.Error()
 	}
 
+	expectedRpc := &RpcRequestVote{testCurrentTerm + 1, 0, 0}
+
 	for i, peerId := range testPeerIds {
 		sentRpc := sentRpcs[i]
 		if sentRpc.toServer != peerId {
 			t.Error()
 		}
-		switch rpc := sentRpc.rpc.(type) {
-		case *RpcRequestVote:
-			if rpc.term != testCurrentTerm+1 || rpc.lastLogIndex != 0 || rpc.lastLogTerm != 0 {
-				t.Error(rpc)
-			}
-		default:
-			t.Error("Unexpected rpc:", rpc)
+		if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
+			t.Fatal(sentRpc.rpc, expectedRpc)
 		}
 	}
-
 }
