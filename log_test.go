@@ -2,6 +2,7 @@ package raft
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"testing"
 )
@@ -43,15 +44,12 @@ func LogBlackboxTest(t *testing.T, log Log) {
 		t.Fatal()
 	}
 	le = log.getLogEntryAtIndex(12)
-	if le.TermNo != 8 {
-		t.Fatal(le.TermNo)
-	}
-	if le.Command != "c12" {
-		t.Fatal(le.Command)
+	if !reflect.DeepEqual(le, LogEntry{8, "c12"}) {
+		t.Fatal(le)
 	}
 
 	// set test - partial replacing
-	logEntries = []LogEntry{LogEntry{7, "c11"}, LogEntry{9, "c12'"}, LogEntry{9, "c13'"}}
+	logEntries = []LogEntry{LogEntry{7, "c11"}, LogEntry{9, "c12"}, LogEntry{9, "c13'"}}
 	if e := log.setEntriesAfterIndex(10, logEntries); e != nil {
 		t.Fatal(e)
 	}
@@ -59,11 +57,29 @@ func LogBlackboxTest(t *testing.T, log Log) {
 		t.Fatal()
 	}
 	le = log.getLogEntryAtIndex(12)
-	if le.TermNo != 9 {
-		t.Fatal(le.TermNo)
+	if !reflect.DeepEqual(le, LogEntry{9, "c12"}) {
+		t.Fatal(le)
 	}
-	if le.Command != "c12'" {
-		t.Fatal(le.Command)
+
+	// set test - no new entries with empty slice
+	logEntries = []LogEntry{}
+	if e := log.setEntriesAfterIndex(3, logEntries); e != nil {
+		t.Fatal(e)
+	}
+	if log.getIndexOfLastEntry() != 3 {
+		t.Fatal()
+	}
+	le = log.getLogEntryAtIndex(3)
+	if !reflect.DeepEqual(le, LogEntry{1, "c3"}) {
+		t.Fatal(le)
+	}
+
+	// set test - delete all entries; no new entries with nil
+	if e := log.setEntriesAfterIndex(0, nil); e != nil {
+		t.Fatal(e)
+	}
+	if log.getIndexOfLastEntry() != 0 {
+		t.Fatal()
 	}
 
 }
