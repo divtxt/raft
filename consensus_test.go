@@ -116,10 +116,9 @@ func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
 		}
 		switch rpc := sentRpc.rpc.(type) {
 		case *RpcRequestVote:
-			if rpc.term != testCurrentTerm+1 {
+			if rpc.term != testCurrentTerm+1 || rpc.lastLogIndex != 0 || rpc.lastLogTerm != 0 {
 				t.Error(rpc)
 			}
-			// FIXME: validate other rpc fields
 		default:
 			t.Error("Unexpected rpc:", rpc)
 		}

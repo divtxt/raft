@@ -158,8 +158,15 @@ func (cm *ConsensusModule) tick(now time.Time) {
 			newTerm := cm.persistentState.GetCurrentTerm() + 1
 			cm.setServerState(CANDIDATE)
 			cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.thisServerId)
+			lastLogIndex := cm.log.getIndexOfLastEntry()
+			var lastLogTerm TermNo
+			if lastLogIndex > 0 {
+				lastLogTerm = cm.log.getTermAtIndex(lastLogIndex)
+			} else {
+				lastLogTerm = 0
+			}
 			for _, serverId := range cm.allServerIds {
-				rpcRequestVote := &RpcRequestVote{newTerm}
+				rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
 				cm.rpcSender.SendAsync(serverId, rpcRequestVote)
 			}
 		}
