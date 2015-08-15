@@ -27,14 +27,15 @@ type PersistentState interface {
 }
 
 // "RPC" sending layer.
-// This is called "RPC" for raft terminology, but the semantics we expect
+// This is called "RPC" for raft terminology, but we're using an asynchronous
+// messaging layer model.
 type RpcSender interface {
-	// Send the given RPC message to the given server without blocking
-	// the caller.
+	// Send the given RPC message to the given server.
+	// The sending should not block the caller.
 	// The ConsensusModule will only ever call this method from it's
 	// single goroutine.
 	// TODO: should this call error if unable to *not* block?
 	// TODO: should this call error if rpc type is unknown?
 	// TODO: should this call error if bad server id?
-	SendAsync(rpc interface{}, toServer ServerId)
+	SendAsync(toServer ServerId, rpc interface{})
 }
