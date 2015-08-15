@@ -31,6 +31,10 @@ type RpcRequestVote struct {
 	term TermNo
 
 	// candidateId
-	// lastLogIndex LogIndex
-	// lastLogTerm TermNo
+
+	// - index of candidate's last log entry
+	lastLogIndex LogIndex
+
+	// - term of candidate's last log entry
+	lastLogTerm TermNo
 }
