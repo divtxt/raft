@@ -37,7 +37,7 @@ type Log interface {
 	// following the given index and then append the given new
 	// entries after that index.
 	//
-	// However, Raft properties means that the Log can follow do this:
+	// However, Raft properties means that the Log can use this logic:
 	// - (AppendEntries receiver step 3.) If an existing entry conflicts with
 	// a new one (same index but different terms), delete the existing entry
 	// and all that follow it (#5.3)
@@ -48,6 +48,9 @@ type Log interface {
 	// the first index where the terms of the existing entry and the new
 	// entry don't match.
 	//
-	// TODO: return values for invalid params or log errors
+	// Note that an index of 0 is valid and implies deleting all entries.
+	// A zero length slice and nil both indicate no new entries to be added
+	// after deleting.
+	// TODO: log errors
 	setEntriesAfterIndex(LogIndex, []LogEntry) error
 }
