@@ -102,24 +102,27 @@ func TestCMFollowerStartsElectionOnElectionTimeout(t *testing.T) {
 	for _, peerId := range testPeerIds {
 		expectedIds[peerId] = true
 	}
-loop:
-	for {
-		select {
-		case sentRpc := <-mrs.c:
-			switch rpc := sentRpc.rpc.(type) {
-			case *RpcRequestVote:
-				if rpc.term != testCurrentTerm+1 {
-					t.Error(rpc)
-				}
-				delete(expectedIds, sentRpc.toServer)
-			default:
-				t.Error("Unexpected rpc:", rpc)
+
+	sentRpcs := mrs.getAllSortedByToServer()
+
+	if len(sentRpcs) != len(testPeerIds) {
+		t.Error()
+	}
+
+	for i, peerId := range testPeerIds {
+		sentRpc := sentRpcs[i]
+		if sentRpc.toServer != peerId {
+			t.Error()
+		}
+		switch rpc := sentRpc.rpc.(type) {
+		case *RpcRequestVote:
+			if rpc.term != testCurrentTerm+1 {
+				t.Error(rpc)
 			}
+			// FIXME: validate other rpc fields
 		default:
-			for peerId, _ := range expectedIds {
-				t.Error("Missing rpc for peer:", peerId)
-			}
-			break loop
+			t.Error("Unexpected rpc:", rpc)
 		}
 	}
+
 }

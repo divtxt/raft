@@ -160,7 +160,7 @@ func (cm *ConsensusModule) tick(now time.Time) {
 			cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.thisServerId)
 			for _, serverId := range cm.allServerIds {
 				rpcRequestVote := &RpcRequestVote{newTerm}
-				cm.rpcSender.SendAsync(rpcRequestVote, serverId)
+				cm.rpcSender.SendAsync(serverId, rpcRequestVote)
 			}
 		}
 	case CANDIDATE:

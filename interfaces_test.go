@@ -2,9 +2,12 @@ package raft
 
 import (
 	"reflect"
+	"sort"
 	"sync"
 	"testing"
 )
+
+// -- PersistentState
 
 // PersistentState blackbox test
 // Send a PersistentState in new / reset state.
@@ -73,49 +76,67 @@ func TestInMemoryPersistentState(t *testing.T) {
 	PersistentStateBlackboxTest(t, imps)
 }
 
+// -- RpcSender
+
 // Mock in-memory implementation of RpcSender - meant only for tests
 type mockRpcSender struct {
 	c chan mockSentRpc
 }
 
 type mockSentRpc struct {
-	rpc      interface{}
 	toServer ServerId
+	rpc      interface{}
 }
 
 func newMockRpcSender() *mockRpcSender {
 	return &mockRpcSender{make(chan mockSentRpc, 100)}
 }
 
-func (mrs *mockRpcSender) SendAsync(rpc interface{}, toServer ServerId) {
+func (mrs *mockRpcSender) SendAsync(toServer ServerId, rpc interface{}) {
 	select {
 	default:
 		panic("oops!")
-	case mrs.c <- mockSentRpc{rpc, toServer}:
+	case mrs.c <- mockSentRpc{toServer, rpc}:
 		// nothing more to do!
 	}
 }
 
-func TestMockRpcSender(t *testing.T) {
-	mrs := newMockRpcSender()
+func (mrs *mockRpcSender) getAllSortedByToServer() []mockSentRpc {
+	rpcs := make([]mockSentRpc, 0, 100)
 
-	mrs.SendAsync("foo", "s1")
-	mrs.SendAsync(42, "s2")
-
-	actual := make([]mockSentRpc, 0, 2)
 loop:
 	for {
 		select {
 		case v := <-mrs.c:
-			n := len(actual)
-			actual = actual[0 : n+1]
-			actual[n] = v
+			n := len(rpcs)
+			rpcs = rpcs[0 : n+1]
+			rpcs[n] = v
 		default:
 			break loop
 		}
 	}
 
-	expected := []mockSentRpc{mockSentRpc{"foo", "s1"}, mockSentRpc{42, "s2"}}
+	sort.Sort(mockRpcSenderSlice(rpcs))
+
+	return rpcs
+}
+
+// implement sort.Interface for mockSentRpc slices
+type mockRpcSenderSlice []mockSentRpc
+
+func (mrss mockRpcSenderSlice) Len() int           { return len(mrss) }
+func (mrss mockRpcSenderSlice) Less(i, j int) bool { return mrss[i].toServer < mrss[j].toServer }
+func (mrss mockRpcSenderSlice) Swap(i, j int)      { mrss[i], mrss[j] = mrss[j], mrss[i] }
+
+func TestMockRpcSender(t *testing.T) {
+	mrs := newMockRpcSender()
+
+	mrs.SendAsync("s2", "foo")
+	mrs.SendAsync("s1", 42)
+
+	actual := mrs.getAllSortedByToServer()
+
+	expected := []mockSentRpc{mockSentRpc{"s1", 42}, mockSentRpc{"s2", "foo"}}
 
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatal()
