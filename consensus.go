@@ -21,13 +21,15 @@ type ConsensusModule struct {
 	rpcSender       RpcSender
 
 	// -- Config - these fields meant to be immutable
-	thisServerId ServerId
-	allServerIds []ServerId
-	timeSettings TimeSettings
+	thisServerId  ServerId
+	peerServerIds []ServerId
+	timeSettings  TimeSettings
 
-	// -- State
-	stopped             int32
-	serverState         ServerState
+	// -- State - these fields may be accessed concurrently
+	stopped     int32
+	serverState ServerState
+
+	// -- State - these fields meant for use within the goroutine
 	volatileState       VolatileState
 	electionTimeoutTime time.Time
 
@@ -43,7 +45,7 @@ func NewConsensusModule(
 	log Log,
 	rpcSender RpcSender,
 	thisServerId ServerId,
-	allServerIds []ServerId,
+	peerServerIds []ServerId,
 	timeSettings TimeSettings,
 ) *ConsensusModule {
 	// FIXME: param checks
@@ -60,7 +62,7 @@ func NewConsensusModule(
 
 		// -- Config
 		thisServerId,
-		allServerIds,
+		peerServerIds,
 		timeSettings,
 
 		// -- State
@@ -68,7 +70,7 @@ func NewConsensusModule(
 		// #5.2-p1s2: When servers start up, they begin as followers
 		FOLLOWER,
 		VolatileState{},
-		now, // temporary value
+		now, // FIXME: temporary value
 
 		// -- Channels
 		rpcChannel,
@@ -165,7 +167,7 @@ func (cm *ConsensusModule) tick(now time.Time) {
 			} else {
 				lastLogTerm = 0
 			}
-			for _, serverId := range cm.allServerIds {
+			for _, serverId := range cm.peerServerIds {
 				rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
 				cm.rpcSender.SendAsync(serverId, rpcRequestVote)
 			}
