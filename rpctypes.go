@@ -38,3 +38,8 @@ type RpcRequestVote struct {
 	// - term of candidate's last log entry
 	lastLogTerm TermNo
 }
+
+type RpcRequestVoteReply struct {
+	// term
+	voteGranted bool
+}
