@@ -30,11 +30,12 @@ type ConsensusModule struct {
 	serverState ServerState
 
 	// -- State - these fields meant for use within the goroutine
-	volatileState       VolatileState
-	electionTimeoutTime time.Time
+	volatileState          VolatileState
+	electionTimeoutTime    time.Time
+	candidateVolatileState *CandidateVolatileState
 
 	// -- Channels
-	rpcChannel chan bool
+	rpcChannel chan rpcTuple
 	ticker     *time.Ticker
 }
 
@@ -51,7 +52,7 @@ func NewConsensusModule(
 	// FIXME: param checks
 
 	now := time.Now()
-	rpcChannel := make(chan bool, RPC_CHANNEL_BUFFER_SIZE)
+	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.tickerDuration)
 
 	cm := &ConsensusModule{
@@ -69,8 +70,11 @@ func NewConsensusModule(
 		0,
 		// #5.2-p1s2: When servers start up, they begin as followers
 		FOLLOWER,
+
+		// -- State
 		VolatileState{},
 		now, // FIXME: temporary value
+		nil,
 
 		// -- Channels
 		rpcChannel,
@@ -101,8 +105,26 @@ func (cm *ConsensusModule) ProcessRpc(appendEntries AppendEntries) (AppendEntrie
 	return AppendEntriesReply{cm.persistentState.GetCurrentTerm(), success}, err
 }
 
-// Stop the consensus module. Stops the goroutine that does the
-// processing and prevents any further
+// Process the given RPC message from the given peer asynchronously.
+// This method sends the rpc to the ConsensusModule's goroutine.
+// Sending an unknown or unexpected rpc message will cause the
+// ConsensusModule to shut down.
+func (cm *ConsensusModule) ProcessRpcAsync(from ServerId, rpc interface{}) {
+	select {
+	case cm.rpcChannel <- rpcTuple{from, rpc}:
+	default:
+		// FIXME
+		panic("oops!")
+	}
+}
+
+type rpcTuple struct {
+	from ServerId
+	rpc  interface{}
+}
+
+// Stop the consensus module asynchronously.
+// This will stop the goroutine that does the processing.
 func (cm *ConsensusModule) StopAsync() {
 	close(cm.rpcChannel) // atomic & will panic if already closed
 }
@@ -127,12 +149,12 @@ func (cm *ConsensusModule) processor() {
 loop:
 	for {
 		select {
-		case _, ok := <-cm.rpcChannel:
+		case rpc, ok := <-cm.rpcChannel:
 			if !ok {
 				// WARN: rpc channel closed - exiting processor()
 				break loop
 			}
-			// FIXME: implement rpc receive here!
+			cm.rpc(rpc.from, rpc.rpc)
 		case now, ok := <-cm.ticker.C:
 			if !ok {
 				// FATAL: ticker channel closed - exiting processor()
@@ -142,6 +164,15 @@ loop:
 			}
 			cm.tick(now)
 		}
+	}
+}
+
+func (cm *ConsensusModule) rpc(from ServerId, rpc interface{}) {
+	switch rpc := rpc.(type) {
+	case *RpcRequestVoteReply:
+		cm._processRpc_RequestVoteReply(from, rpc)
+	default:
+		panic("oops! unexpected/unknown rpc message type")
 	}
 }
 
@@ -158,6 +189,7 @@ func (cm *ConsensusModule) tick(now time.Time) {
 			// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 			// in parallel to each of the other servers in the cluster.
 			newTerm := cm.persistentState.GetCurrentTerm() + 1
+			cm.candidateVolatileState = newCandidateVolatileState(cm.peerServerIds)
 			cm.setServerState(CANDIDATE)
 			cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.thisServerId)
 			lastLogIndex := cm.log.getIndexOfLastEntry()
@@ -173,8 +205,14 @@ func (cm *ConsensusModule) tick(now time.Time) {
 			}
 		}
 	case CANDIDATE:
+		// FIXME
+		panic("todo")
 	case LEADER:
+		// FIXME
+		panic("todo")
 	default:
+		// FIXME
+		panic("oops")
 	}
 
 }
