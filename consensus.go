@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -37,6 +38,10 @@ type ConsensusModule struct {
 	// -- Channels
 	rpcChannel chan rpcTuple
 	ticker     *time.Ticker
+
+	// -- Control
+	stopSignal chan struct{}
+	stopError  interface{}
 }
 
 // Initialize a consensus module with the given components and settings.
@@ -79,6 +84,10 @@ func NewConsensusModule(
 		// -- Channels
 		rpcChannel,
 		ticker,
+
+		// -- Control
+		make(chan struct{}),
+		nil,
 	}
 
 	cm.resetElectionTimeoutTime()
@@ -89,9 +98,24 @@ func NewConsensusModule(
 	return cm
 }
 
-// Check if the goroutine is shutdown
+// Check if the goroutine is stopped.
 func (cm *ConsensusModule) IsStopped() bool {
 	return atomic.LoadInt32(&cm.stopped) != 0
+}
+
+// Stop the consensus module asynchronously.
+// This will stop the goroutine that does the processing.
+// Safe to call even if the goroutine has stopped.
+// Will panic if called more than once.
+func (cm *ConsensusModule) StopAsync() {
+	close(cm.stopSignal)
+}
+
+// Get the panic error value that stopped the goroutine.
+// The value will be nil if the goroutine is not stopped, or stopped
+// without an error, or  panicked with a nil value.
+func (cm *ConsensusModule) GetStopError() interface{} {
+	return cm.stopError
 }
 
 // Get the current server state
@@ -108,7 +132,7 @@ func (cm *ConsensusModule) ProcessRpc(appendEntries AppendEntries) (AppendEntrie
 // Process the given RPC message from the given peer asynchronously.
 // This method sends the rpc to the ConsensusModule's goroutine.
 // Sending an unknown or unexpected rpc message will cause the
-// ConsensusModule to shut down.
+// ConsensusModule goroutine to panic and stop.
 func (cm *ConsensusModule) ProcessRpcAsync(from ServerId, rpc interface{}) {
 	select {
 	case cm.rpcChannel <- rpcTuple{from, rpc}:
@@ -121,12 +145,6 @@ func (cm *ConsensusModule) ProcessRpcAsync(from ServerId, rpc interface{}) {
 type rpcTuple struct {
 	from ServerId
 	rpc  interface{}
-}
-
-// Stop the consensus module asynchronously.
-// This will stop the goroutine that does the processing.
-func (cm *ConsensusModule) StopAsync() {
-	close(cm.rpcChannel) // atomic & will panic if already closed
 }
 
 // -- protected methods
@@ -142,8 +160,16 @@ func (cm *ConsensusModule) resetElectionTimeoutTime() {
 
 func (cm *ConsensusModule) processor() {
 	defer func() {
-		// Mark the server as shutdown
+		// Recover & save the panic reason
+		if r := recover(); r != nil {
+			cm.stopError = r
+		}
+		// Mark the server as stopped
 		atomic.StoreInt32(&cm.stopped, 1)
+		// Clean up things
+		close(cm.rpcChannel)
+		cm.ticker.Stop()
+		// TODO: call stop event listener(s)
 	}()
 
 loop:
@@ -151,18 +177,16 @@ loop:
 		select {
 		case rpc, ok := <-cm.rpcChannel:
 			if !ok {
-				// WARN: rpc channel closed - exiting processor()
-				break loop
+				panic("FATAL: rpcChannel closed")
 			}
 			cm.rpc(rpc.from, rpc.rpc)
 		case now, ok := <-cm.ticker.C:
 			if !ok {
-				// FATAL: ticker channel closed - exiting processor()
-				// FIXME: better handling than panic()
-				panic("ticker channel closed - exiting processor()")
-				break loop
+				panic("FATAL: ticker channel closed")
 			}
 			cm.tick(now)
+		case <-cm.stopSignal:
+			break loop
 		}
 	}
 }
@@ -172,7 +196,7 @@ func (cm *ConsensusModule) rpc(from ServerId, rpc interface{}) {
 	case *RpcRequestVoteReply:
 		cm._processRpc_RequestVoteReply(from, rpc)
 	default:
-		panic("oops! unexpected/unknown rpc message type")
+		panic(fmt.Sprintf("FATAL: unknown rpc type: %T", rpc))
 	}
 }
 
