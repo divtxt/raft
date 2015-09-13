@@ -57,6 +57,30 @@ func TestCMStop(t *testing.T) {
 	if !cm.IsStopped() {
 		t.Error()
 	}
+	if cm.GetStopError() != nil {
+		t.Error()
+	}
+}
+
+func TestCMUnknownRpcTypeStopsCM(t *testing.T) {
+	cm := setupTestFollower(t, nil)
+
+	if cm.IsStopped() {
+		t.Error()
+	}
+
+	cm.ProcessRpcAsync("s2", &struct{ int }{42})
+	time.Sleep(1 * time.Millisecond)
+
+	if !cm.IsStopped() {
+		cm.StopAsync()
+		t.Fatal()
+	}
+
+	e := cm.GetStopError()
+	if e != "FATAL: unknown rpc type: *struct { int }" {
+		t.Error(e)
+	}
 }
 
 // #5.2-p1s5: If a follower receives no communication over a period of time
