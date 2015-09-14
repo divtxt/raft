@@ -56,7 +56,6 @@ func NewConsensusModule(
 ) *ConsensusModule {
 	// FIXME: param checks
 
-	now := time.Now()
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.tickerDuration)
 
@@ -78,7 +77,7 @@ func NewConsensusModule(
 
 		// -- State
 		VolatileState{},
-		now, // FIXME: temporary value
+		time.Now(), // temp value, to be replaced before goroutine start
 		nil,
 
 		// -- Channels
