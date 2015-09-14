@@ -2,6 +2,7 @@ package raft
 
 import (
 	"reflect"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -79,6 +80,40 @@ func TestCMUnknownRpcTypeStopsCM(t *testing.T) {
 
 	e := cm.GetStopError()
 	if e != "FATAL: unknown rpc type: *struct { int }" {
+		t.Error(e)
+	}
+}
+
+func TestCMSetServerStateBadServerStatePanics(t *testing.T) {
+	cm := setupTestFollower(t, nil)
+	defer cm.StopAsync()
+
+	defer func() {
+		if r := recover(); r != "FATAL: unknown ServerState: 42" {
+			t.Error(r)
+		}
+	}()
+
+	cm.setServerState(42)
+}
+
+func TestCMBadServerStateStopsCM(t *testing.T) {
+	cm := setupTestFollower(t, nil)
+
+	if cm.IsStopped() {
+		t.Error()
+	}
+
+	atomic.StoreUint32((*uint32)(&cm.serverState), 42)
+	time.Sleep(6 * time.Millisecond)
+
+	if !cm.IsStopped() {
+		cm.StopAsync()
+		t.Fatal()
+	}
+
+	e := cm.GetStopError()
+	if e != "FATAL: unknown ServerState: 42" {
 		t.Error(e)
 	}
 }
