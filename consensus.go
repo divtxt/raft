@@ -46,6 +46,9 @@ type ConsensusModule struct {
 
 // Initialize a consensus module with the given components and settings.
 // A goroutine that handles consensus processing is created.
+// All parameters are required and cannot be nil.
+// Server ids are check using ValidateServerIds().
+// Time settings is checked using ValidateTimeSettings().
 func NewConsensusModule(
 	persistentState PersistentState,
 	log Log,
@@ -54,7 +57,22 @@ func NewConsensusModule(
 	peerServerIds []ServerId,
 	timeSettings TimeSettings,
 ) *ConsensusModule {
-	// FIXME: param checks
+	// Param checks
+	if persistentState == nil {
+		panic("'persistentState' cannot be nil")
+	}
+	if log == nil {
+		panic("'log' cannot be nil")
+	}
+	if rpcSender == nil {
+		panic("'rpcSender' cannot be nil")
+	}
+	if emsg := ValidateServerIds(thisServerId, peerServerIds); emsg != "" {
+		panic(emsg)
+	}
+	if emsg := ValidateTimeSettings(timeSettings); emsg != "" {
+		panic(emsg)
+	}
 
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.tickerDuration)
