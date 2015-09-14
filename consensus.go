@@ -151,6 +151,9 @@ type rpcTuple struct {
 
 // Set the current server state
 func (cm *ConsensusModule) setServerState(serverState ServerState) {
+	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
+		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
+	}
 	atomic.StoreUint32((*uint32)(&cm.serverState), (uint32)(serverState))
 }
 
@@ -202,7 +205,8 @@ func (cm *ConsensusModule) rpc(from ServerId, rpc interface{}) {
 
 func (cm *ConsensusModule) tick(now time.Time) {
 
-	switch cm.GetServerState() {
+	serverState := cm.GetServerState()
+	switch serverState {
 	case FOLLOWER:
 		// #5.2-p1s5: If a follower receives no communication over a period
 		// of time called the election timeout, then it assumes there is no
@@ -235,8 +239,7 @@ func (cm *ConsensusModule) tick(now time.Time) {
 		// FIXME
 		panic("todo")
 	default:
-		// FIXME
-		panic("oops")
+		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
 
 }
