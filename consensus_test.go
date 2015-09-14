@@ -159,11 +159,8 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 	if cm.persistentState.GetVotedFor() != testServerId {
 		t.Fatal()
 	}
+
 	// candidate has issued RequestVote RPCs to all other servers.
-	expectedIds := make(map[ServerId]bool)
-	for _, peerId := range testPeerIds {
-		expectedIds[peerId] = true
-	}
 
 	sentRpcs := mrs.getAllSortedByToServer()
 
