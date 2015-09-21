@@ -140,12 +140,6 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 	return ServerState(atomic.LoadUint32((*uint32)(&cm.serverState)))
 }
 
-// Process the given RPC
-func (cm *ConsensusModule) ProcessRpc(appendEntries AppendEntries) (AppendEntriesReply, error) {
-	success, err := cm._processRpc_AppendEntries(appendEntries)
-	return AppendEntriesReply{cm.persistentState.GetCurrentTerm(), success}, err
-}
-
 // Process the given RPC message from the given peer asynchronously.
 // This method sends the rpc to the ConsensusModule's goroutine.
 // Sending an unknown or unexpected rpc message will cause the
@@ -213,6 +207,18 @@ loop:
 
 func (cm *ConsensusModule) rpc(from ServerId, rpc interface{}) {
 	switch rpc := rpc.(type) {
+
+	case *AppendEntries:
+		success, err := cm._processRpc_AppendEntries(rpc)
+		if err != nil {
+			// FIXME
+			panic(fmt.Sprintf("FATAL: error: %v", err))
+		}
+		reply := &AppendEntriesReply{
+			cm.persistentState.GetCurrentTerm(),
+			success,
+		}
+		cm.rpcSender.SendAsync(from, reply)
 	case *RpcRequestVoteReply:
 		cm._processRpc_RequestVoteReply(from, rpc)
 	default:

@@ -1,35 +1,40 @@
 package raft
 
 import (
+	"reflect"
 	"testing"
+	"time"
 )
 
-func makeAEWithTerm(term TermNo) AppendEntries {
-	return AppendEntries{term, 0, 0, nil, 0}
+func makeAEWithTerm(term TermNo) *AppendEntries {
+	return &AppendEntries{term, 0, 0, nil, 0}
 }
 
-func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm TermNo) AppendEntries {
-	return AppendEntries{term, prevli, prevterm, nil, 0}
+func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm TermNo) *AppendEntries {
+	return &AppendEntries{term, prevli, prevterm, nil, 0}
 }
 
 // 1. Reply false if term < currentTerm (#5.1)
 func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
-	follower := setupTestFollower(t, nil)
+	follower, mrs := setupTestFollowerR2(t, nil)
 	defer follower.StopAsync()
 	followerTerm := follower.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
 
-	reply, err := follower.ProcessRpc(appendEntries)
-	if err != nil {
-		t.Fatal(err)
+	follower.ProcessRpcAsync("s2", appendEntries)
+	time.Sleep(1 * time.Millisecond)
+	sentRpcs := mrs.getAllSortedByToServer()
+	if len(sentRpcs) != 1 {
+		t.Error(len(sentRpcs))
 	}
-
-	if reply.term != followerTerm {
+	sentRpc := sentRpcs[0]
+	if sentRpc.toServer != "s2" {
 		t.Error()
 	}
-	if reply.success != false {
-		t.Error()
+	expectedRpc := &AppendEntriesReply{followerTerm, false}
+	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
+		t.Fatal(sentRpc.rpc, expectedRpc)
 	}
 }
 
@@ -40,24 +45,26 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 // prevLogIndex since step 3 covers the alternate conflicting entry case.
 // Note: this test based on Figure 7, server (b)
 func TestRpcAENoMatchingLogEntry(t *testing.T) {
-	follower := setupTestFollower(t, []TermNo{1, 1, 1, 4})
+	follower, mrs := setupTestFollowerR2(t, []TermNo{1, 1, 1, 4})
 	defer follower.StopAsync()
 	followerTerm := follower.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(testCurrentTerm, 10, 6)
 
-	reply, err := follower.ProcessRpc(appendEntries)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if reply.term != followerTerm {
+	follower.ProcessRpcAsync("s3", appendEntries)
+	time.Sleep(1 * time.Millisecond)
+	sentRpcs := mrs.getAllSortedByToServer()
+	if len(sentRpcs) != 1 {
 		t.Error()
 	}
-	if reply.success != false {
+	sentRpc := sentRpcs[0]
+	if sentRpc.toServer != "s3" {
 		t.Error()
 	}
-
+	expectedRpc := &AppendEntriesReply{followerTerm, false}
+	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
+		t.Fatal(sentRpc.rpc, expectedRpc)
+	}
 }
 
 // 3. If an existing entry conflicts with a new one (same index
@@ -66,12 +73,15 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 // 4. Append any new entries not already in the log
 // 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit,
 // index of last new entry)
-// Note: this is not specified, but I'm assuimg that the RPC reply should
+// Note: this is not specified, but I'm assuming that the RPC reply should
 // have success set to true.
 // Note: this test case based on Figure 7, case (e) in the Raft paper but adds
 // some extra entries to also test step 3
 func TestRpcAEAppendNewEntries(t *testing.T) {
-	follower := setupTestFollower(t, []TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4})
+	follower, mrs := setupTestFollowerR2(
+		t,
+		[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
+	)
 	defer follower.StopAsync()
 	follower.volatileState.commitIndex = 3
 	followerTerm := follower.persistentState.GetCurrentTerm()
@@ -80,20 +90,27 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 		t.Error()
 	}
 
-	sentLogEntries := []LogEntry{LogEntry{5, "c6'"}, LogEntry{5, "c7'"}, LogEntry{6, "c8'"}}
-
-	appendEntries := AppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
-
-	reply, err := follower.ProcessRpc(appendEntries)
-	if err != nil {
-		t.Fatal(err)
+	sentLogEntries := []LogEntry{
+		LogEntry{5, "c6'"},
+		LogEntry{5, "c7'"},
+		LogEntry{6, "c8'"},
 	}
 
-	if reply.term != followerTerm {
+	appendEntries := &AppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
+
+	follower.ProcessRpcAsync("s4", appendEntries)
+	time.Sleep(1 * time.Millisecond)
+	sentRpcs := mrs.getAllSortedByToServer()
+	if len(sentRpcs) != 1 {
 		t.Error()
 	}
-	if !reply.success {
-		t.Error(reply.success)
+	sentRpc := sentRpcs[0]
+	if sentRpc.toServer != "s4" {
+		t.Error()
+	}
+	expectedRpc := &AppendEntriesReply{followerTerm, true}
+	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
+		t.Fatal(sentRpc.rpc, expectedRpc)
 	}
 
 	if iole := follower.log.getIndexOfLastEntry(); iole != 8 {
