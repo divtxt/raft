@@ -2,13 +2,16 @@ package raft
 
 import (
 	"fmt"
+	"math/rand"
 	"sync/atomic"
 	"time"
 )
 
 type TimeSettings struct {
-	tickerDuration  time.Duration
-	electionTimeout time.Duration
+	tickerDuration time.Duration
+
+	// Election timeout low value - 2x this value is used as high value.
+	electionTimeoutLow time.Duration
 }
 
 const (
@@ -22,9 +25,10 @@ type ConsensusModule struct {
 	rpcSender       RpcSender
 
 	// -- Config - these fields meant to be immutable
-	thisServerId  ServerId
-	peerServerIds []ServerId
-	timeSettings  TimeSettings
+	thisServerId           ServerId
+	peerServerIds          []ServerId
+	electionTimeoutLow     time.Duration
+	currentElectionTimeout time.Duration
 
 	// -- State - these fields may be accessed concurrently
 	stopped     int32
@@ -86,7 +90,8 @@ func NewConsensusModule(
 		// -- Config
 		thisServerId,
 		peerServerIds,
-		timeSettings,
+		timeSettings.electionTimeoutLow,
+		0, // temp value, to be replaced before goroutine start
 
 		// -- State
 		0,
@@ -107,6 +112,7 @@ func NewConsensusModule(
 		nil,
 	}
 
+	cm.chooseNewRandomElectionTimeout()
 	cm.resetElectionTimeoutTime()
 
 	// Start the go routine
@@ -168,8 +174,14 @@ func (cm *ConsensusModule) setServerState(serverState ServerState) {
 	atomic.StoreUint32((*uint32)(&cm.serverState), (uint32)(serverState))
 }
 
+func (cm *ConsensusModule) chooseNewRandomElectionTimeout() {
+	// #5.2-p6s2: ..., election timeouts are chosen randomly from a fixed
+	// interval (e.g., 150-300ms)
+	cm.currentElectionTimeout = cm.electionTimeoutLow + time.Duration(rand.Int63n(int64(cm.electionTimeoutLow)+1))
+}
+
 func (cm *ConsensusModule) resetElectionTimeoutTime() {
-	cm.electionTimeoutTime = time.Now().Add(cm.timeSettings.electionTimeout)
+	cm.electionTimeoutTime = time.Now().Add(cm.currentElectionTimeout)
 }
 
 func (cm *ConsensusModule) processor() {

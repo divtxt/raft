@@ -58,11 +58,11 @@ func TestValidateTimeSettings(t *testing.T) {
 		},
 		{
 			TimeSettings{2 * time.Millisecond, 1 * time.Millisecond},
-			"electionTimeout must be greater than tickerDuration",
+			"electionTimeoutLow must be greater than tickerDuration",
 		},
 		{
 			TimeSettings{1 * time.Millisecond, -2 * time.Millisecond},
-			"electionTimeout must be greater than tickerDuration",
+			"electionTimeoutLow must be greater than tickerDuration",
 		},
 	}
 

@@ -22,7 +22,6 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
 
-	time.Sleep(2 * testElectionTimeoutFuzz)
 	follower.ProcessRpcAsync("s2", appendEntries)
 	time.Sleep(testSleepToLetGoroutineRun)
 
