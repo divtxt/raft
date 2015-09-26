@@ -51,8 +51,8 @@ func ValidateTimeSettings(timeSettings TimeSettings) string {
 	if timeSettings.tickerDuration.Nanoseconds() <= 0 {
 		return "tickerDuration must be greater than zero"
 	}
-	if timeSettings.electionTimeout.Nanoseconds() <= timeSettings.tickerDuration.Nanoseconds() {
-		return "electionTimeout must be greater than tickerDuration"
+	if timeSettings.electionTimeoutLow.Nanoseconds() <= timeSettings.tickerDuration.Nanoseconds() {
+		return "electionTimeoutLow must be greater than tickerDuration"
 	}
 
 	return ""

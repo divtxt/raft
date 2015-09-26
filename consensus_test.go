@@ -12,8 +12,8 @@ const (
 	// Note: value for tests based on Figure 7
 	testCurrentTerm = 8
 
-	testTickerDuration  = 15 * time.Millisecond
-	testElectionTimeout = 150 * time.Millisecond
+	testTickerDuration     = 15 * time.Millisecond
+	testElectionTimeoutLow = 150 * time.Millisecond
 
 	testSleepToLetGoroutineRun = 3 * time.Millisecond
 	testSleepJustMoreThanATick = testTickerDuration + testSleepToLetGoroutineRun
@@ -36,7 +36,7 @@ func setupTestFollowerR2(
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
 	imle := newIMLEWithDummyCommands(logTerms)
 	mrs := newMockRpcSender()
-	ts := TimeSettings{testTickerDuration, testElectionTimeout}
+	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}
 	cm := NewConsensusModule(ps, imle, mrs, testServerId, testPeerIds, ts)
 	if cm == nil {
 		t.Fatal()
@@ -134,6 +134,8 @@ func TestCMBadServerStateStopsCM(t *testing.T) {
 // and transitions to candidate state.
 // #5.2-p2s2: It then votes for itself and issues RequestVote RPCs in parallel
 // to each of the other servers in the cluster.
+// #5.2-p6s2: ..., election timeouts are chosen randomly from a fixed
+// interval (e.g., 150-300ms)
 func testCMFollowerStartsElectionOnElectionTimeout(
 	t *testing.T,
 	cm *ConsensusModule,
@@ -144,6 +146,9 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 		t.Fatal()
 	}
 	if cm.persistentState.GetVotedFor() != "" {
+		t.Fatal()
+	}
+	if cm.currentElectionTimeout < testElectionTimeoutLow || cm.currentElectionTimeout > 2*testElectionTimeoutLow {
 		t.Fatal()
 	}
 
@@ -157,7 +162,7 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 	}
 
 	// Test that election timeout causes a new election
-	time.Sleep(testElectionTimeout)
+	time.Sleep(cm.currentElectionTimeout)
 	if cm.persistentState.GetCurrentTerm() != testCurrentTerm+1 {
 		t.Fatal()
 	}
