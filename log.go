@@ -51,6 +51,9 @@ type Log interface {
 	// Note that an index of 0 is valid and implies deleting all entries.
 	// A zero length slice and nil both indicate no new entries to be added
 	// after deleting.
-	// TODO: log errors
-	setEntriesAfterIndex(LogIndex, []LogEntry) error
+	//
+	// This method is expected to always succeed. All errors should be indicated
+	// by panicking, and this will shutdown the consensus module. This includes
+	// both invalid parameters from the caller and internal errors in the Log.
+	setEntriesAfterIndex(LogIndex, []LogEntry)
 }
