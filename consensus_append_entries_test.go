@@ -22,8 +22,10 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
 
+	time.Sleep(2 * testElectionTimeoutFuzz)
 	follower.ProcessRpcAsync("s2", appendEntries)
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
+
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
 		t.Error(len(sentRpcs))
@@ -52,7 +54,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 	appendEntries := makeAEWithTermAndPrevLogDetails(testCurrentTerm, 10, 6)
 
 	follower.ProcessRpcAsync("s3", appendEntries)
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
 		t.Error()
@@ -99,7 +101,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 	appendEntries := &AppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
 
 	follower.ProcessRpcAsync("s4", appendEntries)
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
 		t.Error()

@@ -11,6 +11,15 @@ const (
 	testServerId = "s1"
 	// Note: value for tests based on Figure 7
 	testCurrentTerm = 8
+
+	testTickerDuration  = 15 * time.Millisecond
+	testElectionTimeout = 150 * time.Millisecond
+
+	testSleepToLetGoroutineRun = 3 * time.Millisecond
+	testSleepJustMoreThanATick = testTickerDuration + testSleepToLetGoroutineRun
+
+	// because Sleep(testSleepToLetGoroutineRun) can take a bit longer
+	testElectionTimeoutFuzz = testSleepToLetGoroutineRun + (time.Millisecond * 3 / 2)
 )
 
 var testPeerIds = []ServerId{"s2", "s3", "s4", "s5"}
@@ -27,7 +36,7 @@ func setupTestFollowerR2(
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
 	imle := newIMLEWithDummyCommands(logTerms)
 	mrs := newMockRpcSender()
-	ts := TimeSettings{5 * time.Millisecond, 50 * time.Millisecond}
+	ts := TimeSettings{testTickerDuration, testElectionTimeout}
 	cm := NewConsensusModule(ps, imle, mrs, testServerId, testPeerIds, ts)
 	if cm == nil {
 		t.Fatal()
@@ -53,7 +62,7 @@ func TestCMStop(t *testing.T) {
 	}
 
 	cm.StopAsync()
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
 
 	if !cm.IsStopped() {
 		t.Error()
@@ -71,7 +80,7 @@ func TestCMUnknownRpcTypeStopsCM(t *testing.T) {
 	}
 
 	cm.ProcessRpcAsync("s2", &struct{ int }{42})
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
 
 	if !cm.IsStopped() {
 		cm.StopAsync()
@@ -105,7 +114,7 @@ func TestCMBadServerStateStopsCM(t *testing.T) {
 	}
 
 	atomic.StoreUint32((*uint32)(&cm.serverState), 42)
-	time.Sleep(6 * time.Millisecond)
+	time.Sleep(testSleepJustMoreThanATick)
 
 	if !cm.IsStopped() {
 		cm.StopAsync()
@@ -139,7 +148,7 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 	}
 
 	// Test that a tick before election timeout causes no state change.
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepJustMoreThanATick)
 	if cm.persistentState.GetCurrentTerm() != testCurrentTerm {
 		t.Fatal()
 	}
@@ -148,7 +157,7 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 	}
 
 	// Test that election timeout causes a new election
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(testElectionTimeout)
 	if cm.persistentState.GetCurrentTerm() != testCurrentTerm+1 {
 		t.Fatal()
 	}

@@ -20,28 +20,28 @@ func TestRpcRVR_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 
 	// s2 grants vote - should stay as candidate
 	cm.ProcessRpcAsync("s2", &RpcRequestVoteReply{true})
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
 	if cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
 	cm.ProcessRpcAsync("s3", &RpcRequestVoteReply{false})
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
 	if cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s4 grants vote - should become leader
 	cm.ProcessRpcAsync("s4", &RpcRequestVoteReply{true})
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
 	if cm.GetServerState() != LEADER {
 		t.Fatal()
 	}
 
 	// s5 grants vote - should stay leader
 	cm.ProcessRpcAsync("s5", &RpcRequestVoteReply{true})
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(testSleepToLetGoroutineRun)
 	if cm.GetServerState() != LEADER {
 		t.Fatal()
 	}
