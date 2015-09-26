@@ -36,15 +36,23 @@ func LogBlackboxTest(t *testing.T, log Log) {
 
 	// set test - invalid index
 	logEntries = []LogEntry{LogEntry{8, "c12"}}
-	if log.setEntriesAfterIndex(11, logEntries) == nil {
+	{
+		stopThePanic := true
+		defer func() {
+			if stopThePanic {
+				if recover() == nil {
+					t.Fatal()
+				}
+			}
+		}()
+		log.setEntriesAfterIndex(11, logEntries)
+		stopThePanic = false
 		t.Fatal()
 	}
 
 	// set test - no replacing
 	logEntries = []LogEntry{LogEntry{7, "c11"}, LogEntry{8, "c12"}}
-	if e := log.setEntriesAfterIndex(10, logEntries); e != nil {
-		t.Fatal(e)
-	}
+	log.setEntriesAfterIndex(10, logEntries)
 	if log.getIndexOfLastEntry() != 12 {
 		t.Fatal()
 	}
@@ -55,9 +63,7 @@ func LogBlackboxTest(t *testing.T, log Log) {
 
 	// set test - partial replacing
 	logEntries = []LogEntry{LogEntry{7, "c11"}, LogEntry{9, "c12"}, LogEntry{9, "c13'"}}
-	if e := log.setEntriesAfterIndex(10, logEntries); e != nil {
-		t.Fatal(e)
-	}
+	log.setEntriesAfterIndex(10, logEntries)
 	if log.getIndexOfLastEntry() != 13 {
 		t.Fatal()
 	}
@@ -68,9 +74,7 @@ func LogBlackboxTest(t *testing.T, log Log) {
 
 	// set test - no new entries with empty slice
 	logEntries = []LogEntry{}
-	if e := log.setEntriesAfterIndex(3, logEntries); e != nil {
-		t.Fatal(e)
-	}
+	log.setEntriesAfterIndex(3, logEntries)
 	if log.getIndexOfLastEntry() != 3 {
 		t.Fatal()
 	}
@@ -80,9 +84,7 @@ func LogBlackboxTest(t *testing.T, log Log) {
 	}
 
 	// set test - delete all entries; no new entries with nil
-	if e := log.setEntriesAfterIndex(0, nil); e != nil {
-		t.Fatal(e)
-	}
+	log.setEntriesAfterIndex(0, nil)
 	if log.getIndexOfLastEntry() != 0 {
 		t.Fatal()
 	}
@@ -106,10 +108,10 @@ func (imle *inMemoryLog) getLogEntryAtIndex(li LogIndex) LogEntry {
 	return imle.entries[li-1]
 }
 
-func (imle *inMemoryLog) setEntriesAfterIndex(li LogIndex, entries []LogEntry) error {
+func (imle *inMemoryLog) setEntriesAfterIndex(li LogIndex, entries []LogEntry) {
 	iole := imle.getIndexOfLastEntry()
 	if iole < li {
-		return fmt.Errorf("inMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", iole)
+		panic(fmt.Sprintf("inMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", li, iole))
 	}
 	// delete entries after index
 	if iole > li {
@@ -117,7 +119,6 @@ func (imle *inMemoryLog) setEntriesAfterIndex(li LogIndex, entries []LogEntry) e
 	}
 	// append entries
 	imle.entries = append(imle.entries, entries...)
-	return nil
 }
 
 func newIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {

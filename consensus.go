@@ -209,11 +209,7 @@ func (cm *ConsensusModule) rpc(from ServerId, rpc interface{}) {
 	switch rpc := rpc.(type) {
 
 	case *AppendEntries:
-		success, err := cm._processRpc_AppendEntries(rpc)
-		if err != nil {
-			// FIXME
-			panic(fmt.Sprintf("FATAL: error: %v", err))
-		}
+		success := cm._processRpc_AppendEntries(rpc)
 		reply := &AppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(),
 			success,
