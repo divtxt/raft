@@ -11,7 +11,7 @@ type PersistentState interface {
 	// (However, tests will call from a different goroutine)
 	GetCurrentTerm() TermNo
 
-	// Get the canidate id this server has voted for. ("" if none)
+	// Get the candidate id this server has voted for. ("" if none)
 	// The ConsensusModule will only ever call this method from it's
 	// single goroutine.
 	// (However, tests will call from a different goroutine)
