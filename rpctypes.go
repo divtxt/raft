@@ -1,3 +1,12 @@
+// The Raft paper models communication between consensus modules as
+// concurrent RPC method calls that return values.
+// However, we're implementing this consensus module as a single threaded
+// component that expects an asynchronous messaging model implementation.
+// In this model, RPC requests and replies are independent message types
+// that are sent and received using the same interfaces.
+// The actual choice of networking protocol, delivery semantics and policy
+// are intentionally unspecified by this implementation.
+
 package raft
 
 type AppendEntries struct {

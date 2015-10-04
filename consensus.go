@@ -147,6 +147,7 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 }
 
 // Process the given RPC message from the given peer asynchronously.
+// See comments in rpctypes.go for an explanation of the messaging model.
 // This method sends the rpc to the ConsensusModule's goroutine.
 // Sending an unknown or unexpected rpc message will cause the
 // ConsensusModule goroutine to panic and stop.
