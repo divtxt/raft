@@ -155,7 +155,7 @@ func (cm *ConsensusModule) ProcessRpcAsync(from ServerId, rpc interface{}) {
 	case cm.rpcChannel <- rpcTuple{from, rpc}:
 	default:
 		// FIXME
-		panic("oops!")
+		panic("oops! rpcChannel is full!")
 	}
 }
 
