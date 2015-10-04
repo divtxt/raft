@@ -161,10 +161,20 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 		t.Fatal()
 	}
 
+	testCMFollowerStartsElectionOnElectionTimeout_Part2(t, cm, mrs, testCurrentTerm+1)
+}
+
+func testCMFollowerStartsElectionOnElectionTimeout_Part2(
+	t *testing.T,
+	cm *ConsensusModule,
+	mrs *mockRpcSender,
+	expectedNewTerm TermNo,
+) {
+
 	// Test that election timeout causes a new election
 	time.Sleep(cm.currentElectionTimeout)
-	if cm.persistentState.GetCurrentTerm() != testCurrentTerm+1 {
-		t.Fatal()
+	if cm.persistentState.GetCurrentTerm() != expectedNewTerm {
+		t.Fatal(expectedNewTerm, cm.persistentState.GetCurrentTerm())
 	}
 	if cm.GetServerState() != CANDIDATE {
 		t.Fatal()
@@ -188,7 +198,7 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 		lastLogTerm = cm.log.getTermAtIndex(lastLogIndex)
 	}
 
-	expectedRpc := &RpcRequestVote{testCurrentTerm + 1, lastLogIndex, lastLogTerm}
+	expectedRpc := &RpcRequestVote{expectedNewTerm, lastLogIndex, lastLogTerm}
 
 	for i, peerId := range testPeerIds {
 		sentRpc := sentRpcs[i]
