@@ -46,3 +46,56 @@ func TestRpcRVR_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 		t.Fatal()
 	}
 }
+
+// #5.2-p5s1: The third possible outcome is that a candidate neither
+// wins nor loses the election; ... votes could be split so that no
+// candidate obtains a majority.
+// #5.2-p5s2: When this happens, each candidate will time out and
+// start a new election by incrementing its term and initiating
+// another round of RequestVote RPCs.
+func TestRpcRVR_StartNewElectionOnElectionTimeout(t *testing.T) {
+	terms := testLogTerms_Figure7LeaderLine()
+	cm, mrs := setupTestFollowerR2(t, terms)
+	defer func() {
+		cm.StopAsync()
+		e := cm.GetStopError()
+		if e != nil {
+			panic(e)
+		}
+	}()
+
+	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
+
+	if cm.GetServerState() != CANDIDATE {
+		t.Fatal()
+	}
+
+	// s2 grants vote - should stay as candidate
+	cm.ProcessRpcAsync("s2", &RpcRequestVoteReply{true})
+	time.Sleep(testSleepToLetGoroutineRun)
+	if cm.GetServerState() != CANDIDATE {
+		t.Fatal()
+	}
+
+	// s3 denies vote - should stay as candidate
+	cm.ProcessRpcAsync("s3", &RpcRequestVoteReply{false})
+	time.Sleep(testSleepToLetGoroutineRun)
+	if cm.GetServerState() != CANDIDATE {
+		t.Fatal()
+	}
+
+	// no more votes - election timeout causes a new election
+	testCMFollowerStartsElectionOnElectionTimeout_Part2(t, cm, mrs, testCurrentTerm+2)
+	//
+	// time.Sleep(cm.currentElectionTimeout)
+	// if cm.persistentState.GetCurrentTerm() != testCurrentTerm+2 {
+	//     t.Fatal()
+	// }
+	// if cm.GetServerState() != CANDIDATE {
+	//     t.Fatal()
+	// }
+	// // candidate has voted for itself
+	// if cm.persistentState.GetVotedFor() != testServerId {
+	//     t.Fatal()
+	// }
+}

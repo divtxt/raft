@@ -235,7 +235,6 @@ func (cm *ConsensusModule) rpc(from ServerId, rpc interface{}) {
 }
 
 func (cm *ConsensusModule) tick(now time.Time) {
-
 	serverState := cm.GetServerState()
 	switch serverState {
 	case FOLLOWER:
@@ -243,34 +242,48 @@ func (cm *ConsensusModule) tick(now time.Time) {
 		// of time called the election timeout, then it assumes there is no
 		// viable leader and begins an election to choose a new leader.
 		if now.After(cm.electionTimeoutTime) {
-			// #5.2-p2s1: To begin an election, a follower increments its
-			// current term and transitions to candidate state.
-			// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
-			// in parallel to each of the other servers in the cluster.
-			newTerm := cm.persistentState.GetCurrentTerm() + 1
-			cm.candidateVolatileState = newCandidateVolatileState(cm.peerServerIds)
-			cm.setServerState(CANDIDATE)
-			cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.thisServerId)
-			lastLogIndex := cm.log.getIndexOfLastEntry()
-			var lastLogTerm TermNo
-			if lastLogIndex > 0 {
-				lastLogTerm = cm.log.getTermAtIndex(lastLogIndex)
-			} else {
-				lastLogTerm = 0
-			}
-			for _, serverId := range cm.peerServerIds {
-				rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-				cm.rpcSender.SendAsync(serverId, rpcRequestVote)
-			}
+			cm.beginElection()
 		}
 	case CANDIDATE:
-		// FIXME
-		panic("todo")
+		// #5.2-p5s1: The third possible outcome is that a candidate neither
+		// wins nor loses the election; ... votes could be split so that no
+		// candidate obtains a majority.
+		// #5.2-p5s2: When this happens, each candidate will time out and
+		// start a new election by incrementing its term and initiating
+		// another round of RequestVote RPCs.
+		if now.After(cm.electionTimeoutTime) {
+			cm.beginElection()
+		}
+		// TODO: else/and anything else?
 	case LEADER:
 		// FIXME
-		panic("todo")
+		panic("todo: LEADER tick()")
 	default:
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
+}
 
+func (cm *ConsensusModule) beginElection() {
+	// #5.2-p2s1: To begin an election, a follower increments its
+	// current term and transitions to candidate state.
+	newTerm := cm.persistentState.GetCurrentTerm() + 1
+	cm.candidateVolatileState = newCandidateVolatileState(cm.peerServerIds)
+	cm.setServerState(CANDIDATE)
+	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
+	// in parallel to each of the other servers in the cluster.
+	cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.thisServerId)
+	lastLogIndex := cm.log.getIndexOfLastEntry()
+	var lastLogTerm TermNo
+	if lastLogIndex > 0 {
+		lastLogTerm = cm.log.getTermAtIndex(lastLogIndex)
+	} else {
+		lastLogTerm = 0
+	}
+	for _, serverId := range cm.peerServerIds {
+		rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
+		cm.rpcSender.SendAsync(serverId, rpcRequestVote)
+	}
+	// Reset election timeout!
+	cm.chooseNewRandomElectionTimeout()
+	cm.resetElectionTimeoutTime()
 }
