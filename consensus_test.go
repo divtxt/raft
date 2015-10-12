@@ -44,10 +44,28 @@ func setupTestFollowerR2(
 	return cm, mrs
 }
 
+func (cm *ConsensusModule) stopAndCheckError() {
+	{
+		defer func() {
+			if r := recover(); r != nil && r != "send on closed channel" {
+				panic(r)
+			}
+		}()
+		cm.StopAsync()
+	}
+	time.Sleep(testSleepToLetGoroutineRun)
+	if !cm.IsStopped() {
+		panic("Timeout waiting for stop!")
+	}
+	if e := cm.GetStopError(); e != nil {
+		panic(e)
+	}
+}
+
 // #5.2-p1s2: When servers start up, they begin as followers
 func TestCMStartsAsFollower(t *testing.T) {
 	cm := setupTestFollower(t, nil)
-	defer cm.StopAsync()
+	defer cm.stopAndCheckError()
 
 	if cm.GetServerState() != FOLLOWER {
 		t.Fatal()
@@ -95,7 +113,7 @@ func TestCMUnknownRpcTypeStopsCM(t *testing.T) {
 
 func TestCMSetServerStateBadServerStatePanics(t *testing.T) {
 	cm := setupTestFollower(t, nil)
-	defer cm.StopAsync()
+	defer cm.stopAndCheckError()
 
 	defer func() {
 		if r := recover(); r != "FATAL: unknown ServerState: 42" {
@@ -213,7 +231,7 @@ func testCMFollowerStartsElectionOnElectionTimeout_Part2(
 
 func TestCMFollowerStartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 	cm, mrs := setupTestFollowerR2(t, nil)
-	defer cm.StopAsync()
+	defer cm.stopAndCheckError()
 
 	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
 }
@@ -222,7 +240,7 @@ func TestCMFollowerStartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
 	// Log with 10 entries with terms as shown in Figure 7, leader line
 	terms := testLogTerms_Figure7LeaderLine()
 	cm, mrs := setupTestFollowerR2(t, terms)
-	defer cm.StopAsync()
+	defer cm.stopAndCheckError()
 
 	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
 }

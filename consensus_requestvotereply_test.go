@@ -10,7 +10,7 @@ import (
 func TestRpcRVR_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 	terms := testLogTerms_Figure7LeaderLine()
 	cm, mrs := setupTestFollowerR2(t, terms)
-	defer cm.StopAsync()
+	defer cm.stopAndCheckError()
 
 	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
 
@@ -56,13 +56,7 @@ func TestRpcRVR_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 func TestRpcRVR_StartNewElectionOnElectionTimeout(t *testing.T) {
 	terms := testLogTerms_Figure7LeaderLine()
 	cm, mrs := setupTestFollowerR2(t, terms)
-	defer func() {
-		cm.StopAsync()
-		e := cm.GetStopError()
-		if e != nil {
-			panic(e)
-		}
-	}()
+	defer cm.stopAndCheckError()
 
 	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
 
