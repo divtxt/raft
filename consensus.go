@@ -45,7 +45,7 @@ type ConsensusModule struct {
 
 	// -- Control
 	stopSignal chan struct{}
-	stopError  interface{}
+	stopError  *atomic.Value
 }
 
 // Initialize a consensus module with the given components and settings.
@@ -109,7 +109,7 @@ func NewConsensusModule(
 
 		// -- Control
 		make(chan struct{}),
-		nil,
+		&atomic.Value{},
 	}
 
 	cm.chooseNewRandomElectionTimeout()
@@ -138,7 +138,7 @@ func (cm *ConsensusModule) StopAsync() {
 // The value will be nil if the goroutine is not stopped, or stopped
 // without an error, or  panicked with a nil value.
 func (cm *ConsensusModule) GetStopError() interface{} {
-	return cm.stopError
+	return cm.stopError.Load()
 }
 
 // Get the current server state
@@ -189,7 +189,7 @@ func (cm *ConsensusModule) processor() {
 	defer func() {
 		// Recover & save the panic reason
 		if r := recover(); r != nil {
-			cm.stopError = r
+			cm.stopError.Store(r)
 		}
 		// Mark the server as stopped
 		atomic.StoreInt32(&cm.stopped, 1)
