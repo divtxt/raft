@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"fmt"
 	"reflect"
 	"sync/atomic"
 	"testing"
@@ -44,21 +45,42 @@ func setupTestFollowerR2(
 	return cm, mrs
 }
 
+func (cm *ConsensusModule) stopAsyncWithRecover() (e interface{}) {
+	defer func() {
+		e = recover()
+	}()
+	cm.StopAsync()
+	return nil
+}
+
 func (cm *ConsensusModule) stopAndCheckError() {
-	{
-		defer func() {
-			if r := recover(); r != nil && r != "send on closed channel" {
-				panic(r)
-			}
-		}()
-		cm.StopAsync()
-	}
+	var callersError, stopAsyncError, stopStatusError, stopError interface{}
+
+	callersError = recover()
+
+	stopAsyncError = cm.stopAsyncWithRecover()
+
 	time.Sleep(testSleepToLetGoroutineRun)
 	if !cm.IsStopped() {
-		panic("Timeout waiting for stop!")
+		stopStatusError = "Timeout waiting for stop!"
 	}
-	if e := cm.GetStopError(); e != nil {
-		panic(e)
+
+	stopError = cm.GetStopError()
+
+	if stopAsyncError == nil && stopStatusError == nil && stopError == nil {
+		if callersError != nil {
+			panic(callersError)
+		} else {
+			return
+		}
+	} else {
+		errs := [...]interface{}{
+			callersError,
+			stopAsyncError,
+			stopStatusError,
+			stopError,
+		}
+		panic(fmt.Sprintf("%v", errs))
 	}
 }
 
