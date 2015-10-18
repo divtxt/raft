@@ -78,6 +78,7 @@ func NewConsensusModule(
 		panic(emsg)
 	}
 
+	now := time.Now()
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.tickerDuration)
 
@@ -100,7 +101,7 @@ func NewConsensusModule(
 
 		// -- State
 		VolatileState{},
-		time.Now(), // temp value, to be replaced before goroutine start
+		now, // temp value, to be replaced before goroutine start
 		nil,
 
 		// -- Channels
@@ -113,7 +114,7 @@ func NewConsensusModule(
 	}
 
 	cm.chooseNewRandomElectionTimeout()
-	cm.resetElectionTimeoutTime()
+	cm.resetElectionTimeoutTime(now)
 
 	// Start the go routine
 	go cm.processor()
@@ -181,8 +182,8 @@ func (cm *ConsensusModule) chooseNewRandomElectionTimeout() {
 	cm.currentElectionTimeout = cm.electionTimeoutLow + time.Duration(rand.Int63n(int64(cm.electionTimeoutLow)+1))
 }
 
-func (cm *ConsensusModule) resetElectionTimeoutTime() {
-	cm.electionTimeoutTime = time.Now().Add(cm.currentElectionTimeout)
+func (cm *ConsensusModule) resetElectionTimeoutTime(now time.Time) {
+	cm.electionTimeoutTime = now.Add(cm.currentElectionTimeout)
 }
 
 func (cm *ConsensusModule) processor() {
@@ -243,7 +244,7 @@ func (cm *ConsensusModule) tick(now time.Time) {
 		// of time called the election timeout, then it assumes there is no
 		// viable leader and begins an election to choose a new leader.
 		if now.After(cm.electionTimeoutTime) {
-			cm.beginElection()
+			cm.beginElection(now)
 		}
 	case CANDIDATE:
 		// #5.2-p5s1: The third possible outcome is that a candidate neither
@@ -253,7 +254,7 @@ func (cm *ConsensusModule) tick(now time.Time) {
 		// start a new election by incrementing its term and initiating
 		// another round of RequestVote RPCs.
 		if now.After(cm.electionTimeoutTime) {
-			cm.beginElection()
+			cm.beginElection(now)
 		}
 		// TODO: else/and anything else?
 	case LEADER:
@@ -264,7 +265,7 @@ func (cm *ConsensusModule) tick(now time.Time) {
 	}
 }
 
-func (cm *ConsensusModule) beginElection() {
+func (cm *ConsensusModule) beginElection(now time.Time) {
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
@@ -286,5 +287,5 @@ func (cm *ConsensusModule) beginElection() {
 	}
 	// Reset election timeout!
 	cm.chooseNewRandomElectionTimeout()
-	cm.resetElectionTimeoutTime()
+	cm.resetElectionTimeoutTime(now)
 }
