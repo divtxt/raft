@@ -48,11 +48,11 @@ func ValidateServerIds(
 // These checks are basic sanity checks and currently don't include the
 // softer usefulness checks recommended by the raft protocol.
 func ValidateTimeSettings(timeSettings TimeSettings) string {
-	if timeSettings.tickerDuration.Nanoseconds() <= 0 {
-		return "tickerDuration must be greater than zero"
+	if timeSettings.TickerDuration.Nanoseconds() <= 0 {
+		return "TickerDuration must be greater than zero"
 	}
-	if timeSettings.electionTimeoutLow.Nanoseconds() <= timeSettings.tickerDuration.Nanoseconds() {
-		return "electionTimeoutLow must be greater than tickerDuration"
+	if timeSettings.ElectionTimeoutLow.Nanoseconds() <= timeSettings.TickerDuration.Nanoseconds() {
+		return "ElectionTimeoutLow must be greater than TickerDuration"
 	}
 
 	return ""

@@ -6,8 +6,8 @@ package raft
 
 func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries *AppendEntries) bool {
 
-	leaderCurrentTerm := appendEntries.term
-	prevLogIndex := appendEntries.prevLogIndex
+	leaderCurrentTerm := appendEntries.Term
+	prevLogIndex := appendEntries.PrevLogIndex
 	log := cm.log
 
 	// 1. Reply false if term < currentTerm (#5.1)
@@ -25,11 +25,11 @@ func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries *AppendEntrie
 	// but different terms), delete the existing entry and all that
 	// follow it (#5.3)
 	// 4. Append any new entries not already in the log
-	log.setEntriesAfterIndex(prevLogIndex, appendEntries.entries)
+	log.setEntriesAfterIndex(prevLogIndex, appendEntries.Entries)
 
 	// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit,
 	// index of last new entry)
-	leaderCommit := appendEntries.leaderCommit
+	leaderCommit := appendEntries.LeaderCommit
 	if leaderCommit > cm.volatileState.commitIndex {
 		indexOfLastNewEntry := log.getIndexOfLastEntry()
 		if leaderCommit < indexOfLastNewEntry {
