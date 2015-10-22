@@ -11,44 +11,44 @@ package raft
 
 type AppendEntries struct {
 	// - leader's term
-	term TermNo
+	Term TermNo
 
 	// leaderId
 
 	// - index of log entry immediately preceding new ones
-	prevLogIndex LogIndex
+	PrevLogIndex LogIndex
 
 	// - term of prevLogIndex entry
-	prevLogTerm TermNo
+	PrevLogTerm TermNo
 
 	// - log entries to store (empty for heartbeat; may send more than one ...)
 	// implied?: terms in these entries >= prevLogTerm
 	// implied?: term in each new entry >= term of previous entry
-	entries []LogEntry
+	Entries []LogEntry
 
 	// leader's commitIndex
-	leaderCommit LogIndex
+	LeaderCommit LogIndex
 }
 
 type AppendEntriesReply struct {
-	term    TermNo
-	success bool
+	Term    TermNo
+	Success bool
 }
 
 type RpcRequestVote struct {
 	// - candidate's term
-	term TermNo
+	Term TermNo
 
 	// candidateId
 
 	// - index of candidate's last log entry
-	lastLogIndex LogIndex
+	LastLogIndex LogIndex
 
 	// - term of candidate's last log entry
-	lastLogTerm TermNo
+	LastLogTerm TermNo
 }
 
 type RpcRequestVoteReply struct {
 	// term
-	voteGranted bool
+	VoteGranted bool
 }

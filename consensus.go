@@ -8,10 +8,10 @@ import (
 )
 
 type TimeSettings struct {
-	tickerDuration time.Duration
+	TickerDuration time.Duration
 
 	// Election timeout low value - 2x this value is used as high value.
-	electionTimeoutLow time.Duration
+	ElectionTimeoutLow time.Duration
 }
 
 const (
@@ -80,7 +80,7 @@ func NewConsensusModule(
 
 	now := time.Now()
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
-	ticker := time.NewTicker(timeSettings.tickerDuration)
+	ticker := time.NewTicker(timeSettings.TickerDuration)
 
 	cm := &ConsensusModule{
 		// -- External components
@@ -91,7 +91,7 @@ func NewConsensusModule(
 		// -- Config
 		thisServerId,
 		peerServerIds,
-		timeSettings.electionTimeoutLow,
+		timeSettings.ElectionTimeoutLow,
 		0, // temp value, to be replaced before goroutine start
 
 		// -- State

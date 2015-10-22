@@ -7,7 +7,7 @@ func (cm *ConsensusModule) _processRpc_RequestVoteReply(fromPeer ServerId, rpcRe
 
 	// #5.2-p3s1: A candidate wins an election if it receives votes from a
 	// majority of the servers in the full cluster for the same term.
-	if rpcRequestVoteReply.voteGranted {
+	if rpcRequestVoteReply.VoteGranted {
 		haveQuorum := cm.candidateVolatileState.addVoteFrom(fromPeer)
 		if haveQuorum {
 			cm.setServerState(LEADER)
