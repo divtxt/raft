@@ -61,6 +61,29 @@ func NewConsensusModule(
 	peerServerIds []ServerId,
 	timeSettings TimeSettings,
 ) *ConsensusModule {
+	cm, _ := newPassiveConsensusModule(
+		persistentState,
+		log,
+		rpcSender,
+		thisServerId,
+		peerServerIds,
+		timeSettings,
+	)
+
+	// Start the go routine
+	go cm.processor()
+
+	return cm
+}
+
+func newPassiveConsensusModule(
+	persistentState PersistentState,
+	log Log,
+	rpcSender RpcSender,
+	thisServerId ServerId,
+	peerServerIds []ServerId,
+	timeSettings TimeSettings,
+) (*ConsensusModule, time.Time) {
 	// Param checks
 	if persistentState == nil {
 		panic("'persistentState' cannot be nil")
@@ -116,10 +139,7 @@ func NewConsensusModule(
 	cm.chooseNewRandomElectionTimeout()
 	cm.resetElectionTimeoutTime(now)
 
-	// Start the go routine
-	go cm.processor()
-
-	return cm
+	return cm, now
 }
 
 // Check if the goroutine is stopped.
