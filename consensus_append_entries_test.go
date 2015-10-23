@@ -3,7 +3,6 @@ package raft
 import (
 	"reflect"
 	"testing"
-	"time"
 )
 
 func makeAEWithTerm(term TermNo) *AppendEntries {
@@ -16,14 +15,12 @@ func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm Term
 
 // 1. Reply false if term < currentTerm (#5.1)
 func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
-	follower, mrs := setupTestFollowerR2(t, nil)
-	defer follower.StopAsync()
-	followerTerm := follower.persistentState.GetCurrentTerm()
+	mcm, mrs := setupManagedConsensusModuleR2(t, nil)
+	followerTerm := mcm.cm.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
 
-	follower.ProcessRpcAsync("s2", appendEntries)
-	time.Sleep(testSleepToLetGoroutineRun)
+	mcm.cm.rpc("s2", appendEntries)
 
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
@@ -46,14 +43,12 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 // prevLogIndex since step 3 covers the alternate conflicting entry case.
 // Note: this test based on Figure 7, server (b)
 func TestRpcAENoMatchingLogEntry(t *testing.T) {
-	follower, mrs := setupTestFollowerR2(t, []TermNo{1, 1, 1, 4})
-	defer follower.StopAsync()
-	followerTerm := follower.persistentState.GetCurrentTerm()
+	mcm, mrs := setupManagedConsensusModuleR2(t, []TermNo{1, 1, 1, 4})
+	followerTerm := mcm.cm.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(testCurrentTerm, 10, 6)
 
-	follower.ProcessRpcAsync("s3", appendEntries)
-	time.Sleep(testSleepToLetGoroutineRun)
+	mcm.cm.rpc("s3", appendEntries)
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
 		t.Error()
@@ -79,15 +74,14 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 // Note: this test case based on Figure 7, case (e) in the Raft paper but adds
 // some extra entries to also test step 3
 func TestRpcAEAppendNewEntries(t *testing.T) {
-	follower, mrs := setupTestFollowerR2(
+	mcm, mrs := setupManagedConsensusModuleR2(
 		t,
 		[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
 	)
-	defer follower.StopAsync()
-	follower.volatileState.commitIndex = 3
-	followerTerm := follower.persistentState.GetCurrentTerm()
+	mcm.cm.volatileState.commitIndex = 3
+	followerTerm := mcm.cm.persistentState.GetCurrentTerm()
 
-	if follower.log.getLogEntryAtIndex(6).Command != "c6" {
+	if mcm.cm.log.getLogEntryAtIndex(6).Command != "c6" {
 		t.Error()
 	}
 
@@ -99,8 +93,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 
 	appendEntries := &AppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
 
-	follower.ProcessRpcAsync("s4", appendEntries)
-	time.Sleep(testSleepToLetGoroutineRun)
+	mcm.cm.rpc("s4", appendEntries)
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
 		t.Error()
@@ -114,10 +107,10 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 		t.Fatal(sentRpc.rpc, expectedRpc)
 	}
 
-	if iole := follower.log.getIndexOfLastEntry(); iole != 8 {
+	if iole := mcm.cm.log.getIndexOfLastEntry(); iole != 8 {
 		t.Fatal(iole)
 	}
-	addedLogEntry := follower.log.getLogEntryAtIndex(6)
+	addedLogEntry := mcm.cm.log.getLogEntryAtIndex(6)
 	if addedLogEntry.TermNo != 5 {
 		t.Error()
 	}
@@ -126,7 +119,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 	}
 
 	// FIXME: need to test permutations in step 5
-	if follower.volatileState.commitIndex != 7 {
+	if mcm.cm.volatileState.commitIndex != 7 {
 		t.Error()
 	}
 }
