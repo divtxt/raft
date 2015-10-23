@@ -2,47 +2,41 @@ package raft
 
 import (
 	"testing"
-	"time"
 )
 
 // #5.2-p3s1: A candidate wins an election if it receives votes from a
 // majority of the servers in the full cluster for the same term.
 func TestRpcRVR_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 	terms := testLogTerms_Figure7LeaderLine()
-	cm, mrs := setupTestFollowerR2(t, terms)
-	defer cm.stopAndCheckError()
+	mcm, mrs := setupManagedConsensusModuleR2(t, terms)
 
-	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
+	testCMFollowerStartsElectionOnElectionTimeout(t, mcm, mrs)
 
-	if cm.GetServerState() != CANDIDATE {
+	if mcm.cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s2 grants vote - should stay as candidate
-	cm.ProcessRpcAsync("s2", &RpcRequestVoteReply{true})
-	time.Sleep(testSleepToLetGoroutineRun)
-	if cm.GetServerState() != CANDIDATE {
+	mcm.cm.rpc("s2", &RpcRequestVoteReply{true})
+	if mcm.cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	cm.ProcessRpcAsync("s3", &RpcRequestVoteReply{false})
-	time.Sleep(testSleepToLetGoroutineRun)
-	if cm.GetServerState() != CANDIDATE {
+	mcm.cm.rpc("s3", &RpcRequestVoteReply{false})
+	if mcm.cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s4 grants vote - should become leader
-	cm.ProcessRpcAsync("s4", &RpcRequestVoteReply{true})
-	time.Sleep(testSleepToLetGoroutineRun)
-	if cm.GetServerState() != LEADER {
+	mcm.cm.rpc("s4", &RpcRequestVoteReply{true})
+	if mcm.cm.GetServerState() != LEADER {
 		t.Fatal()
 	}
 
 	// s5 grants vote - should stay leader
-	cm.ProcessRpcAsync("s5", &RpcRequestVoteReply{true})
-	time.Sleep(testSleepToLetGoroutineRun)
-	if cm.GetServerState() != LEADER {
+	mcm.cm.rpc("s5", &RpcRequestVoteReply{true})
+	if mcm.cm.GetServerState() != LEADER {
 		t.Fatal()
 	}
 }
@@ -55,31 +49,28 @@ func TestRpcRVR_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 // another round of RequestVote RPCs.
 func TestRpcRVR_StartNewElectionOnElectionTimeout(t *testing.T) {
 	terms := testLogTerms_Figure7LeaderLine()
-	cm, mrs := setupTestFollowerR2(t, terms)
-	defer cm.stopAndCheckError()
+	mcm, mrs := setupManagedConsensusModuleR2(t, terms)
 
-	testCMFollowerStartsElectionOnElectionTimeout(t, cm, mrs)
+	testCMFollowerStartsElectionOnElectionTimeout(t, mcm, mrs)
 
-	if cm.GetServerState() != CANDIDATE {
+	if mcm.cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s2 grants vote - should stay as candidate
-	cm.ProcessRpcAsync("s2", &RpcRequestVoteReply{true})
-	time.Sleep(testSleepToLetGoroutineRun)
-	if cm.GetServerState() != CANDIDATE {
+	mcm.cm.rpc("s2", &RpcRequestVoteReply{true})
+	if mcm.cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	cm.ProcessRpcAsync("s3", &RpcRequestVoteReply{false})
-	time.Sleep(testSleepToLetGoroutineRun)
-	if cm.GetServerState() != CANDIDATE {
+	mcm.cm.rpc("s3", &RpcRequestVoteReply{false})
+	if mcm.cm.GetServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// no more votes - election timeout causes a new election
-	testCMFollowerStartsElectionOnElectionTimeout_Part2(t, cm, mrs, testCurrentTerm+2)
+	testCMFollowerStartsElectionOnElectionTimeout_Part2(t, mcm, mrs, testCurrentTerm+2)
 	//
 	// time.Sleep(cm.currentElectionTimeout)
 	// if cm.persistentState.GetCurrentTerm() != testCurrentTerm+2 {
