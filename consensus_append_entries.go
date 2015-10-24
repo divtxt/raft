@@ -4,7 +4,7 @@
 
 package raft
 
-func (cm *ConsensusModule) _processRpc_AppendEntries(appendEntries *AppendEntries) bool {
+func (cm *passiveConsensusModule) _processRpc_AppendEntries(appendEntries *AppendEntries) bool {
 
 	leaderCurrentTerm := appendEntries.Term
 	prevLogIndex := appendEntries.PrevLogIndex

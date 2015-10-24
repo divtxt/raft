@@ -16,11 +16,11 @@ func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm Term
 // 1. Reply false if term < currentTerm (#5.1)
 func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 	mcm, mrs := setupManagedConsensusModuleR2(t, nil)
-	followerTerm := mcm.cm.persistentState.GetCurrentTerm()
+	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTerm(followerTerm - 1)
 
-	mcm.cm.rpc("s2", appendEntries)
+	mcm.pcm.rpc("s2", appendEntries)
 
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
@@ -44,11 +44,11 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 // Note: this test based on Figure 7, server (b)
 func TestRpcAENoMatchingLogEntry(t *testing.T) {
 	mcm, mrs := setupManagedConsensusModuleR2(t, []TermNo{1, 1, 1, 4})
-	followerTerm := mcm.cm.persistentState.GetCurrentTerm()
+	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(testCurrentTerm, 10, 6)
 
-	mcm.cm.rpc("s3", appendEntries)
+	mcm.pcm.rpc("s3", appendEntries)
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
 		t.Error()
@@ -78,10 +78,10 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 		t,
 		[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
 	)
-	mcm.cm.volatileState.commitIndex = 3
-	followerTerm := mcm.cm.persistentState.GetCurrentTerm()
+	mcm.pcm.volatileState.commitIndex = 3
+	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
-	if mcm.cm.log.getLogEntryAtIndex(6).Command != "c6" {
+	if mcm.pcm.log.getLogEntryAtIndex(6).Command != "c6" {
 		t.Error()
 	}
 
@@ -93,7 +93,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 
 	appendEntries := &AppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
 
-	mcm.cm.rpc("s4", appendEntries)
+	mcm.pcm.rpc("s4", appendEntries)
 	sentRpcs := mrs.getAllSortedByToServer()
 	if len(sentRpcs) != 1 {
 		t.Error()
@@ -107,10 +107,10 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 		t.Fatal(sentRpc.rpc, expectedRpc)
 	}
 
-	if iole := mcm.cm.log.getIndexOfLastEntry(); iole != 8 {
+	if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 8 {
 		t.Fatal(iole)
 	}
-	addedLogEntry := mcm.cm.log.getLogEntryAtIndex(6)
+	addedLogEntry := mcm.pcm.log.getLogEntryAtIndex(6)
 	if addedLogEntry.TermNo != 5 {
 		t.Error()
 	}
@@ -119,7 +119,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 	}
 
 	// FIXME: need to test permutations in step 5
-	if mcm.cm.volatileState.commitIndex != 7 {
+	if mcm.pcm.volatileState.commitIndex != 7 {
 		t.Error()
 	}
 }
