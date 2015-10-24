@@ -12,31 +12,31 @@ func TestRpcRVR_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 
 	testCMFollowerStartsElectionOnElectionTimeout(t, mcm, mrs)
 
-	if mcm.cm.GetServerState() != CANDIDATE {
+	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s2 grants vote - should stay as candidate
-	mcm.cm.rpc("s2", &RpcRequestVoteReply{true})
-	if mcm.cm.GetServerState() != CANDIDATE {
+	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
+	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.cm.rpc("s3", &RpcRequestVoteReply{false})
-	if mcm.cm.GetServerState() != CANDIDATE {
+	mcm.pcm.rpc("s3", &RpcRequestVoteReply{false})
+	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s4 grants vote - should become leader
-	mcm.cm.rpc("s4", &RpcRequestVoteReply{true})
-	if mcm.cm.GetServerState() != LEADER {
+	mcm.pcm.rpc("s4", &RpcRequestVoteReply{true})
+	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
 
 	// s5 grants vote - should stay leader
-	mcm.cm.rpc("s5", &RpcRequestVoteReply{true})
-	if mcm.cm.GetServerState() != LEADER {
+	mcm.pcm.rpc("s5", &RpcRequestVoteReply{true})
+	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
 }
@@ -53,19 +53,19 @@ func TestRpcRVR_StartNewElectionOnElectionTimeout(t *testing.T) {
 
 	testCMFollowerStartsElectionOnElectionTimeout(t, mcm, mrs)
 
-	if mcm.cm.GetServerState() != CANDIDATE {
+	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s2 grants vote - should stay as candidate
-	mcm.cm.rpc("s2", &RpcRequestVoteReply{true})
-	if mcm.cm.GetServerState() != CANDIDATE {
+	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
+	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.cm.rpc("s3", &RpcRequestVoteReply{false})
-	if mcm.cm.GetServerState() != CANDIDATE {
+	mcm.pcm.rpc("s3", &RpcRequestVoteReply{false})
+	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
@@ -76,7 +76,7 @@ func TestRpcRVR_StartNewElectionOnElectionTimeout(t *testing.T) {
 	// if cm.persistentState.GetCurrentTerm() != testCurrentTerm+2 {
 	//     t.Fatal()
 	// }
-	// if cm.GetServerState() != CANDIDATE {
+	// if cm.getServerState() != CANDIDATE {
 	//     t.Fatal()
 	// }
 	// // candidate has voted for itself

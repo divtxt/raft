@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -23,26 +22,6 @@ const (
 )
 
 var testPeerIds = []ServerId{"s2", "s3", "s4", "s5"}
-
-func setupTestFollower(t *testing.T, logTerms []TermNo) *ConsensusModule {
-	cm, _ := setupTestFollowerR2(t, logTerms)
-	return cm
-}
-
-func setupTestFollowerR2(
-	t *testing.T,
-	logTerms []TermNo,
-) (*ConsensusModule, *mockRpcSender) {
-	ps := newIMPSWithCurrentTerm(testCurrentTerm)
-	imle := newIMLEWithDummyCommands(logTerms)
-	mrs := newMockRpcSender()
-	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}
-	cm := NewConsensusModule(ps, imle, mrs, testServerId, testPeerIds, ts)
-	if cm == nil {
-		t.Fatal()
-	}
-	return cm, mrs
-}
 
 func setupManagedConsensusModule(t *testing.T, logTerms []TermNo) *managedConsensusModule {
 	cm, _ := setupManagedConsensusModuleR2(t, logTerms)
@@ -67,90 +46,12 @@ func setupManagedConsensusModuleR2(
 	return mcm, mrs
 }
 
-func (cm *ConsensusModule) stopAsyncWithRecover() (e interface{}) {
-	defer func() {
-		e = recover()
-	}()
-	cm.StopAsync()
-	return nil
-}
-
-func (cm *ConsensusModule) stopAndCheckError() {
-	var callersError, stopAsyncError, stopStatusError, stopError interface{}
-
-	callersError = recover()
-
-	stopAsyncError = cm.stopAsyncWithRecover()
-
-	time.Sleep(testSleepToLetGoroutineRun)
-	if !cm.IsStopped() {
-		stopStatusError = "Timeout waiting for stop!"
-	}
-
-	stopError = cm.GetStopError()
-
-	if stopAsyncError == nil && stopStatusError == nil && stopError == nil {
-		if callersError != nil {
-			panic(callersError)
-		} else {
-			return
-		}
-	} else {
-		errs := [...]interface{}{
-			callersError,
-			stopAsyncError,
-			stopStatusError,
-			stopError,
-		}
-		panic(fmt.Sprintf("%v", errs))
-	}
-}
-
 // #5.2-p1s2: When servers start up, they begin as followers
 func TestCMStartsAsFollower(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 
-	if mcm.cm.GetServerState() != FOLLOWER {
+	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
-	}
-}
-
-func TestCMStop(t *testing.T) {
-	cm := setupTestFollower(t, nil)
-
-	if cm.IsStopped() {
-		t.Error()
-	}
-
-	cm.StopAsync()
-	time.Sleep(testSleepToLetGoroutineRun)
-
-	if !cm.IsStopped() {
-		t.Error()
-	}
-	if cm.GetStopError() != nil {
-		t.Error()
-	}
-}
-
-func TestCMUnknownRpcTypeStopsCM(t *testing.T) {
-	cm := setupTestFollower(t, nil)
-
-	if cm.IsStopped() {
-		t.Error()
-	}
-
-	cm.ProcessRpcAsync("s2", &struct{ int }{42})
-	time.Sleep(testSleepToLetGoroutineRun)
-
-	if !cm.IsStopped() {
-		cm.StopAsync()
-		t.Fatal()
-	}
-
-	e := cm.GetStopError()
-	if e != "FATAL: unknown rpc type: *struct { int }" {
-		t.Error(e)
 	}
 }
 
@@ -163,7 +64,7 @@ func TestCMUnknownRpcTypePanics(t *testing.T) {
 		}
 	}()
 
-	mcm.cm.rpc("s2", &struct{ int }{42})
+	mcm.pcm.rpc("s2", &struct{ int }{42})
 	t.Fatal()
 }
 
@@ -176,14 +77,14 @@ func TestCMSetServerStateBadServerStatePanics(t *testing.T) {
 		}
 	}()
 
-	mcm.cm.setServerState(42)
+	mcm.pcm.setServerState(42)
 	t.Fatal()
 }
 
 func TestCMBadServerStatePanicsTick(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 
-	mcm.cm.serverState = 42
+	mcm.pcm.serverState = 42
 
 	defer func() {
 		if r := recover(); r != "FATAL: unknown ServerState: 42" {
@@ -214,22 +115,22 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 	mrs *mockRpcSender,
 ) {
 
-	if mcm.cm.GetServerState() != FOLLOWER {
+	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
-	if mcm.cm.persistentState.GetVotedFor() != "" {
+	if mcm.pcm.persistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
-	if mcm.cm.currentElectionTimeout < testElectionTimeoutLow || mcm.cm.currentElectionTimeout > 2*testElectionTimeoutLow {
+	if mcm.pcm.currentElectionTimeout < testElectionTimeoutLow || mcm.pcm.currentElectionTimeout > 2*testElectionTimeoutLow {
 		t.Fatal()
 	}
 
 	// Test that a tick before election timeout causes no state change.
 	mcm.tick()
-	if mcm.cm.persistentState.GetCurrentTerm() != testCurrentTerm {
+	if mcm.pcm.persistentState.GetCurrentTerm() != testCurrentTerm {
 		t.Fatal()
 	}
-	if mcm.cm.GetServerState() != FOLLOWER {
+	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
 
@@ -245,14 +146,14 @@ func testCMFollowerStartsElectionOnElectionTimeout_Part2(
 
 	// Test that election timeout causes a new election
 	mcm.tickTilElectionTimeout()
-	if mcm.cm.persistentState.GetCurrentTerm() != expectedNewTerm {
-		t.Fatal(expectedNewTerm, mcm.cm.persistentState.GetCurrentTerm())
+	if mcm.pcm.persistentState.GetCurrentTerm() != expectedNewTerm {
+		t.Fatal(expectedNewTerm, mcm.pcm.persistentState.GetCurrentTerm())
 	}
-	if mcm.cm.GetServerState() != CANDIDATE {
+	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 	// candidate has voted for itself
-	if mcm.cm.persistentState.GetVotedFor() != testServerId {
+	if mcm.pcm.persistentState.GetVotedFor() != testServerId {
 		t.Fatal()
 	}
 
@@ -264,10 +165,10 @@ func testCMFollowerStartsElectionOnElectionTimeout_Part2(
 		t.Error()
 	}
 
-	lastLogIndex := mcm.cm.log.getIndexOfLastEntry()
+	lastLogIndex := mcm.pcm.log.getIndexOfLastEntry()
 	var lastLogTerm TermNo = 0
 	if lastLogIndex > 0 {
-		lastLogTerm = mcm.cm.log.getTermAtIndex(lastLogIndex)
+		lastLogTerm = mcm.pcm.log.getTermAtIndex(lastLogIndex)
 	}
 
 	expectedRpc := &RpcRequestVote{expectedNewTerm, lastLogIndex, lastLogTerm}
@@ -301,24 +202,24 @@ func TestCMFollowerStartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
 // of time with helper methods. This simplifies tests and avoids concurrency
 // issues with inspecting the internals.
 type managedConsensusModule struct {
-	cm  *ConsensusModule
+	pcm *passiveConsensusModule
 	now time.Time
 }
 
 func (mcm *managedConsensusModule) tick() {
-	mcm.cm.tick(mcm.now)
+	mcm.pcm.tick(mcm.now)
 	mcm.now = mcm.now.Add(testTickerDuration)
 }
 
 func (mcm *managedConsensusModule) tickTilElectionTimeout() {
-	electionTimeoutTime := mcm.cm.electionTimeoutTime
+	electionTimeoutTime := mcm.pcm.electionTimeoutTime
 	for {
 		mcm.tick()
 		if mcm.now.After(electionTimeoutTime) {
 			break
 		}
 	}
-	if mcm.cm.electionTimeoutTime != electionTimeoutTime {
+	if mcm.pcm.electionTimeoutTime != electionTimeoutTime {
 		panic("electionTimeoutTime changed!")
 	}
 	// Because tick() increments "now" after calling tick(),

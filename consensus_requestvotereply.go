@@ -3,7 +3,7 @@
 
 package raft
 
-func (cm *ConsensusModule) _processRpc_RequestVoteReply(fromPeer ServerId, rpcRequestVoteReply *RpcRequestVoteReply) {
+func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(fromPeer ServerId, rpcRequestVoteReply *RpcRequestVoteReply) {
 
 	// #5.2-p3s1: A candidate wins an election if it receives votes from a
 	// majority of the servers in the full cluster for the same term.
