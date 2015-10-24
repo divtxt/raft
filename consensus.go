@@ -34,7 +34,7 @@ type passiveConsensusModule struct {
 	serverState ServerState
 
 	// -- State - these fields meant for single-threaded access
-	volatileState          VolatileState
+	volatileState          volatileState
 	electionTimeoutTime    time.Time
 	candidateVolatileState *candidateVolatileState
 }
@@ -83,7 +83,7 @@ func newPassiveConsensusModule(
 		FOLLOWER,
 
 		// -- State
-		VolatileState{},
+		volatileState{},
 		now, // temp value, to be replaced before goroutine start
 		nil,
 	}
