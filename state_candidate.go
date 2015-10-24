@@ -1,15 +1,15 @@
 package raft
 
 // Volatile state on candidates
-type CandidateVolatileState struct {
+type candidateVolatileState struct {
 	receivedVotes uint
 	requiredVotes uint
 	votedPeers    map[ServerId]bool
 }
 
 // New instance set up for a fresh election
-func newCandidateVolatileState(peerServerIds []ServerId) *CandidateVolatileState {
-	cvs := &CandidateVolatileState{}
+func newCandidateVolatileState(peerServerIds []ServerId) *candidateVolatileState {
+	cvs := &candidateVolatileState{}
 
 	var clusterSize uint
 	clusterSize = (uint)(len(peerServerIds) + 1)
@@ -27,7 +27,7 @@ func newCandidateVolatileState(peerServerIds []ServerId) *CandidateVolatileState
 
 // Add a granted vote.
 // Returns true if quorum has been achieved
-func (cvs *CandidateVolatileState) addVoteFrom(peerId ServerId) bool {
+func (cvs *candidateVolatileState) addVoteFrom(peerId ServerId) bool {
 	if !cvs.votedPeers[peerId] {
 		cvs.votedPeers[peerId] = true
 		cvs.receivedVotes++

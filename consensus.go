@@ -36,7 +36,7 @@ type passiveConsensusModule struct {
 	// -- State - these fields meant for single-threaded access
 	volatileState          VolatileState
 	electionTimeoutTime    time.Time
-	candidateVolatileState *CandidateVolatileState
+	candidateVolatileState *candidateVolatileState
 }
 
 func newPassiveConsensusModule(
