@@ -56,3 +56,7 @@ func TestCandidateVolatileState_3nodes(t *testing.T) {
 		t.Fatal()
 	}
 }
+
+// TODO: vote from self should panic
+
+// TODO: vote from non-member should panic or be ignored?
