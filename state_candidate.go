@@ -28,13 +28,9 @@ func newCandidateVolatileState(peerServerIds []ServerId) *CandidateVolatileState
 // Add a granted vote.
 // Returns true if quorum has been achieved
 func (cvs *CandidateVolatileState) addVoteFrom(peerId ServerId) bool {
-
-	if cvs.votedPeers[peerId] {
-		// FIXME
-		panic("this peer has already voted!")
-	} else {
+	if !cvs.votedPeers[peerId] {
 		cvs.votedPeers[peerId] = true
 		cvs.receivedVotes++
-		return cvs.receivedVotes >= cvs.requiredVotes
 	}
+	return cvs.receivedVotes >= cvs.requiredVotes
 }

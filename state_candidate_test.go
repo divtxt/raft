@@ -20,6 +20,11 @@ func TestCandidateVolatileState(t *testing.T) {
 		t.Fatal()
 	}
 
+	// Duplicate vote - no error and no quorum yet
+	if cvs.addVoteFrom("s2") {
+		t.Fatal()
+	}
+
 	// Add 2nd vote - should be at quorum
 	if !cvs.addVoteFrom("s3") {
 		t.Fatal()
@@ -32,6 +37,11 @@ func TestCandidateVolatileState(t *testing.T) {
 	if !cvs.addVoteFrom("s5") {
 		t.Fatal()
 	}
+	// Another duplicate vote - no error and stay at quorum
+	if !cvs.addVoteFrom("s3") {
+		t.Fatal()
+	}
+
 }
 
 func TestCandidateVolatileState_3nodes(t *testing.T) {
