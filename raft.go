@@ -96,13 +96,9 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 // This method sends the rpc to the ConsensusModule's goroutine.
 // Sending an unknown or unexpected rpc message will cause the
 // ConsensusModule goroutine to panic and stop.
+// TODO: behavior when channel full?
 func (cm *ConsensusModule) ProcessRpcAsync(from ServerId, rpc interface{}) {
-	select {
-	case cm.rpcChannel <- rpcTuple{from, rpc}:
-	default:
-		// FIXME
-		panic("oops! rpcChannel is full!")
-	}
+	cm.rpcChannel <- rpcTuple{from, rpc}
 }
 
 // -- protected methods
