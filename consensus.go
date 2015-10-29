@@ -133,6 +133,12 @@ func (cm *passiveConsensusModule) rpc(from ServerId, rpc interface{}) {
 			success,
 		}
 		cm.rpcSender.SendAsync(from, reply)
+	case *RpcRequestVote:
+		success := cm._processRpc_RequestVote(from, rpc)
+		reply := &RpcRequestVoteReply{
+			success,
+		}
+		cm.rpcSender.SendAsync(from, reply)
 	case *RpcRequestVoteReply:
 		cm._processRpc_RequestVoteReply(from, rpc)
 	default:
