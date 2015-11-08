@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-func setupTestFollower(t *testing.T, logTerms []TermNo) *ConsensusModule {
-	cm, _ := setupTestFollowerR2(t, logTerms)
+func setupConsensusModule(t *testing.T, logTerms []TermNo) *ConsensusModule {
+	cm, _ := setupConsensusModuleR2(t, logTerms)
 	return cm
 }
 
-func setupTestFollowerR2(
+func setupConsensusModuleR2(
 	t *testing.T,
 	logTerms []TermNo,
 ) (*ConsensusModule, *mockRpcSender) {
@@ -65,8 +65,15 @@ func (cm *ConsensusModule) stopAndCheckError() {
 	}
 }
 
-func TestCMStop(t *testing.T) {
-	cm := setupTestFollower(t, nil)
+func TestCMStartStateAndStop(t *testing.T) {
+	cm := setupConsensusModule(t, nil)
+
+	// #5.2-p1s2: When servers start up, they begin as followers
+	if cm.GetServerState() != FOLLOWER {
+		t.Fatal()
+	}
+
+	time.Sleep(testSleepJustMoreThanATick)
 
 	if cm.IsStopped() {
 		t.Error()
@@ -84,7 +91,7 @@ func TestCMStop(t *testing.T) {
 }
 
 func TestCMUnknownRpcTypeStopsCM(t *testing.T) {
-	cm := setupTestFollower(t, nil)
+	cm := setupConsensusModule(t, nil)
 
 	if cm.IsStopped() {
 		t.Error()
