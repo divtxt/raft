@@ -114,7 +114,6 @@ func (cm *ConsensusModule) processor() {
 		// Clean up things
 		close(cm.rpcChannel)
 		cm.ticker.Stop()
-		// TODO: call stop event listener(s)
 	}()
 
 loop:
