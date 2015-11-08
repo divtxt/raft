@@ -1,5 +1,9 @@
 package raft
 
+import (
+	"fmt"
+)
+
 // Volatile state on candidates
 type candidateVolatileState struct {
 	receivedVotes uint
@@ -28,7 +32,11 @@ func newCandidateVolatileState(peerServerIds []ServerId) *candidateVolatileState
 // Add a granted vote.
 // Returns true if quorum has been achieved
 func (cvs *candidateVolatileState) addVoteFrom(peerId ServerId) bool {
-	if !cvs.votedPeers[peerId] {
+	voted, ok := cvs.votedPeers[peerId]
+	if !ok {
+		panic(fmt.Sprintf("candidateVolatileState.addVoteFrom(): unknown peer: %v", peerId))
+	}
+	if !voted {
 		cvs.votedPeers[peerId] = true
 		cvs.receivedVotes++
 	}
