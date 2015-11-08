@@ -57,6 +57,13 @@ func TestCandidateVolatileState_3nodes(t *testing.T) {
 	}
 }
 
-// TODO: vote from self should panic
-
-// TODO: vote from non-member should panic or be ignored?
+func TestCandidateVolatileState_VoteFromNonMemberPanics(t *testing.T) {
+	cvs := newCandidateVolatileState([]ServerId{"peer2", "peer3"})
+	defer func() {
+		if r := recover(); r != "candidateVolatileState.addVoteFrom(): unknown peer: peer4" {
+			t.Error(r)
+		}
+	}()
+	cvs.addVoteFrom("peer4")
+	t.Fatal()
+}
