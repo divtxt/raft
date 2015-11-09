@@ -35,7 +35,7 @@ func LogBlackboxTest(t *testing.T, log Log) {
 	var logEntries []LogEntry
 
 	// set test - invalid index
-	logEntries = []LogEntry{LogEntry{8, "c12"}}
+	logEntries = []LogEntry{{8, "c12"}}
 	{
 		stopThePanic := true
 		defer func() {
@@ -51,7 +51,7 @@ func LogBlackboxTest(t *testing.T, log Log) {
 	}
 
 	// set test - no replacing
-	logEntries = []LogEntry{LogEntry{7, "c11"}, LogEntry{8, "c12"}}
+	logEntries = []LogEntry{{7, "c11"}, {8, "c12"}}
 	log.setEntriesAfterIndex(10, logEntries)
 	if log.getIndexOfLastEntry() != 12 {
 		t.Fatal()
@@ -62,7 +62,7 @@ func LogBlackboxTest(t *testing.T, log Log) {
 	}
 
 	// set test - partial replacing
-	logEntries = []LogEntry{LogEntry{7, "c11"}, LogEntry{9, "c12"}, LogEntry{9, "c13'"}}
+	logEntries = []LogEntry{{7, "c11"}, {9, "c12"}, {9, "c13'"}}
 	log.setEntriesAfterIndex(10, logEntries)
 	if log.getIndexOfLastEntry() != 13 {
 		t.Fatal()

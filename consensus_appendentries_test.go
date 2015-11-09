@@ -86,9 +86,9 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 	}
 
 	sentLogEntries := []LogEntry{
-		LogEntry{5, "c6'"},
-		LogEntry{5, "c7'"},
-		LogEntry{6, "c8'"},
+		{5, "c6'"},
+		{5, "c7'"},
+		{6, "c8'"},
 	}
 
 	appendEntries := &RpcAppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
