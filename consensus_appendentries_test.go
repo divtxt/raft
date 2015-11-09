@@ -5,12 +5,12 @@ import (
 	"testing"
 )
 
-func makeAEWithTerm(term TermNo) *AppendEntries {
-	return &AppendEntries{term, 0, 0, nil, 0}
+func makeAEWithTerm(term TermNo) *RpcAppendEntries {
+	return &RpcAppendEntries{term, 0, 0, nil, 0}
 }
 
-func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm TermNo) *AppendEntries {
-	return &AppendEntries{term, prevli, prevterm, nil, 0}
+func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm TermNo) *RpcAppendEntries {
+	return &RpcAppendEntries{term, prevli, prevterm, nil, 0}
 }
 
 // 1. Reply false if term < currentTerm (#5.1)
@@ -30,7 +30,7 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 	if sentRpc.toServer != "s2" {
 		t.Error()
 	}
-	expectedRpc := &AppendEntriesReply{followerTerm, false}
+	expectedRpc := &RpcAppendEntriesReply{followerTerm, false}
 	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
 		t.Fatal(sentRpc.rpc, expectedRpc)
 	}
@@ -57,7 +57,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 	if sentRpc.toServer != "s3" {
 		t.Error()
 	}
-	expectedRpc := &AppendEntriesReply{followerTerm, false}
+	expectedRpc := &RpcAppendEntriesReply{followerTerm, false}
 	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
 		t.Fatal(sentRpc.rpc, expectedRpc)
 	}
@@ -91,7 +91,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 		LogEntry{6, "c8'"},
 	}
 
-	appendEntries := &AppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
+	appendEntries := &RpcAppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
 
 	mcm.pcm.rpc("s4", appendEntries)
 	sentRpcs := mrs.getAllSortedByToServer()
@@ -102,7 +102,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 	if sentRpc.toServer != "s4" {
 		t.Error()
 	}
-	expectedRpc := &AppendEntriesReply{followerTerm, true}
+	expectedRpc := &RpcAppendEntriesReply{followerTerm, true}
 	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
 		t.Fatal(sentRpc.rpc, expectedRpc)
 	}
