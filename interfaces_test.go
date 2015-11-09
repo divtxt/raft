@@ -136,7 +136,7 @@ func TestMockRpcSender(t *testing.T) {
 
 	actual := mrs.getAllSortedByToServer()
 
-	expected := []mockSentRpc{mockSentRpc{"s1", 42}, mockSentRpc{"s2", "foo"}}
+	expected := []mockSentRpc{{"s1", 42}, {"s2", "foo"}}
 
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatal()
