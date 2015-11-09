@@ -118,8 +118,58 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 		t.Error()
 	}
 
-	// FIXME: need to test permutations in step 5
 	if mcm.pcm.volatileState.commitIndex != 7 {
+		t.Error()
+	}
+}
+
+// Variant of TestRpcAEAppendNewEntries to test alternate path for step 5.
+// Note: this test case based on Figure 7, case (b) in the Raft paper
+func TestRpcAEAppendNewEntriesB(t *testing.T) {
+	mcm, mrs := setupManagedConsensusModuleR2(
+		t,
+		[]TermNo{1, 1, 1, 4},
+	)
+	mcm.pcm.volatileState.commitIndex = 3
+	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+	if mcm.pcm.log.getLogEntryAtIndex(4).Command != "c4" {
+		t.Error()
+	}
+
+	sentLogEntries := []LogEntry{
+		{4, "c5'"},
+		{5, "c6'"},
+	}
+
+	appendEntries := &RpcAppendEntries{testCurrentTerm, 4, 4, sentLogEntries, 7}
+
+	mcm.pcm.rpc("s4", appendEntries)
+	sentRpcs := mrs.getAllSortedByToServer()
+	if len(sentRpcs) != 1 {
+		t.Error()
+	}
+	sentRpc := sentRpcs[0]
+	if sentRpc.toServer != "s4" {
+		t.Error()
+	}
+	expectedRpc := &RpcAppendEntriesReply{followerTerm, true}
+	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
+		t.Fatal(sentRpc.rpc, expectedRpc)
+	}
+
+	if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 6 {
+		t.Fatal(iole)
+	}
+	addedLogEntry := mcm.pcm.log.getLogEntryAtIndex(6)
+	if addedLogEntry.TermNo != 5 {
+		t.Error()
+	}
+	if addedLogEntry.Command != "c6'" {
+		t.Error()
+	}
+
+	if mcm.pcm.volatileState.commitIndex != 6 {
 		t.Error()
 	}
 }

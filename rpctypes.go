@@ -27,6 +27,7 @@ type RpcAppendEntries struct {
 	Entries []LogEntry
 
 	// leader's commitIndex
+	// implied?: LeaderCommit >= PrevLogIndex
 	LeaderCommit LogIndex
 }
 
