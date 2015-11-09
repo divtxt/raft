@@ -9,7 +9,7 @@
 
 package raft
 
-type AppendEntries struct {
+type RpcAppendEntries struct {
 	// - leader's term
 	Term TermNo
 
@@ -30,7 +30,7 @@ type AppendEntries struct {
 	LeaderCommit LogIndex
 }
 
-type AppendEntriesReply struct {
+type RpcAppendEntriesReply struct {
 	Term    TermNo
 	Success bool
 }

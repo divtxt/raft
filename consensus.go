@@ -126,9 +126,9 @@ type rpcTuple struct {
 func (cm *passiveConsensusModule) rpc(from ServerId, rpc interface{}) {
 	switch rpc := rpc.(type) {
 
-	case *AppendEntries:
+	case *RpcAppendEntries:
 		success := cm._processRpc_AppendEntries(rpc)
-		reply := &AppendEntriesReply{
+		reply := &RpcAppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(),
 			success,
 		}
