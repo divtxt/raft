@@ -71,16 +71,4 @@ func TestRpcRVR_StartNewElectionOnElectionTimeout(t *testing.T) {
 
 	// no more votes - election timeout causes a new election
 	testCMFollowerStartsElectionOnElectionTimeout_Part2(t, mcm, mrs, testCurrentTerm+2)
-	//
-	// time.Sleep(cm.currentElectionTimeout)
-	// if cm.persistentState.GetCurrentTerm() != testCurrentTerm+2 {
-	//     t.Fatal()
-	// }
-	// if cm.getServerState() != CANDIDATE {
-	//     t.Fatal()
-	// }
-	// // candidate has voted for itself
-	// if cm.persistentState.GetVotedFor() != testServerId {
-	//     t.Fatal()
-	// }
 }
