@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"reflect"
 	"testing"
 	"time"
 )
@@ -16,16 +15,13 @@ const (
 
 	testSleepToLetGoroutineRun = 3 * time.Millisecond
 	testSleepJustMoreThanATick = testTickerDuration + testSleepToLetGoroutineRun
-
-	// because Sleep(testSleepToLetGoroutineRun) can take a bit longer
-	testElectionTimeoutFuzz = testSleepToLetGoroutineRun + (time.Millisecond * 3 / 2)
 )
 
 var testPeerIds = []ServerId{"s2", "s3", "s4", "s5"}
 
 func setupManagedConsensusModule(t *testing.T, logTerms []TermNo) *managedConsensusModule {
-	cm, _ := setupManagedConsensusModuleR2(t, logTerms)
-	return cm
+	mcm, _ := setupManagedConsensusModuleR2(t, logTerms)
+	return mcm
 }
 
 func setupManagedConsensusModuleR2(
@@ -47,7 +43,7 @@ func setupManagedConsensusModuleR2(
 }
 
 // #5.2-p1s2: When servers start up, they begin as followers
-func TestCMStartsAsFollower(t *testing.T) {
+func TestCM_StartsAsFollower(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 
 	if mcm.pcm.getServerState() != FOLLOWER {
@@ -55,7 +51,7 @@ func TestCMStartsAsFollower(t *testing.T) {
 	}
 }
 
-func TestCMUnknownRpcTypePanics(t *testing.T) {
+func TestCM_UnknownRpcTypePanics(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 
 	defer func() {
@@ -68,7 +64,7 @@ func TestCMUnknownRpcTypePanics(t *testing.T) {
 	t.Fatal()
 }
 
-func TestCMSetServerStateBadServerStatePanics(t *testing.T) {
+func TestCM_SetServerStateBadServerStatePanics(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 
 	defer func() {
@@ -81,7 +77,7 @@ func TestCMSetServerStateBadServerStatePanics(t *testing.T) {
 	t.Fatal()
 }
 
-func TestCMBadServerStatePanicsTick(t *testing.T) {
+func TestCM_BadServerStatePanicsTick(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 
 	mcm.pcm.serverState = 42
@@ -109,7 +105,7 @@ func TestCMBadServerStatePanicsTick(t *testing.T) {
 // to each of the other servers in the cluster.
 // #5.2-p6s2: ..., election timeouts are chosen randomly from a fixed
 // interval (e.g., 150-300ms)
-func testCMFollowerStartsElectionOnElectionTimeout(
+func testCM_Follower_StartsElectionOnElectionTimeout(
 	t *testing.T,
 	mcm *managedConsensusModule,
 	mrs *mockRpcSender,
@@ -134,16 +130,15 @@ func testCMFollowerStartsElectionOnElectionTimeout(
 		t.Fatal()
 	}
 
-	testCMFollowerStartsElectionOnElectionTimeout_Part2(t, mcm, mrs, testCurrentTerm+1)
+	testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(t, mcm, mrs, testCurrentTerm+1)
 }
 
-func testCMFollowerStartsElectionOnElectionTimeout_Part2(
+func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	t *testing.T,
 	mcm *managedConsensusModule,
 	mrs *mockRpcSender,
 	expectedNewTerm TermNo,
 ) {
-
 	// Test that election timeout causes a new election
 	mcm.tickTilElectionTimeout()
 	if mcm.pcm.persistentState.GetCurrentTerm() != expectedNewTerm {
@@ -158,44 +153,35 @@ func testCMFollowerStartsElectionOnElectionTimeout_Part2(
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-
-	sentRpcs := mrs.getAllSortedByToServer()
-
-	if len(sentRpcs) != len(testPeerIds) {
-		t.Error()
-	}
-
 	lastLogIndex := mcm.pcm.log.getIndexOfLastEntry()
 	var lastLogTerm TermNo = 0
 	if lastLogIndex > 0 {
 		lastLogTerm = mcm.pcm.log.getTermAtIndex(lastLogIndex)
 	}
-
 	expectedRpc := &RpcRequestVote{expectedNewTerm, lastLogIndex, lastLogTerm}
-
-	for i, peerId := range testPeerIds {
-		sentRpc := sentRpcs[i]
-		if sentRpc.toServer != peerId {
-			t.Error()
-		}
-		if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
-			t.Fatal(sentRpc.rpc, expectedRpc)
-		}
+	expectedRpcs := []mockSentRpc{
+		{"s2", expectedRpc},
+		{"s3", expectedRpc},
+		{"s4", expectedRpc},
+		{"s5", expectedRpc},
 	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
-func TestCMFollowerStartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
+func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 	mcm, mrs := setupManagedConsensusModuleR2(t, nil)
-
-	testCMFollowerStartsElectionOnElectionTimeout(t, mcm, mrs)
+	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
 }
 
-func TestCMFollowerStartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
-	// Log with 10 entries with terms as shown in Figure 7, leader line
-	terms := testLogTerms_Figure7LeaderLine()
+func testSetupCM_Candidate_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+	terms := makeLogTerms_Figure7LeaderLine()
 	mcm, mrs := setupManagedConsensusModuleR2(t, terms)
+	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
+	return mcm, mrs
+}
 
-	testCMFollowerStartsElectionOnElectionTimeout(t, mcm, mrs)
+func TestCM_Follower_StartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
+	testSetupCM_Candidate_Figure7LeaderLine(t)
 }
 
 // For most tests, we'll use a passive CM where we control the progress
