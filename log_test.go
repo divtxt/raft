@@ -8,13 +8,13 @@ import (
 )
 
 // Log with 10 entries with terms as shown in Figure 7, leader line
-func testLogTerms_Figure7LeaderLine() []TermNo {
+func makeLogTerms_Figure7LeaderLine() []TermNo {
 	return []TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6, 6}
 }
 
 // Blackbox test
 // Send a Log with 10 entries with terms as shown in Figure 7, leader line
-func LogBlackboxTest(t *testing.T, log Log) {
+func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	// Initial data tests
 	if log.getIndexOfLastEntry() != 10 {
 		t.Fatal()
@@ -134,7 +134,7 @@ func newIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {
 // Run the blackbox test on inMemoryLog
 func TestInMemoryLogEntries(t *testing.T) {
 	// Log with 10 entries with terms as shown in Figure 7, leader line
-	terms := testLogTerms_Figure7LeaderLine()
+	terms := makeLogTerms_Figure7LeaderLine()
 	imle := newIMLEWithDummyCommands(terms)
-	LogBlackboxTest(t, imle)
+	PartialTest_Log_BlackboxTest(t, imle)
 }

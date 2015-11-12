@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -14,7 +13,7 @@ func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm Term
 }
 
 // 1. Reply false if term < currentTerm (#5.1)
-func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
+func TestCM_RpcAE_Follower_LeaderTermLessThanCurrentTerm(t *testing.T) {
 	mcm, mrs := setupManagedConsensusModuleR2(t, nil)
 	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
@@ -22,18 +21,11 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 
 	mcm.pcm.rpc("s2", appendEntries)
 
-	sentRpcs := mrs.getAllSortedByToServer()
-	if len(sentRpcs) != 1 {
-		t.Error(len(sentRpcs))
-	}
-	sentRpc := sentRpcs[0]
-	if sentRpc.toServer != "s2" {
-		t.Error()
-	}
 	expectedRpc := &RpcAppendEntriesReply{followerTerm, false}
-	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
-		t.Fatal(sentRpc.rpc, expectedRpc)
+	expectedRpcs := []mockSentRpc{
+		{"s2", expectedRpc},
 	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
 // 2. Reply false if log doesn't contain an entry at prevLogIndex whose term
@@ -42,25 +34,19 @@ func TestRpcAELeaderTermLessThanCurrentTerm(t *testing.T) {
 // step refers strictly to the follower's log not having any entry at
 // prevLogIndex since step 3 covers the alternate conflicting entry case.
 // Note: this test based on Figure 7, server (b)
-func TestRpcAENoMatchingLogEntry(t *testing.T) {
+func TestCM_RpcAE_Follower_NoMatchingLogEntry(t *testing.T) {
 	mcm, mrs := setupManagedConsensusModuleR2(t, []TermNo{1, 1, 1, 4})
 	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 	appendEntries := makeAEWithTermAndPrevLogDetails(testCurrentTerm, 10, 6)
 
 	mcm.pcm.rpc("s3", appendEntries)
-	sentRpcs := mrs.getAllSortedByToServer()
-	if len(sentRpcs) != 1 {
-		t.Error()
-	}
-	sentRpc := sentRpcs[0]
-	if sentRpc.toServer != "s3" {
-		t.Error()
-	}
+
 	expectedRpc := &RpcAppendEntriesReply{followerTerm, false}
-	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
-		t.Fatal(sentRpc.rpc, expectedRpc)
+	expectedRpcs := []mockSentRpc{
+		{"s3", expectedRpc},
 	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
 // 3. If an existing entry conflicts with a new one (same index
@@ -73,7 +59,7 @@ func TestRpcAENoMatchingLogEntry(t *testing.T) {
 // have success set to true.
 // Note: this test case based on Figure 7, case (e) in the Raft paper but adds
 // some extra entries to also test step 3
-func TestRpcAEAppendNewEntries(t *testing.T) {
+func TestCM_RpcAE_Follower_AppendNewEntries(t *testing.T) {
 	mcm, mrs := setupManagedConsensusModuleR2(
 		t,
 		[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
@@ -94,18 +80,12 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 	appendEntries := &RpcAppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
 
 	mcm.pcm.rpc("s4", appendEntries)
-	sentRpcs := mrs.getAllSortedByToServer()
-	if len(sentRpcs) != 1 {
-		t.Error()
-	}
-	sentRpc := sentRpcs[0]
-	if sentRpc.toServer != "s4" {
-		t.Error()
-	}
+
 	expectedRpc := &RpcAppendEntriesReply{followerTerm, true}
-	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
-		t.Fatal(sentRpc.rpc, expectedRpc)
+	expectedRpcs := []mockSentRpc{
+		{"s4", expectedRpc},
 	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 
 	if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 8 {
 		t.Fatal(iole)
@@ -125,7 +105,7 @@ func TestRpcAEAppendNewEntries(t *testing.T) {
 
 // Variant of TestRpcAEAppendNewEntries to test alternate path for step 5.
 // Note: this test case based on Figure 7, case (b) in the Raft paper
-func TestRpcAEAppendNewEntriesB(t *testing.T) {
+func TestCM_RpcAE_Follower_AppendNewEntriesB(t *testing.T) {
 	mcm, mrs := setupManagedConsensusModuleR2(
 		t,
 		[]TermNo{1, 1, 1, 4},
@@ -145,18 +125,12 @@ func TestRpcAEAppendNewEntriesB(t *testing.T) {
 	appendEntries := &RpcAppendEntries{testCurrentTerm, 4, 4, sentLogEntries, 7}
 
 	mcm.pcm.rpc("s4", appendEntries)
-	sentRpcs := mrs.getAllSortedByToServer()
-	if len(sentRpcs) != 1 {
-		t.Error()
-	}
-	sentRpc := sentRpcs[0]
-	if sentRpc.toServer != "s4" {
-		t.Error()
-	}
+
 	expectedRpc := &RpcAppendEntriesReply{followerTerm, true}
-	if !reflect.DeepEqual(sentRpc.rpc, expectedRpc) {
-		t.Fatal(sentRpc.rpc, expectedRpc)
+	expectedRpcs := []mockSentRpc{
+		{"s4", expectedRpc},
 	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 
 	if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 6 {
 		t.Fatal(iole)

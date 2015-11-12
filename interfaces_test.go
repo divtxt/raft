@@ -9,9 +9,9 @@ import (
 
 // -- PersistentState
 
-// PersistentState blackbox test
+// PersistentState blackbox test.
 // Send a PersistentState in new / reset state.
-func PersistentStateBlackboxTest(t *testing.T, persistentState PersistentState) {
+func PartialTest_PersistentState_BlackboxTest(t *testing.T, persistentState PersistentState) {
 	// Initial data tests
 	if persistentState.GetCurrentTerm() != 0 {
 		t.Fatal()
@@ -73,7 +73,7 @@ func newIMPSWithCurrentTerm(currentTerm TermNo) *inMemoryPersistentState {
 // Run the blackbox test on inMemoryPersistentState
 func TestInMemoryPersistentState(t *testing.T) {
 	imps := newIMPSWithCurrentTerm(0)
-	PersistentStateBlackboxTest(t, imps)
+	PartialTest_PersistentState_BlackboxTest(t, imps)
 }
 
 // -- RpcSender
@@ -101,7 +101,9 @@ func (mrs *mockRpcSender) SendAsync(toServer ServerId, rpc interface{}) {
 	}
 }
 
-func (mrs *mockRpcSender) getAllSortedByToServer() []mockSentRpc {
+// Clears & checks sent rpcs.
+// expectedRpcs should be sorted by server
+func (mrs *mockRpcSender) checkSentRpcs(t *testing.T, expectedRpcs []mockSentRpc) {
 	rpcs := make([]mockSentRpc, 0, 100)
 
 loop:
@@ -118,7 +120,9 @@ loop:
 
 	sort.Sort(mockRpcSenderSlice(rpcs))
 
-	return rpcs
+	if !reflect.DeepEqual(rpcs, expectedRpcs) {
+		t.Fatal(rpcs)
+	}
 }
 
 // implement sort.Interface for mockSentRpc slices
@@ -134,11 +138,6 @@ func TestMockRpcSender(t *testing.T) {
 	mrs.SendAsync("s2", "foo")
 	mrs.SendAsync("s1", 42)
 
-	actual := mrs.getAllSortedByToServer()
-
 	expected := []mockSentRpc{{"s1", 42}, {"s2", "foo"}}
-
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatal()
-	}
+	mrs.checkSentRpcs(t, expected)
 }

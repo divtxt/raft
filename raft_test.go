@@ -65,7 +65,7 @@ func (cm *ConsensusModule) stopAndCheckError() {
 	}
 }
 
-func TestCMStartStateAndStop(t *testing.T) {
+func TestConsensusModule_StartStateAndStop(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 
 	// #5.2-p1s2: When servers start up, they begin as followers
@@ -90,7 +90,7 @@ func TestCMStartStateAndStop(t *testing.T) {
 	}
 }
 
-func TestCMUnknownRpcTypeStopsCM(t *testing.T) {
+func TestConsensusModule_UnknownRpcTypeStopsCM(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 
 	if cm.IsStopped() {
