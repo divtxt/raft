@@ -92,9 +92,22 @@ func TestCM_BadServerStatePanicsTick(t *testing.T) {
 	t.Fatal()
 }
 
-// TODO
-// func TestCMBadServerStatePanicsRpc(t *testing.T) {
-// }
+func TestCM_BadServerStatePanicsRpc(t *testing.T) {
+	mcm := setupManagedConsensusModule(t, nil)
+
+	mcm.pcm.serverState = 42
+
+	defer func() {
+		if r := recover(); r != "FATAL: unknown ServerState: 42" {
+			t.Error(r)
+		}
+	}()
+
+	requestVote := &RpcRequestVote{1, 0, 0}
+
+	mcm.pcm.rpc("s2", requestVote)
+	t.Fatal()
+}
 
 // #5.2-p1s5: If a follower receives no communication over a period of time
 // called the election timeout, then it assumes there is no viable leader
