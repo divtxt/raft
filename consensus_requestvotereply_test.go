@@ -7,7 +7,7 @@ import (
 // #5.2-p3s1: A candidate wins an election if it receives votes from a
 // majority of the servers in the full cluster for the same term.
 func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
-	mcm, _ := testSetupCM_Candidate_Figure7LeaderLine(t)
+	mcm, _ := testSetupMCM_Candidate_Figure7LeaderLine(t)
 
 	// s2 grants vote - should stay as candidate
 	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
@@ -41,7 +41,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 // start a new election by incrementing its term and initiating
 // another round of RequestVote RPCs.
 func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
-	mcm, mrs := testSetupCM_Candidate_Figure7LeaderLine(t)
+	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 
 	// s2 grants vote - should stay as candidate
 	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
