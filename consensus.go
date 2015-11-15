@@ -169,8 +169,7 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		}
 		// TODO: else/and anything else?
 	case LEADER:
-		// FIXME
-		panic("todo: LEADER tick()")
+		panic("TODO: LEADER tick()")
 	default:
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
