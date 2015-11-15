@@ -51,62 +51,71 @@ func TestCM_StartsAsFollower(t *testing.T) {
 	}
 }
 
-func TestCM_UnknownRpcTypePanics(t *testing.T) {
+func testCM_setupMCMAndExpectPanicFor(
+	t *testing.T,
+	f func(*managedConsensusModule),
+	expectedRecover interface{},
+) {
 	mcm := setupManagedConsensusModule(t, nil)
 
+	skipRecover := false
 	defer func() {
-		if r := recover(); r != "FATAL: unknown rpc type: *struct { int }" {
-			t.Error(r)
+		if !skipRecover {
+			if r := recover(); r != expectedRecover {
+				t.Error(r)
+			}
 		}
 	}()
 
-	mcm.pcm.rpc("s2", &struct{ int }{42})
+	f(mcm)
+	skipRecover = true
 	t.Fatal()
+}
+
+func TestCM_UnknownRpcTypePanics(t *testing.T) {
+	testCM_setupMCMAndExpectPanicFor(
+		t,
+		func(mcm *managedConsensusModule) {
+			mcm.pcm.rpc("s2", &struct{ int }{42})
+		},
+		"FATAL: unknown rpc type: *struct { int }",
+	)
 }
 
 func TestCM_SetServerStateBadServerStatePanics(t *testing.T) {
-	mcm := setupManagedConsensusModule(t, nil)
-
-	defer func() {
-		if r := recover(); r != "FATAL: unknown ServerState: 42" {
-			t.Error(r)
-		}
-	}()
-
-	mcm.pcm.setServerState(42)
-	t.Fatal()
+	testCM_setupMCMAndExpectPanicFor(
+		t,
+		func(mcm *managedConsensusModule) {
+			mcm.pcm.setServerState(42)
+		},
+		"FATAL: unknown ServerState: 42",
+	)
 }
 
 func TestCM_BadServerStatePanicsTick(t *testing.T) {
-	mcm := setupManagedConsensusModule(t, nil)
+	testCM_setupMCMAndExpectPanicFor(
+		t,
+		func(mcm *managedConsensusModule) {
+			mcm.pcm.serverState = 42
 
-	mcm.pcm.serverState = 42
-
-	defer func() {
-		if r := recover(); r != "FATAL: unknown ServerState: 42" {
-			t.Error(r)
-		}
-	}()
-
-	mcm.tick()
-	t.Fatal()
+			mcm.tick()
+		},
+		"FATAL: unknown ServerState: 42",
+	)
 }
 
 func TestCM_BadServerStatePanicsRpc(t *testing.T) {
-	mcm := setupManagedConsensusModule(t, nil)
+	testCM_setupMCMAndExpectPanicFor(
+		t,
+		func(mcm *managedConsensusModule) {
+			mcm.pcm.serverState = 42
 
-	mcm.pcm.serverState = 42
+			requestVote := &RpcRequestVote{1, 0, 0}
 
-	defer func() {
-		if r := recover(); r != "FATAL: unknown ServerState: 42" {
-			t.Error(r)
-		}
-	}()
-
-	requestVote := &RpcRequestVote{1, 0, 0}
-
-	mcm.pcm.rpc("s2", requestVote)
-	t.Fatal()
+			mcm.pcm.rpc("s2", requestVote)
+		},
+		"FATAL: unknown ServerState: 42",
+	)
 }
 
 // #5.2-p1s5: If a follower receives no communication over a period of time
