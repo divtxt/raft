@@ -195,15 +195,33 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
 }
 
-func testSetupCM_Candidate_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+func testSetupMCM_Follower_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
 	terms := makeLogTerms_Figure7LeaderLine()
 	mcm, mrs := setupManagedConsensusModuleR2(t, terms)
+	if mcm.pcm.getServerState() != FOLLOWER {
+		t.Fatal()
+	}
+	return mcm, mrs
+}
+
+func testSetupMCM_Candidate_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+	mcm, mrs := testSetupMCM_Follower_Figure7LeaderLine(t)
 	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
 	return mcm, mrs
 }
 
+func testSetupMCM_Leader_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
+	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
+	mcm.pcm.rpc("s3", &RpcRequestVoteReply{true})
+	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
+	return mcm, mrs
+}
+
 func TestCM_Follower_StartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
-	testSetupCM_Candidate_Figure7LeaderLine(t)
+	testSetupMCM_Candidate_Figure7LeaderLine(t)
 }
 
 // For most tests, we'll use a passive CM where we control the progress

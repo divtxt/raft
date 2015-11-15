@@ -14,9 +14,9 @@ func (cm *passiveConsensusModule) _processRpc_RequestVote(
 	case FOLLOWER:
 		// Pass through to main logic below
 	case CANDIDATE:
-		panic("TODO: _processRpc_RequestVote / CANDIDATE")
+		// Pass through to main logic below
 	case LEADER:
-		panic("TODO: _processRpc_RequestVote / LEADER")
+		// Pass through to main logic below
 	default:
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", cm.serverState))
 	}

@@ -9,25 +9,24 @@ func makeRVWithTerm(term TermNo) *RpcRequestVote {
 }
 
 // 1. Reply false if term < currentTerm (#5.1)
-// Note: this test assumes follower in sync with the Figure 7 leader
-func TestCM_RpcRVR_Follower_TermLessThanCurrentTerm_Leader(t *testing.T) {
-	terms := makeLogTerms_Figure7LeaderLine()
-	mcm, mrs := setupManagedConsensusModuleR2(t, terms)
-	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
+// Note: this test assumes server in sync with the Figure 7 leader
+func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
+	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
+		mcm, mrs := setup(t)
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
-	if mcm.pcm.getServerState() != FOLLOWER {
-		t.Fatal()
+		requestVote := makeRVWithTerm(serverTerm - 1)
+
+		mcm.pcm.rpc("s2", requestVote)
+
+		expectedRpc := &RpcRequestVoteReply{false}
+		expectedRpcs := []mockSentRpc{
+			{"s2", expectedRpc},
+		}
+		mrs.checkSentRpcs(t, expectedRpcs)
 	}
 
-	requestVote := makeRVWithTerm(followerTerm - 1)
-
-	mcm.pcm.rpc("s2", requestVote)
-
-	expectedRpc := &RpcRequestVoteReply{false}
-	expectedRpcs := []mockSentRpc{
-		{"s2", expectedRpc},
-	}
-	mrs.checkSentRpcs(t, expectedRpcs)
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
+	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
-
-// TODO: test step 1 for other states
