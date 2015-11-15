@@ -27,8 +27,8 @@ func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(fromPeer ServerId
 		haveQuorum := cm.candidateVolatileState.addVoteFrom(fromPeer)
 		if haveQuorum {
 			cm.setServerState(LEADER)
-			// FIXME: more leader things!
+			// TODO: more leader things!
 		}
-	} // else FIXME
+	} // else TODO
 
 }
