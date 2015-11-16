@@ -14,9 +14,9 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntries(appendEntries *RpcAp
 	case FOLLOWER:
 		// Pass through to main logic below
 	case CANDIDATE:
-		panic("TODO: _processRpc_AppendEntries / CANDIDATE")
+		// Pass through to main logic below
 	case LEADER:
-		panic("TODO: _processRpc_AppendEntries / LEADER")
+		// Pass through to main logic below
 	default:
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", cm.serverState))
 	}

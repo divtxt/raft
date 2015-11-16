@@ -13,19 +13,25 @@ func makeAEWithTermAndPrevLogDetails(term TermNo, prevli LogIndex, prevterm Term
 }
 
 // 1. Reply false if term < currentTerm (#5.1)
-func TestCM_RpcAE_Follower_LeaderTermLessThanCurrentTerm(t *testing.T) {
-	mcm, mrs := setupManagedConsensusModuleR2(t, nil)
-	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
+func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
+	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
+		mcm, mrs := setup(t)
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
-	appendEntries := makeAEWithTerm(followerTerm - 1)
+		appendEntries := makeAEWithTerm(serverTerm - 1)
 
-	mcm.pcm.rpc("s2", appendEntries)
+		mcm.pcm.rpc("s2", appendEntries)
 
-	expectedRpc := &RpcAppendEntriesReply{followerTerm, false}
-	expectedRpcs := []mockSentRpc{
-		{"s2", expectedRpc},
+		expectedRpc := &RpcAppendEntriesReply{serverTerm, false}
+		expectedRpcs := []mockSentRpc{
+			{"s2", expectedRpc},
+		}
+		mrs.checkSentRpcs(t, expectedRpcs)
 	}
-	mrs.checkSentRpcs(t, expectedRpcs)
+
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
+	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
 
 // 2. Reply false if log doesn't contain an entry at prevLogIndex whose term
