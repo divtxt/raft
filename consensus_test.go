@@ -195,8 +195,10 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
 }
 
-func testSetupMCM_Follower_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
-	terms := makeLogTerms_Figure7LeaderLine()
+func testSetupMCM_Follower_WithTerms(
+	t *testing.T,
+	terms []TermNo,
+) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := setupManagedConsensusModuleR2(t, terms)
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
@@ -204,20 +206,38 @@ func testSetupMCM_Follower_Figure7LeaderLine(t *testing.T) (*managedConsensusMod
 	return mcm, mrs
 }
 
-func testSetupMCM_Candidate_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
-	mcm, mrs := testSetupMCM_Follower_Figure7LeaderLine(t)
+func testSetupMCM_Candidate_WithTerms(
+	t *testing.T,
+	terms []TermNo,
+) (*managedConsensusModule, *mockRpcSender) {
+	mcm, mrs := testSetupMCM_Follower_WithTerms(t, terms)
 	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
 	return mcm, mrs
 }
 
-func testSetupMCM_Leader_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
-	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
+func testSetupMCM_Leader_WithTerms(
+	t *testing.T,
+	terms []TermNo,
+) (*managedConsensusModule, *mockRpcSender) {
+	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
 	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
 	mcm.pcm.rpc("s3", &RpcRequestVoteReply{true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
 	return mcm, mrs
+}
+
+func testSetupMCM_Follower_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+	return testSetupMCM_Follower_WithTerms(t, makeLogTerms_Figure7LeaderLine())
+}
+
+func testSetupMCM_Candidate_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+	return testSetupMCM_Candidate_WithTerms(t, makeLogTerms_Figure7LeaderLine())
+}
+
+func testSetupMCM_Leader_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+	return testSetupMCM_Leader_WithTerms(t, makeLogTerms_Figure7LeaderLine())
 }
 
 func TestCM_Follower_StartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
