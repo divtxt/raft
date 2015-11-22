@@ -96,7 +96,7 @@ func TestCM_BadServerStatePanicsTick(t *testing.T) {
 	testCM_setupMCMAndExpectPanicFor(
 		t,
 		func(mcm *managedConsensusModule) {
-			mcm.pcm.serverState = 42
+			mcm.pcm._unsafe_serverState = 42
 
 			mcm.tick()
 		},
@@ -108,7 +108,7 @@ func TestCM_BadServerStatePanicsRpc(t *testing.T) {
 	testCM_setupMCMAndExpectPanicFor(
 		t,
 		func(mcm *managedConsensusModule) {
-			mcm.pcm.serverState = 42
+			mcm.pcm._unsafe_serverState = 42
 
 			requestVote := &RpcRequestVote{1, 0, 0}
 

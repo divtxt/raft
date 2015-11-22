@@ -31,7 +31,7 @@ type passiveConsensusModule struct {
 	currentElectionTimeout time.Duration
 
 	// -- State - these fields may be accessed concurrently
-	serverState ServerState
+	_unsafe_serverState ServerState
 
 	// -- State - these fields meant for single-threaded access
 	volatileState          volatileState
@@ -96,7 +96,7 @@ func newPassiveConsensusModule(
 
 // Get the current server state
 func (cm *passiveConsensusModule) getServerState() ServerState {
-	return ServerState(atomic.LoadUint32((*uint32)(&cm.serverState)))
+	return ServerState(atomic.LoadUint32((*uint32)(&cm._unsafe_serverState)))
 }
 
 // Set the current server state
@@ -104,7 +104,7 @@ func (cm *passiveConsensusModule) setServerState(serverState ServerState) {
 	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
-	atomic.StoreUint32((*uint32)(&cm.serverState), (uint32)(serverState))
+	atomic.StoreUint32((*uint32)(&cm._unsafe_serverState), (uint32)(serverState))
 }
 
 func (cm *passiveConsensusModule) chooseNewRandomElectionTimeout() {
