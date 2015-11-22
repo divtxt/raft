@@ -4,10 +4,6 @@
 
 package raft
 
-import (
-	"fmt"
-)
-
 func (cm *passiveConsensusModule) _processRpc_AppendEntries(appendEntries *RpcAppendEntries) bool {
 
 	switch cm.getServerState() {
@@ -17,8 +13,6 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntries(appendEntries *RpcAp
 		// Pass through to main logic below
 	case LEADER:
 		// Pass through to main logic below
-	default:
-		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", cm.getServerState()))
 	}
 
 	leaderCurrentTerm := appendEntries.Term
