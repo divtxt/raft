@@ -2,10 +2,6 @@
 
 package raft
 
-import (
-	"fmt"
-)
-
 func (cm *passiveConsensusModule) _processRpc_RequestVote(
 	fromPeer ServerId,
 	rpcRequestVote *RpcRequestVote,
@@ -17,8 +13,6 @@ func (cm *passiveConsensusModule) _processRpc_RequestVote(
 		// Pass through to main logic below
 	case LEADER:
 		// Pass through to main logic below
-	default:
-		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", cm.getServerState()))
 	}
 
 	// 1. Reply false if term < currentTerm (#5.1)

@@ -124,8 +124,19 @@ type rpcTuple struct {
 
 // Process the given rpc message
 func (cm *passiveConsensusModule) rpc(from ServerId, rpc interface{}) {
-	switch rpc := rpc.(type) {
+	serverState := cm.getServerState()
+	switch serverState {
+	case FOLLOWER:
+		// Pass through to main logic below
+	case CANDIDATE:
+		// Pass through to main logic below
+	case LEADER:
+		// Pass through to main logic below
+	default:
+		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
+	}
 
+	switch rpc := rpc.(type) {
 	case *RpcAppendEntries:
 		success := cm._processRpc_AppendEntries(rpc)
 		reply := &RpcAppendEntriesReply{

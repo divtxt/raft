@@ -3,10 +3,6 @@
 
 package raft
 
-import (
-	"fmt"
-)
-
 func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(fromPeer ServerId, rpcRequestVoteReply *RpcRequestVoteReply) {
 
 	switch cm.getServerState() {
@@ -17,8 +13,6 @@ func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(fromPeer ServerId
 	case LEADER:
 		// Do nothing since this candidate has already won the election.
 		return
-	default:
-		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", cm.getServerState()))
 	}
 
 	// #5.2-p3s1: A candidate wins an election if it receives votes from a
