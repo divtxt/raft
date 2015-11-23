@@ -4,9 +4,12 @@
 
 package raft
 
-func (cm *passiveConsensusModule) _processRpc_AppendEntries(appendEntries *RpcAppendEntries) bool {
+func (cm *passiveConsensusModule) _processRpc_AppendEntries(
+	serverState ServerState,
+	appendEntries *RpcAppendEntries,
+) bool {
 
-	switch cm.getServerState() {
+	switch serverState {
 	case FOLLOWER:
 		// Pass through to main logic below
 	case CANDIDATE:
