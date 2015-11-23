@@ -3,10 +3,11 @@
 package raft
 
 func (cm *passiveConsensusModule) _processRpc_RequestVote(
+	serverState ServerState,
 	fromPeer ServerId,
 	rpcRequestVote *RpcRequestVote,
 ) bool {
-	switch cm.getServerState() {
+	switch serverState {
 	case FOLLOWER:
 		// Pass through to main logic below
 	case CANDIDATE:

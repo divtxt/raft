@@ -3,9 +3,13 @@
 
 package raft
 
-func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(fromPeer ServerId, rpcRequestVoteReply *RpcRequestVoteReply) {
+func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(
+	serverState ServerState,
+	fromPeer ServerId,
+	rpcRequestVoteReply *RpcRequestVoteReply,
+) {
 
-	switch cm.getServerState() {
+	switch serverState {
 	case FOLLOWER:
 		panic("TODO: _processRpc_RequestVoteReply / CANDIDATE")
 	case CANDIDATE:

@@ -138,20 +138,20 @@ func (cm *passiveConsensusModule) rpc(from ServerId, rpc interface{}) {
 
 	switch rpc := rpc.(type) {
 	case *RpcAppendEntries:
-		success := cm._processRpc_AppendEntries(rpc)
+		success := cm._processRpc_AppendEntries(serverState, rpc)
 		reply := &RpcAppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(),
 			success,
 		}
 		cm.rpcSender.SendAsync(from, reply)
 	case *RpcRequestVote:
-		success := cm._processRpc_RequestVote(from, rpc)
+		success := cm._processRpc_RequestVote(serverState, from, rpc)
 		reply := &RpcRequestVoteReply{
 			success,
 		}
 		cm.rpcSender.SendAsync(from, reply)
 	case *RpcRequestVoteReply:
-		cm._processRpc_RequestVoteReply(from, rpc)
+		cm._processRpc_RequestVoteReply(serverState, from, rpc)
 	default:
 		panic(fmt.Sprintf("FATAL: unknown rpc type: %T", rpc))
 	}
