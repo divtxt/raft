@@ -24,8 +24,7 @@ func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(
 	if rpcRequestVoteReply.VoteGranted {
 		haveQuorum := cm.candidateVolatileState.addVoteFrom(fromPeer)
 		if haveQuorum {
-			cm.setServerState(LEADER)
-			// TODO: more leader things!
+			cm.becomeLeader()
 		}
 	} // else TODO
 

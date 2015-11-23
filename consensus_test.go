@@ -86,7 +86,7 @@ func TestCM_SetServerStateBadServerStatePanics(t *testing.T) {
 	testCM_setupMCMAndExpectPanicFor(
 		t,
 		func(mcm *managedConsensusModule) {
-			mcm.pcm.setServerState(42)
+			mcm.pcm._setServerState(42)
 		},
 		"FATAL: unknown ServerState: 42",
 	)
