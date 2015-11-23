@@ -100,7 +100,7 @@ func (cm *passiveConsensusModule) getServerState() ServerState {
 }
 
 // Set the current server state
-func (cm *passiveConsensusModule) setServerState(serverState ServerState) {
+func (cm *passiveConsensusModule) _setServerState(serverState ServerState) {
 	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
@@ -165,9 +165,7 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		// #5.2-p1s5: If a follower receives no communication over a period
 		// of time called the election timeout, then it assumes there is no
 		// viable leader and begins an election to choose a new leader.
-		if now.After(cm.electionTimeoutTime) {
-			cm.beginElection(now)
-		}
+		fallthrough
 	case CANDIDATE:
 		// #5.2-p5s1: The third possible outcome is that a candidate neither
 		// wins nor loses the election; ... votes could be split so that no
@@ -176,7 +174,7 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		// start a new election by incrementing its term and initiating
 		// another round of RequestVote RPCs.
 		if now.After(cm.electionTimeoutTime) {
-			cm.beginElection(now)
+			cm.becomeCandidateAndBeginElection(now)
 		}
 		// TODO: else/and anything else?
 	case LEADER:
@@ -186,12 +184,12 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 	}
 }
 
-func (cm *passiveConsensusModule) beginElection(now time.Time) {
+func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) {
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
 	cm.candidateVolatileState = newCandidateVolatileState(cm.peerServerIds)
-	cm.setServerState(CANDIDATE)
+	cm._setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
 	cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.thisServerId)
@@ -209,4 +207,9 @@ func (cm *passiveConsensusModule) beginElection(now time.Time) {
 	// Reset election timeout!
 	cm.chooseNewRandomElectionTimeout()
 	cm.resetElectionTimeoutTime(now)
+}
+
+func (cm *passiveConsensusModule) becomeLeader() {
+	cm._setServerState(LEADER)
+	// TODO: more leader things!
 }
