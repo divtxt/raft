@@ -83,8 +83,8 @@ func newPassiveConsensusModule(
 		FOLLOWER,
 
 		// -- State
-		volatileState{},
-		now, // temp value, to be replaced before goroutine start
+		volatileState{}, // TODO: do these values need to be initialized?
+		now,             // temp value, to be replaced before goroutine start
 		nil,
 	}
 
@@ -212,4 +212,9 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 func (cm *passiveConsensusModule) becomeLeader() {
 	cm._setServerState(LEADER)
 	// TODO: more leader things!
+}
+
+func (cm *passiveConsensusModule) becomeFollower() {
+	cm._setServerState(FOLLOWER)
+	// TODO: more follower things!
 }
