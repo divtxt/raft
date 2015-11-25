@@ -11,7 +11,8 @@ func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(
 
 	switch serverState {
 	case FOLLOWER:
-		panic("TODO: _processRpc_RequestVoteReply / CANDIDATE")
+		// Do nothing since this server is already a follower.
+		return
 	case CANDIDATE:
 		// Pass through to main logic below
 	case LEADER:
@@ -27,5 +28,4 @@ func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(
 			cm.becomeLeader()
 		}
 	} // else TODO
-
 }

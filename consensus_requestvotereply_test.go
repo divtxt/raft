@@ -58,3 +58,22 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 	// no more votes - election timeout causes a new election
 	testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(t, mcm, mrs, testCurrentTerm+2)
 }
+
+// Extra: follower ignores vote
+func TestCM_RpcRVR_Follower_Ignores(t *testing.T) {
+	mcm, mrs := testSetupMCM_Follower_Figure7LeaderLine(t)
+
+	// s2 grants vote - ignore
+	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
+	if mcm.pcm.getServerState() != FOLLOWER {
+		t.Fatal()
+	}
+	mrs.checkSentRpcs(t, []mockSentRpc{})
+
+	// s3 denies vote - ignore
+	mcm.pcm.rpc("s3", &RpcRequestVoteReply{false})
+	if mcm.pcm.getServerState() != FOLLOWER {
+		t.Fatal()
+	}
+	mrs.checkSentRpcs(t, []mockSentRpc{})
+}
