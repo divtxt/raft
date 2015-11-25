@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -51,25 +52,34 @@ func TestCM_StartsAsFollower(t *testing.T) {
 	}
 }
 
+func test_ExpectPanic(t *testing.T, f func(), expectedRecover interface{}) {
+	skipRecover := false
+	defer func() {
+		if !skipRecover {
+			if r := recover(); r != expectedRecover {
+				t.Fatal(fmt.Sprintf("Expected panic: %v; got: %v", expectedRecover, r))
+			}
+		}
+	}()
+
+	f()
+	skipRecover = true
+	t.Fatal(fmt.Sprintf("Expected panic: %v", expectedRecover))
+}
+
 func testCM_setupMCMAndExpectPanicFor(
 	t *testing.T,
 	f func(*managedConsensusModule),
 	expectedRecover interface{},
 ) {
 	mcm := setupManagedConsensusModule(t, nil)
-
-	skipRecover := false
-	defer func() {
-		if !skipRecover {
-			if r := recover(); r != expectedRecover {
-				t.Error(r)
-			}
-		}
-	}()
-
-	f(mcm)
-	skipRecover = true
-	t.Fatal()
+	test_ExpectPanic(
+		t,
+		func() {
+			f(mcm)
+		},
+		expectedRecover,
+	)
 }
 
 func TestCM_UnknownRpcTypePanics(t *testing.T) {
