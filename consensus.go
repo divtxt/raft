@@ -144,6 +144,8 @@ func (cm *passiveConsensusModule) rpc(from ServerId, rpc interface{}) {
 			success,
 		}
 		cm.rpcSender.SendAsync(from, reply)
+	case *RpcAppendEntriesReply:
+		cm._processRpc_AppendEntriesReply(serverState, rpc)
 	case *RpcRequestVote:
 		success := cm._processRpc_RequestVote(serverState, from, rpc)
 		reply := &RpcRequestVoteReply{
