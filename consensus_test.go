@@ -185,11 +185,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex := mcm.pcm.log.getIndexOfLastEntry()
-	var lastLogTerm TermNo = 0
-	if lastLogIndex > 0 {
-		lastLogTerm = mcm.pcm.log.getTermAtIndex(lastLogIndex)
-	}
+	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(mcm.pcm.log)
 	expectedRpc := &RpcRequestVote{expectedNewTerm, lastLogIndex, lastLogTerm}
 	expectedRpcs := []mockSentRpc{
 		{"s2", expectedRpc},
@@ -209,11 +205,7 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	lastLogIndex := mcm.pcm.log.getIndexOfLastEntry()
-	var lastLogTerm TermNo = 0
-	if lastLogIndex > 0 {
-		lastLogTerm = mcm.pcm.log.getTermAtIndex(lastLogIndex)
-	}
+	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(mcm.pcm.log)
 
 	mrs.checkSentRpcs(t, []mockSentRpc{})
 

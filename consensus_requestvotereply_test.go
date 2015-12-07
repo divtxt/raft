@@ -31,11 +31,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 
 	// leader setup
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	lastLogIndex := mcm.pcm.log.getIndexOfLastEntry()
-	var lastLogTerm TermNo = 0
-	if lastLogIndex > 0 {
-		lastLogTerm = mcm.pcm.log.getTermAtIndex(lastLogIndex)
-	}
+	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(mcm.pcm.log)
 	expectedRpc := &RpcAppendEntries{
 		serverTerm,
 		lastLogIndex,
