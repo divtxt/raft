@@ -29,6 +29,8 @@ type Log interface {
 	// the Log implementation to not fetch the Command if that's a useful
 	// optimization.
 	// TODO: return values for invalid params or log errors
+	// TODO: 0 for 0 and simplify callers and tests
+	// TODO: single call for tuple?
 	getTermAtIndex(LogIndex) TermNo
 
 	// Set the entries after the given index.
