@@ -205,6 +205,36 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
 }
 
+// #RFS-L1b: repeat during idle periods to prevent election timeout (#5.2)
+func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	lastLogIndex := mcm.pcm.log.getIndexOfLastEntry()
+	var lastLogTerm TermNo = 0
+	if lastLogIndex > 0 {
+		lastLogTerm = mcm.pcm.log.getTermAtIndex(lastLogIndex)
+	}
+
+	mrs.checkSentRpcs(t, []mockSentRpc{})
+
+	mcm.tick()
+
+	expectedRpc := &RpcAppendEntries{
+		serverTerm,
+		lastLogIndex,
+		lastLogTerm,
+		[]LogEntry{},
+		0, // TODO: tests for this?!
+	}
+	expectedRpcs := []mockSentRpc{
+		{"s2", expectedRpc},
+		{"s3", expectedRpc},
+		{"s4", expectedRpc},
+		{"s5", expectedRpc},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
+}
+
 func testSetupMCM_Follower_WithTerms(
 	t *testing.T,
 	terms []TermNo,
@@ -222,6 +252,9 @@ func testSetupMCM_Candidate_WithTerms(
 ) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := testSetupMCM_Follower_WithTerms(t, terms)
 	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
+	if mcm.pcm.getServerState() != CANDIDATE {
+		t.Fatal()
+	}
 	return mcm, mrs
 }
 
@@ -235,6 +268,7 @@ func testSetupMCM_Leader_WithTerms(
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
+	mrs.clearSentRpcs()
 	return mcm, mrs
 }
 

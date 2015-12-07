@@ -180,7 +180,8 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		}
 		// TODO: else/and anything else?
 	case LEADER:
-		panic("TODO: LEADER tick()")
+		cm._sendEmptyAppendEntriesToAllPeers()
+		// TODO: more leader things
 	default:
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
@@ -213,10 +214,33 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 
 func (cm *passiveConsensusModule) becomeLeader() {
 	cm._setServerState(LEADER)
+	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
+	// to each server;
+	cm._sendEmptyAppendEntriesToAllPeers()
 	// TODO: more leader things!
 }
 
 func (cm *passiveConsensusModule) becomeFollower() {
 	cm._setServerState(FOLLOWER)
 	// TODO: more follower things!
+}
+
+// leader code
+func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
+	serverTerm := cm.persistentState.GetCurrentTerm()
+	lastLogIndex := cm.log.getIndexOfLastEntry()
+	var lastLogTerm TermNo = 0
+	if lastLogIndex > 0 {
+		lastLogTerm = cm.log.getTermAtIndex(lastLogIndex)
+	}
+	rpcAppendEntries := &RpcAppendEntries{
+		serverTerm,
+		lastLogIndex,
+		lastLogTerm,
+		[]LogEntry{},
+		cm.volatileState.commitIndex,
+	}
+	for _, serverId := range cm.peerServerIds {
+		cm.rpcSender.SendAsync(serverId, rpcAppendEntries)
+	}
 }

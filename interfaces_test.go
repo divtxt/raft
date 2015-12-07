@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"sync"
@@ -101,6 +102,18 @@ func (mrs *mockRpcSender) SendAsync(toServer ServerId, rpc interface{}) {
 	}
 }
 
+// Clear sent rpcs.
+func (mrs *mockRpcSender) clearSentRpcs() {
+loop:
+	for {
+		select {
+		case <-mrs.c:
+		default:
+			break loop
+		}
+	}
+}
+
 // Clears & checks sent rpcs.
 // expectedRpcs should be sorted by server
 func (mrs *mockRpcSender) checkSentRpcs(t *testing.T, expectedRpcs []mockSentRpc) {
@@ -121,7 +134,7 @@ loop:
 	sort.Sort(mockRpcSenderSlice(rpcs))
 
 	if !reflect.DeepEqual(rpcs, expectedRpcs) {
-		t.Fatal(rpcs)
+		t.Fatal(fmt.Sprintf("Expected: %v; got: %v", expectedRpcs, rpcs))
 	}
 }
 
