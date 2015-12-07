@@ -30,7 +30,6 @@ type Log interface {
 	// optimization.
 	// TODO: return values for invalid params or log errors
 	// TODO: 0 for 0 and simplify callers and tests
-	// TODO: single call for tuple?
 	getTermAtIndex(LogIndex) TermNo
 
 	// Set the entries after the given index.
@@ -58,4 +57,14 @@ type Log interface {
 	// by panicking, and this will shutdown the consensus module. This includes
 	// both invalid parameters from the caller and internal errors in the Log.
 	setEntriesAfterIndex(LogIndex, []LogEntry)
+}
+
+// Helper method
+func getIndexAndTermOfLastEntry(log Log) (LogIndex, TermNo) {
+	lastLogIndex := log.getIndexOfLastEntry()
+	var lastLogTerm TermNo = 0
+	if lastLogIndex > 0 {
+		lastLogTerm = log.getTermAtIndex(lastLogIndex)
+	}
+	return lastLogIndex, lastLogTerm
 }
