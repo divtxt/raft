@@ -17,19 +17,23 @@ type LogIndex uint64
 
 // The Raft Log
 // An ordered array of `LogEntry`s with first index 1.
+//
+// All errors should be indicated using panic(). This includes both invalid
+// parameters sent by the consensus module and internal errors in the Log.
+// Note that such a panic will shutdown the consensus module.
+//
 type Log interface {
 	// An index of 0 indicates no entries present.
 	getIndexOfLastEntry() LogIndex
 
-	// TODO: return values for invalid params or log errors
+	// An index of 0 is invalid for this call.
 	getLogEntryAtIndex(LogIndex) LogEntry
 
 	// Get the term of the entry at the given index.
 	// Equivalent to getLogEntryAtIndex(...).TermNo but this call allows
 	// the Log implementation to not fetch the Command if that's a useful
 	// optimization.
-	// TODO: return values for invalid params or log errors
-	// TODO: 0 for 0 and simplify callers and tests
+	// An index of 0 is invalid for this call.
 	getTermAtIndex(LogIndex) TermNo
 
 	// Set the entries after the given index.
@@ -49,13 +53,10 @@ type Log interface {
 	// the first index where the terms of the existing entry and the new
 	// entry don't match.
 	//
-	// Note that an index of 0 is valid and implies deleting all entries.
+	// An index of 0 is valid and implies deleting all entries.
+	//
 	// A zero length slice and nil both indicate no new entries to be added
 	// after deleting.
-	//
-	// This method is expected to always succeed. All errors should be indicated
-	// by panicking, and this will shutdown the consensus module. This includes
-	// both invalid parameters from the caller and internal errors in the Log.
 	setEntriesAfterIndex(LogIndex, []LogEntry)
 }
 
