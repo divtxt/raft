@@ -128,7 +128,7 @@ func (cm *passiveConsensusModule) rpc(
 
 	switch rpc := rpc.(type) {
 	case *RpcAppendEntries:
-		success := cm._processRpc_AppendEntries(from, serverState, rpc)
+		success := cm._processRpc_AppendEntries(serverState, from, rpc)
 		rpcReply := &RpcAppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(),
 			success,
@@ -153,7 +153,7 @@ func (cm *passiveConsensusModule) rpcReply(
 
 	switch rpcReply := rpcReply.(type) {
 	case *RpcAppendEntriesReply:
-		cm._processRpc_AppendEntriesReply(serverState, rpcReply)
+		cm._processRpc_AppendEntriesReply(serverState, from, rpcReply)
 	case *RpcRequestVoteReply:
 		cm._processRpc_RequestVoteReply(serverState, from, rpcReply)
 	default:
