@@ -44,12 +44,16 @@ type PersistentState interface {
 // The choice of RPC protocol is unspecified here.
 //
 // See rpctypes.go for the various RPC message types.
+//
+// See the consensus module's ProcessRpcAsync() for incoming RPC.
 type RpcSender interface {
 	// Send the given RPC message to the given server asynchronously.
 	//
 	// Notes for implementers:
 	//
-	// - No guarantee of success is expected.
+	// - This method should return immediately.
+	//
+	// - No guarantee of RPC success is expected.
 	//
 	// - When the RPC completes, the result should be sent via the consensus
 	// module's ProcessRpcAsync() function.

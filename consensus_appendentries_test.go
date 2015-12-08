@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -22,13 +23,12 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 
 		appendEntries := makeAEWithTerm(serverTerm - 1)
 
-		mcm.pcm.rpc("s2", appendEntries)
+		reply := mcm.pcm.rpc("s2", appendEntries)
 
 		expectedRpc := &RpcAppendEntriesReply{serverTerm, false}
-		expectedRpcs := []mockSentRpc{
-			{"s2", expectedRpc},
+		if !reflect.DeepEqual(reply, expectedRpc) {
+			t.Fatal(reply)
 		}
-		mrs.checkSentRpcs(t, expectedRpcs)
 
 		return mcm, mrs
 	}
@@ -81,13 +81,12 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 
 		appendEntries := makeAEWithTermAndPrevLogDetails(senderTerm, 10, 6)
 
-		mcm.pcm.rpc("s3", appendEntries)
+		reply := mcm.pcm.rpc("s3", appendEntries)
 
 		expectedRpc := &RpcAppendEntriesReply{serverTerm, false}
-		expectedRpcs := []mockSentRpc{
-			{"s3", expectedRpc},
+		if !reflect.DeepEqual(reply, expectedRpc) {
+			t.Fatal(reply)
 		}
-		mrs.checkSentRpcs(t, expectedRpcs)
 
 		if !senderTermIsSame {
 			// #RFS-A2: If RPC request or response contains term T > currentTerm:
@@ -155,7 +154,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 // Note: this test case based on Figure 7, case (e) in the Raft paper but adds
 // some extra entries to also test step 3
 func TestCM_RpcAE_Follower_AppendNewEntries(t *testing.T) {
-	mcm, mrs := setupManagedConsensusModuleR2(
+	mcm, _ := setupManagedConsensusModuleR2(
 		t,
 		[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
 	)
@@ -174,13 +173,12 @@ func TestCM_RpcAE_Follower_AppendNewEntries(t *testing.T) {
 
 	appendEntries := &RpcAppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
 
-	mcm.pcm.rpc("s4", appendEntries)
+	reply := mcm.pcm.rpc("s4", appendEntries)
 
 	expectedRpc := &RpcAppendEntriesReply{followerTerm, true}
-	expectedRpcs := []mockSentRpc{
-		{"s4", expectedRpc},
+	if !reflect.DeepEqual(reply, expectedRpc) {
+		t.Fatal(reply)
 	}
-	mrs.checkSentRpcs(t, expectedRpcs)
 
 	if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 8 {
 		t.Fatal(iole)
@@ -201,7 +199,7 @@ func TestCM_RpcAE_Follower_AppendNewEntries(t *testing.T) {
 // Variant of TestRpcAEAppendNewEntries to test alternate path for step 5.
 // Note: this test case based on Figure 7, case (b) in the Raft paper
 func TestCM_RpcAE_Follower_AppendNewEntriesB(t *testing.T) {
-	mcm, mrs := setupManagedConsensusModuleR2(
+	mcm, _ := setupManagedConsensusModuleR2(
 		t,
 		[]TermNo{1, 1, 1, 4},
 	)
@@ -219,13 +217,12 @@ func TestCM_RpcAE_Follower_AppendNewEntriesB(t *testing.T) {
 
 	appendEntries := &RpcAppendEntries{testCurrentTerm, 4, 4, sentLogEntries, 7}
 
-	mcm.pcm.rpc("s4", appendEntries)
+	reply := mcm.pcm.rpc("s4", appendEntries)
 
 	expectedRpc := &RpcAppendEntriesReply{followerTerm, true}
-	expectedRpcs := []mockSentRpc{
-		{"s4", expectedRpc},
+	if !reflect.DeepEqual(reply, expectedRpc) {
+		t.Fatal(reply)
 	}
-	mrs.checkSentRpcs(t, expectedRpcs)
 
 	if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 6 {
 		t.Fatal(iole)

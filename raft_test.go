@@ -97,7 +97,7 @@ func TestConsensusModule_UnknownRpcTypeStopsCM(t *testing.T) {
 		t.Error()
 	}
 
-	cm.ProcessRpcAsync("s2", &struct{ int }{42})
+	cm.ProcessRpcAsync("s2", &struct{ int }{42}, nil)
 	time.Sleep(testSleepToLetGoroutineRun)
 
 	if !cm.IsStopped() {
