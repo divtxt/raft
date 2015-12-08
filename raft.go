@@ -133,16 +133,20 @@ loop:
 		select {
 		case rpc, ok := <-cm.rpcChannel:
 			if !ok {
+				// theoretically unreachable as we don't close the channel til shutdown
 				panic("FATAL: rpcChannel closed")
 			}
 			rpcReply := cm.passiveConsensusModule.rpc(rpc.from, rpc.rpc)
 			select {
 			case rpc.replyChan <- rpcReply:
 			default:
+				// theoretically unreachable as we make a buffered channel of
+				// capacity 1 and this is the one send to it
 				panic("FATAL: replyChan is nil or wants to block")
 			}
 		case now, ok := <-cm.ticker.C:
 			if !ok {
+				// theoretically unreachable as we don't stop the timer til shutdown
 				panic("FATAL: ticker channel closed")
 			}
 			cm.passiveConsensusModule.tick(now)
