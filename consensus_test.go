@@ -92,6 +92,16 @@ func TestCM_UnknownRpcTypePanics(t *testing.T) {
 	)
 }
 
+func TestCM_UnknownRpcReplyTypePanics(t *testing.T) {
+	testCM_setupMCMAndExpectPanicFor(
+		t,
+		func(mcm *managedConsensusModule) {
+			mcm.pcm.rpcReply("s2", &struct{ int }{42})
+		},
+		"FATAL: unknown rpcReply type: *struct { int } from: s2",
+	)
+}
+
 func TestCM_SetServerStateBadServerStatePanics(t *testing.T) {
 	testCM_setupMCMAndExpectPanicFor(
 		t,
@@ -255,8 +265,8 @@ func testSetupMCM_Leader_WithTerms(
 	terms []TermNo,
 ) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
-	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
-	mcm.pcm.rpc("s3", &RpcRequestVoteReply{true})
+	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{true})
+	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}

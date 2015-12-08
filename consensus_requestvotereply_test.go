@@ -12,19 +12,19 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 
 	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
+	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{true})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.pcm.rpc("s3", &RpcRequestVoteReply{false})
+	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{false})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s4 grants vote - should become leader
-	mcm.pcm.rpc("s4", &RpcRequestVoteReply{true})
+	mcm.pcm.rpcReply("s4", &RpcRequestVoteReply{true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -48,7 +48,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// s5 grants vote - should stay leader
-	mcm.pcm.rpc("s5", &RpcRequestVoteReply{true})
+	mcm.pcm.rpcReply("s5", &RpcRequestVoteReply{true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -64,13 +64,13 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 
 	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
+	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{true})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.pcm.rpc("s3", &RpcRequestVoteReply{false})
+	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{false})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
@@ -84,14 +84,14 @@ func TestCM_RpcRVR_Follower_Ignores(t *testing.T) {
 	mcm, mrs := testSetupMCM_Follower_Figure7LeaderLine(t)
 
 	// s2 grants vote - ignore
-	mcm.pcm.rpc("s2", &RpcRequestVoteReply{true})
+	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{true})
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
 	mrs.checkSentRpcs(t, []mockSentRpc{})
 
 	// s3 denies vote - ignore
-	mcm.pcm.rpc("s3", &RpcRequestVoteReply{false})
+	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{false})
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
