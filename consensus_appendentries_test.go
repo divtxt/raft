@@ -139,7 +139,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 			func() {
 				mcm, _ = f(testSetupMCM_Leader_WithTerms, true)
 			},
-			"FATAL: two leaders with same term: 9",
+			"FATAL: two leaders with same term - got AppendEntries from: s3 with term: 9",
 		)
 	}
 }

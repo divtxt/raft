@@ -106,7 +106,7 @@ func TestConsensusModule_UnknownRpcTypeStopsCM(t *testing.T) {
 	}
 
 	e := cm.GetStopError()
-	if e != "FATAL: unknown rpc type: *struct { int }" {
+	if e != "FATAL: unknown rpc type: *struct { int } from: s2" {
 		t.Error(e)
 	}
 }

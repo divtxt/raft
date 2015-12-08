@@ -9,6 +9,7 @@ import (
 )
 
 func (cm *passiveConsensusModule) _processRpc_AppendEntries(
+	from ServerId,
 	serverState ServerState,
 	appendEntries *RpcAppendEntries,
 ) bool {
@@ -34,7 +35,11 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntries(
 
 	// Extra: raft violation - two leaders with same term
 	if serverState == LEADER && leaderCurrentTerm == serverTerm {
-		panic(fmt.Sprintf("FATAL: two leaders with same term: %v", serverTerm))
+		panic(fmt.Sprintf(
+			"FATAL: two leaders with same term - got AppendEntries from: %v with term: %v",
+			from,
+			serverTerm,
+		))
 	}
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
