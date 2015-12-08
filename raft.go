@@ -92,13 +92,24 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 }
 
 // Process the given RPC message from the given peer asynchronously.
-// See comments in rpctypes.go for an explanation of the messaging model.
-// This method sends the rpc to the ConsensusModule's goroutine.
-// Sending an unknown or unexpected rpc message will cause the
-// ConsensusModule goroutine to panic and stop.
+//
+// This method sends the rpc to the consensus module's goroutine.
+//
+// Invalid parameters will cause the consensus module's goroutine to panic and
+// stop. This includes an unknown rpc message or a nil, unbuffered or full
+// replyChan.
+//
+// See rpctypes.go for the various RPC message types.
+//
+// See RpcSender in interfaces.go for outgoing RPC.
+//
 // TODO: behavior when channel full?
-func (cm *ConsensusModule) ProcessRpcAsync(from ServerId, rpc interface{}) {
-	cm.rpcChannel <- rpcTuple{from, rpc}
+func (cm *ConsensusModule) ProcessRpcAsync(
+	from ServerId,
+	rpc interface{},
+	replyChan chan interface{},
+) {
+	cm.rpcChannel <- rpcTuple{from, rpc, replyChan}
 }
 
 // -- protected methods
@@ -123,7 +134,7 @@ loop:
 			if !ok {
 				panic("FATAL: rpcChannel closed")
 			}
-			cm.passiveConsensusModule.rpc(rpc.from, rpc.rpc)
+			cm.passiveConsensusModule.rpcAndReply(rpc.from, rpc.rpc, rpc.replyChan)
 		case now, ok := <-cm.ticker.C:
 			if !ok {
 				panic("FATAL: ticker channel closed")
@@ -133,4 +144,10 @@ loop:
 			break loop
 		}
 	}
+}
+
+type rpcTuple struct {
+	from      ServerId
+	rpc       interface{}
+	replyChan chan interface{}
 }

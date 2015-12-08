@@ -117,13 +117,29 @@ func (cm *passiveConsensusModule) resetElectionTimeoutTime(now time.Time) {
 	cm.electionTimeoutTime = now.Add(cm.currentElectionTimeout)
 }
 
-type rpcTuple struct {
-	from ServerId
-	rpc  interface{}
+// Process the given rpc message
+func (cm *passiveConsensusModule) rpcAndReply(
+	from ServerId,
+	rpc interface{},
+	replyChan chan interface{},
+) {
+	rpcReply := cm.rpc(from, rpc)
+
+	// TODO: break this out & write tests for it
+	if rpcReply != nil {
+		select {
+		case replyChan <- rpcReply:
+			// nothing more to do
+		default:
+			panic("FATAL: replyChan is nil or wants to block!")
+		}
+	}
 }
 
-// Process the given rpc message
-func (cm *passiveConsensusModule) rpc(from ServerId, rpc interface{}) {
+func (cm *passiveConsensusModule) rpc(
+	from ServerId,
+	rpc interface{},
+) interface{} {
 	serverState := cm.getServerState()
 	switch serverState {
 	case FOLLOWER:
@@ -136,27 +152,29 @@ func (cm *passiveConsensusModule) rpc(from ServerId, rpc interface{}) {
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
 
+	var rpcReply interface{} = nil
+
 	switch rpc := rpc.(type) {
 	case *RpcAppendEntries:
 		success := cm._processRpc_AppendEntries(from, serverState, rpc)
-		reply := &RpcAppendEntriesReply{
+		rpcReply = &RpcAppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(),
 			success,
 		}
-		cm.rpcSender.SendAsync(from, reply)
 	case *RpcAppendEntriesReply:
 		cm._processRpc_AppendEntriesReply(serverState, rpc)
 	case *RpcRequestVote:
 		success := cm._processRpc_RequestVote(serverState, from, rpc)
-		reply := &RpcRequestVoteReply{
+		rpcReply = &RpcRequestVoteReply{
 			success,
 		}
-		cm.rpcSender.SendAsync(from, reply)
 	case *RpcRequestVoteReply:
 		cm._processRpc_RequestVoteReply(serverState, from, rpc)
 	default:
 		panic(fmt.Sprintf("FATAL: unknown rpc type: %T from: %v", rpc, from))
 	}
+
+	return rpcReply
 }
 
 // Iterate
