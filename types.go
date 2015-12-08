@@ -1,5 +1,9 @@
 package raft
 
+import (
+	"fmt"
+)
+
 // Server states.
 type ServerState uint32
 
@@ -16,3 +20,10 @@ type TermNo uint64
 // Server id - the contents are opaque to this module except for
 // a blank string indicating a none value.
 type ServerId string
+
+// Helper functions
+func _validateServerState(serverState ServerState) {
+	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
+		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
+	}
+}
