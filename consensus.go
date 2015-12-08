@@ -120,49 +120,29 @@ func (cm *passiveConsensusModule) resetElectionTimeoutTime(now time.Time) {
 }
 
 // Process the given rpc message
-func (cm *passiveConsensusModule) rpcAndReply(
-	from ServerId,
-	rpc interface{},
-	replyChan chan interface{},
-) {
-	rpcReply := cm.rpc(from, rpc)
-
-	// TODO: break this out & write tests for it
-	if rpcReply != nil {
-		select {
-		case replyChan <- rpcReply:
-			// nothing more to do
-		default:
-			panic("FATAL: replyChan is nil or wants to block!")
-		}
-	}
-}
-
 func (cm *passiveConsensusModule) rpc(
 	from ServerId,
 	rpc interface{},
 ) interface{} {
 	serverState := cm.getServerState()
 
-	var rpcReply interface{} = nil
-
 	switch rpc := rpc.(type) {
 	case *RpcAppendEntries:
 		success := cm._processRpc_AppendEntries(from, serverState, rpc)
-		rpcReply = &RpcAppendEntriesReply{
+		rpcReply := &RpcAppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(),
 			success,
 		}
+		return rpcReply
 	case *RpcRequestVote:
 		success := cm._processRpc_RequestVote(serverState, from, rpc)
-		rpcReply = &RpcRequestVoteReply{
+		rpcReply := &RpcRequestVoteReply{
 			success,
 		}
+		return rpcReply
 	default:
 		panic(fmt.Sprintf("FATAL: unknown rpc type: %T from: %v", rpc, from))
 	}
-
-	return rpcReply
 }
 
 func (cm *passiveConsensusModule) rpcReply(
