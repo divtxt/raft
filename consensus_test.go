@@ -88,7 +88,7 @@ func TestCM_UnknownRpcTypePanics(t *testing.T) {
 		func(mcm *managedConsensusModule) {
 			mcm.pcm.rpc("s2", &struct{ int }{42})
 		},
-		"FATAL: unknown rpc type: *struct { int }",
+		"FATAL: unknown rpc type: *struct { int } from: s2",
 	)
 }
 
