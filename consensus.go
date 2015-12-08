@@ -94,16 +94,18 @@ func newPassiveConsensusModule(
 	return pcm, now
 }
 
-// Get the current server state
+// Get the current server state.
+// Validates the server state before returning.
 func (cm *passiveConsensusModule) getServerState() ServerState {
-	return ServerState(atomic.LoadUint32((*uint32)(&cm._unsafe_serverState)))
+	serverState := ServerState(atomic.LoadUint32((*uint32)(&cm._unsafe_serverState)))
+	_validateServerState(serverState)
+	return serverState
 }
 
-// Set the current server state
+// Set the current server state.
+// Validates the server state before setting.
 func (cm *passiveConsensusModule) _setServerState(serverState ServerState) {
-	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
-		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
-	}
+	_validateServerState(serverState)
 	atomic.StoreUint32((*uint32)(&cm._unsafe_serverState), (uint32)(serverState))
 }
 
@@ -141,16 +143,6 @@ func (cm *passiveConsensusModule) rpc(
 	rpc interface{},
 ) interface{} {
 	serverState := cm.getServerState()
-	switch serverState {
-	case FOLLOWER:
-		// Pass through to main logic below
-	case CANDIDATE:
-		// Pass through to main logic below
-	case LEADER:
-		// Pass through to main logic below
-	default:
-		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
-	}
 
 	var rpcReply interface{} = nil
 
@@ -200,8 +192,6 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 	case LEADER:
 		cm._sendEmptyAppendEntriesToAllPeers()
 		// TODO: more leader things
-	default:
-		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
 }
 
