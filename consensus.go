@@ -153,20 +153,32 @@ func (cm *passiveConsensusModule) rpc(
 			cm.persistentState.GetCurrentTerm(),
 			success,
 		}
-	case *RpcAppendEntriesReply:
-		cm._processRpc_AppendEntriesReply(serverState, rpc)
 	case *RpcRequestVote:
 		success := cm._processRpc_RequestVote(serverState, from, rpc)
 		rpcReply = &RpcRequestVoteReply{
 			success,
 		}
-	case *RpcRequestVoteReply:
-		cm._processRpc_RequestVoteReply(serverState, from, rpc)
 	default:
 		panic(fmt.Sprintf("FATAL: unknown rpc type: %T from: %v", rpc, from))
 	}
 
 	return rpcReply
+}
+
+func (cm *passiveConsensusModule) rpcReply(
+	from ServerId,
+	rpcReply interface{},
+) {
+	serverState := cm.getServerState()
+
+	switch rpcReply := rpcReply.(type) {
+	case *RpcAppendEntriesReply:
+		cm._processRpc_AppendEntriesReply(serverState, rpcReply)
+	case *RpcRequestVoteReply:
+		cm._processRpc_RequestVoteReply(serverState, from, rpcReply)
+	default:
+		panic(fmt.Sprintf("FATAL: unknown rpcReply type: %T from: %v", rpcReply, from))
+	}
 }
 
 // Iterate
