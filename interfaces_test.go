@@ -77,11 +77,13 @@ func TestInMemoryPersistentState(t *testing.T) {
 	PartialTest_PersistentState_BlackboxTest(t, imps)
 }
 
-// -- RpcSender
+// -- rpcSender
 
-// Mock in-memory implementation of RpcSender - meant only for tests
+// Mock in-memory implementation of both RpcService & rpcSender
+// - meant only for tests
 type mockRpcSender struct {
-	c chan mockSentRpc
+	c           chan mockSentRpc
+	replyAsyncs chan func(interface{})
 }
 
 type mockSentRpc struct {
@@ -90,15 +92,24 @@ type mockSentRpc struct {
 }
 
 func newMockRpcSender() *mockRpcSender {
-	return &mockRpcSender{make(chan mockSentRpc, 100)}
+	return &mockRpcSender{
+		make(chan mockSentRpc, 100),
+		make(chan func(interface{}), 100),
+	}
 }
 
-func (mrs *mockRpcSender) SendAsync(toServer ServerId, rpc interface{}) {
+func (mrs *mockRpcSender) sendAsync(toServer ServerId, rpc interface{}) {
+	mrs.SendAsync(toServer, rpc, nil)
+}
+
+func (mrs *mockRpcSender) SendAsync(toServer ServerId, rpc interface{}, replyAsync func(interface{})) {
 	select {
 	default:
 		panic("oops!")
 	case mrs.c <- mockSentRpc{toServer, rpc}:
-		// nothing more to do!
+		if replyAsync != nil {
+			mrs.replyAsyncs <- replyAsync
+		}
 	}
 }
 
@@ -138,6 +149,22 @@ loop:
 	}
 }
 
+// Clears & sends reply to sent reply functions
+func (mrs *mockRpcSender) sendReplies(reply interface{}) int {
+	var n int = 0
+loop:
+	for {
+		select {
+		case replyAsync := <-mrs.replyAsyncs:
+			replyAsync(reply)
+			n++
+		default:
+			break loop
+		}
+	}
+	return n
+}
+
 // implement sort.Interface for mockSentRpc slices
 type mockRpcSenderSlice []mockSentRpc
 
@@ -148,9 +175,27 @@ func (mrss mockRpcSenderSlice) Swap(i, j int)      { mrss[i], mrss[j] = mrss[j],
 func TestMockRpcSender(t *testing.T) {
 	mrs := newMockRpcSender()
 
-	mrs.SendAsync("s2", "foo")
-	mrs.SendAsync("s1", 42)
+	var actualReply interface{} = nil
+	var replyAsync func(interface{}) = func(rpcReply interface{}) {
+		actualReply = rpcReply
+	}
+
+	mrs.SendAsync("s2", "foo", replyAsync)
+	mrs.sendAsync("s1", 42)
 
 	expected := []mockSentRpc{{"s1", 42}, {"s2", "foo"}}
 	mrs.checkSentRpcs(t, expected)
+
+	if actualReply != nil {
+		t.Fatal()
+	}
+
+	sentReply := &struct{ int }{24}
+	if mrs.sendReplies(sentReply) != 1 {
+		t.Error()
+	}
+
+	if !reflect.DeepEqual(actualReply, sentReply) {
+		t.Fatal()
+	}
 }

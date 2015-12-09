@@ -131,3 +131,44 @@ func TestConsensusModule_ProcessRpcAsync(t *testing.T) {
 		t.Fatal()
 	}
 }
+
+// Run through an election cycle to test the rpc reply callbacks!
+func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
+	cm, mrs := setupConsensusModuleR2(t, nil)
+	defer cm.StopAsync()
+
+	// FIXME: unsafe concurrent access
+	time.Sleep(cm.passiveConsensusModule.currentElectionTimeout + testSleepJustMoreThanATick)
+
+	if cm.GetServerState() != CANDIDATE {
+		t.Fatal()
+	}
+
+	// candidate has issued RequestVote RPCs to all other servers.
+	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(cm.passiveConsensusModule.log)
+	expectedRpc := &RpcRequestVote{testCurrentTerm + 1, lastLogIndex, lastLogTerm}
+	expectedRpcs := []mockSentRpc{
+		{"s2", expectedRpc},
+		{"s3", expectedRpc},
+		{"s4", expectedRpc},
+		{"s5", expectedRpc},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
+
+	// reply true for all votes
+	// FIXME: unsafe concurrent access
+	serverTerm := cm.passiveConsensusModule.persistentState.GetCurrentTerm()
+	if mrs.sendReplies(&RpcRequestVoteReply{serverTerm, true}) != 4 {
+		t.Fatal()
+	}
+
+	time.Sleep(testSleepToLetGoroutineRun)
+
+	// server should now be a leader
+	if cm.IsStopped() {
+		t.Fatal(cm.GetStopError())
+	}
+	if cm.GetServerState() != LEADER {
+		t.Fatal()
+	}
+}

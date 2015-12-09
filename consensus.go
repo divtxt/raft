@@ -22,7 +22,7 @@ type passiveConsensusModule struct {
 	// -- External components - these fields meant to be immutable
 	persistentState PersistentState
 	log             Log
-	rpcSender       RpcSender
+	rpcSender       rpcSender
 
 	// -- Config - these fields meant to be immutable
 	thisServerId           ServerId
@@ -42,7 +42,7 @@ type passiveConsensusModule struct {
 func newPassiveConsensusModule(
 	persistentState PersistentState,
 	log Log,
-	rpcSender RpcSender,
+	rpcSender rpcSender,
 	thisServerId ServerId,
 	peerServerIds []ServerId,
 	timeSettings TimeSettings,
@@ -76,7 +76,7 @@ func newPassiveConsensusModule(
 		thisServerId,
 		peerServerIds,
 		timeSettings.ElectionTimeoutLow,
-		0, // temp value, to be replaced before goroutine start
+		0, // temp value, to be replaced later in initialization
 
 		// -- State
 		// #5.2-p1s2: When servers start up, they begin as followers
@@ -159,14 +159,14 @@ func (cm *passiveConsensusModule) rpcReply(
 		case *RpcAppendEntriesReply:
 			cm._processRpc_AppendEntriesReply(serverState, from, rpcReply)
 		default:
-			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v", rpcReply, from))
+			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v - expected *RpcAppendEntriesReply", rpcReply, from))
 		}
 	case *RpcRequestVote:
 		switch rpcReply := rpcReply.(type) {
 		case *RpcRequestVoteReply:
 			cm._processRpc_RequestVoteReply(serverState, from, rpcReply)
 		default:
-			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v", rpcReply, from))
+			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v - expected *RpcRequestVoteReply", rpcReply, from))
 		}
 	default:
 		panic(fmt.Sprintf("FATAL: unknown rpc type: %T from: %v", rpc, from))
@@ -211,7 +211,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(cm.log)
 	for _, serverId := range cm.peerServerIds {
 		rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-		cm.rpcSender.SendAsync(serverId, rpcRequestVote)
+		cm.rpcSender.sendAsync(serverId, rpcRequestVote)
 	}
 	// Reset election timeout!
 	cm.chooseNewRandomElectionTimeout()
@@ -243,6 +243,13 @@ func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
 		cm.volatileState.commitIndex,
 	}
 	for _, serverId := range cm.peerServerIds {
-		cm.rpcSender.SendAsync(serverId, rpcAppendEntries)
+		cm.rpcSender.sendAsync(serverId, rpcAppendEntries)
 	}
+}
+
+// -- rpc bridging things
+
+// This is an internal equivalent to RpcService without the reply setup.
+type rpcSender interface {
+	sendAsync(toServer ServerId, rpc interface{})
 }

@@ -46,7 +46,7 @@ type PersistentState interface {
 // See rpctypes.go for the various RPC message types.
 //
 // See the consensus module's ProcessRpcAsync() for incoming RPC.
-type RpcSender interface {
+type RpcService interface {
 	// Send the given RPC message to the given server asynchronously.
 	//
 	// Notes for implementers:
@@ -55,11 +55,10 @@ type RpcSender interface {
 	//
 	// - No guarantee of RPC success is expected.
 	//
-	// - When the RPC completes, the reply and the original rpc that it
-	// corresponds to should be sent via the consensus module's
-	// ProcessRpcReplyAsync() function.
+	// - If the RPC succeeds, the reply rpc should be sent to the replyAsync
+	// function paramter. It will return immediately.
 	//
-	// - If the RPC fails, there is no need to notify the consensus module.
+	// - If the RPC fails, there is no need to do anything.
 	//
 	// - It is expected that multiple RPC messages will be sent independently to
 	// different servers.
@@ -75,5 +74,5 @@ type RpcSender interface {
 	//
 	// TODO: should this call error if rpc type is unknown?
 	// TODO: should this call error if bad server id?
-	SendAsync(toServer ServerId, rpc interface{})
+	SendAsync(toServer ServerId, rpc interface{}, replyAsync func(interface{}))
 }
