@@ -83,7 +83,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 
 		reply := mcm.pcm.rpc("s3", appendEntries)
 
-		expectedRpc := &RpcAppendEntriesReply{serverTerm, false}
+		expectedRpc := &RpcAppendEntriesReply{senderTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
 		}
@@ -91,16 +91,19 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 		if !senderTermIsSame {
 			// #RFS-A2: If RPC request or response contains term T > currentTerm:
 			// set currentTerm = T, convert to follower (#5.1)
-			// #5.1-p3s4: ...; if one server's current term is smaller than the other's, then
-			// it updates its current term to the larger value.
-			// #5.1-p3s5: If a candidate or leader discovers that its term is out of date, it
-			// immediately reverts to follower state.
-			// #5.2-p4s1: While waiting for votes, a candidate may receive an AppendEntries
-			// RPC from another server claiming to be leader.
-			// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as large as
-			// the candidate’s current term, then the candidate recognizes the leader as
-			// legitimate and returns to follower state.
+			// #5.1-p3s4: ...; if one server's current term is smaller than the
+			// other's, then it updates its current term to the larger value.
+			// #5.1-p3s5: If a candidate or leader discovers that its term is out of
+			// date, it immediately reverts to follower state.
+			// #5.2-p4s1: While waiting for votes, a candidate may receive an
+			// AppendEntries RPC from another server claiming to be leader.
+			// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as
+			// large as the candidate’s current term, then the candidate recognizes
+			// the leader as legitimate and returns to follower state.
 			if mcm.pcm.getServerState() != FOLLOWER {
+				t.Fatal()
+			}
+			if mcm.pcm.persistentState.GetCurrentTerm() != senderTerm {
 				t.Fatal()
 			}
 		}
@@ -116,12 +119,15 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 	{
 		mcm, _ := f(testSetupMCM_Candidate_WithTerms, false)
 
-		// #5.2-p4s1: While waiting for votes, a candidate may receive an AppendEntries
-		// RPC from another server claiming to be leader.
-		// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as large as
-		// the candidate’s current term, then the candidate recognizes the leader as
-		// legitimate and returns to follower state.
+		// #5.2-p4s1: While waiting for votes, a candidate may receive an
+		// AppendEntries RPC from another server claiming to be leader.
+		// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as
+		// large as the candidate’s current term, then the candidate recognizes the
+		// leader as legitimate and returns to follower state.
 		if mcm.pcm.getServerState() != FOLLOWER {
+			t.Fatal()
+		}
+		if mcm.pcm.persistentState.GetCurrentTerm() != testCurrentTerm+2 {
 			t.Fatal()
 		}
 	}

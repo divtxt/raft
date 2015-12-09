@@ -9,6 +9,12 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 	appendEntries *RpcAppendEntries,
 	appendEntriesReply *RpcAppendEntriesReply,
 ) {
+	serverTerm := cm.persistentState.GetCurrentTerm()
+
+	// Ignore reply - rpc was for a previous term
+	if appendEntries.Term != serverTerm {
+		return
+	}
 
 	switch serverState {
 	case FOLLOWER:
