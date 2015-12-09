@@ -6,6 +6,7 @@ package raft
 func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 	serverState ServerState,
 	from ServerId,
+	appendEntries *RpcAppendEntries,
 	appendEntriesReply *RpcAppendEntriesReply,
 ) {
 
