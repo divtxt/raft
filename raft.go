@@ -12,8 +12,9 @@ type ConsensusModule struct {
 	stopped int32
 
 	// -- Channels
-	rpcChannel chan rpcTuple
-	ticker     *time.Ticker
+	rpcChannel      chan rpcTuple
+	rpcReplyChannel chan rpcReplyTuple
+	ticker          *time.Ticker
 
 	// -- Control
 	stopSignal chan struct{}
@@ -43,6 +44,7 @@ func NewConsensusModule(
 	)
 
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
+	rpcReplyChannel := make(chan rpcReplyTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 
 	cm := &ConsensusModule{
@@ -53,6 +55,7 @@ func NewConsensusModule(
 
 		// -- Channels
 		rpcChannel,
+		rpcReplyChannel,
 		ticker,
 
 		// -- Control
@@ -113,6 +116,22 @@ func (cm *ConsensusModule) ProcessRpcAsync(
 	return replyChan
 }
 
+// Process the given RPC reply message from the given peer asynchronously.
+//
+// This method sends the rpc reply to the consensus module's goroutine.
+//
+// An unknown rpc message will cause the consensus module's goroutine to panic
+// and stop.
+//
+// TODO: behavior when channel full?
+func (cm *ConsensusModule) ProcessRpcReplyAsync(
+	from ServerId,
+	rpc interface{},
+	rpcReply interface{},
+) {
+	cm.rpcReplyChannel <- rpcReplyTuple{from, rpc, rpcReply}
+}
+
 // -- protected methods
 
 func (cm *ConsensusModule) processor() {
@@ -125,6 +144,7 @@ func (cm *ConsensusModule) processor() {
 		atomic.StoreInt32(&cm.stopped, 1)
 		// Clean up things
 		close(cm.rpcChannel)
+		close(cm.rpcReplyChannel)
 		cm.ticker.Stop()
 	}()
 
@@ -144,6 +164,12 @@ loop:
 				// capacity 1 and this is the one send to it
 				panic("FATAL: replyChan is nil or wants to block")
 			}
+		case rpcReply, ok := <-cm.rpcReplyChannel:
+			if !ok {
+				// theoretically unreachable as we don't close the channel til shutdown
+				panic("FATAL: rpcReplyChannel closed")
+			}
+			cm.passiveConsensusModule.rpcReply(rpcReply.from, rpcReply.rpc, rpcReply.rpcReply)
 		case now, ok := <-cm.ticker.C:
 			if !ok {
 				// theoretically unreachable as we don't stop the timer til shutdown
@@ -160,4 +186,10 @@ type rpcTuple struct {
 	from      ServerId
 	rpc       interface{}
 	replyChan chan interface{}
+}
+
+type rpcReplyTuple struct {
+	from     ServerId
+	rpc      interface{}
+	rpcReply interface{}
 }

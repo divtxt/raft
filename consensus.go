@@ -148,17 +148,28 @@ func (cm *passiveConsensusModule) rpc(
 
 func (cm *passiveConsensusModule) rpcReply(
 	from ServerId,
+	rpc interface{},
 	rpcReply interface{},
 ) {
 	serverState := cm.getServerState()
 
-	switch rpcReply := rpcReply.(type) {
-	case *RpcAppendEntriesReply:
-		cm._processRpc_AppendEntriesReply(serverState, from, rpcReply)
-	case *RpcRequestVoteReply:
-		cm._processRpc_RequestVoteReply(serverState, from, rpcReply)
+	switch rpc := rpc.(type) {
+	case *RpcAppendEntries:
+		switch rpcReply := rpcReply.(type) {
+		case *RpcAppendEntriesReply:
+			cm._processRpc_AppendEntriesReply(serverState, from, rpcReply)
+		default:
+			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v", rpcReply, from))
+		}
+	case *RpcRequestVote:
+		switch rpcReply := rpcReply.(type) {
+		case *RpcRequestVoteReply:
+			cm._processRpc_RequestVoteReply(serverState, from, rpcReply)
+		default:
+			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v", rpcReply, from))
+		}
 	default:
-		panic(fmt.Sprintf("FATAL: unknown rpcReply type: %T from: %v", rpcReply, from))
+		panic(fmt.Sprintf("FATAL: unknown rpc type: %T from: %v", rpc, from))
 	}
 }
 

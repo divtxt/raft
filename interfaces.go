@@ -55,8 +55,9 @@ type RpcSender interface {
 	//
 	// - No guarantee of RPC success is expected.
 	//
-	// - When the RPC completes, the result should be sent via the consensus
-	// module's ProcessRpcAsync() function.
+	// - When the RPC completes, the reply and the original rpc that it
+	// corresponds to should be sent via the consensus module's
+	// ProcessRpcReplyAsync() function.
 	//
 	// - If the RPC fails, there is no need to notify the consensus module.
 	//

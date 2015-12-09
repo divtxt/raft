@@ -11,21 +11,22 @@ import (
 func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{serverTerm, false})
+	mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, false})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s4 grants vote - should become leader
-	mcm.pcm.rpcReply("s4", &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply("s4", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -48,7 +49,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// s5 grants vote - should stay leader
-	mcm.pcm.rpcReply("s5", &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply("s5", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -63,15 +64,16 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{serverTerm, false})
+	mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, false})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
@@ -85,17 +87,18 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, mrs := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 		beforeState := mcm.pcm.getServerState()
 
 		// s2 grants vote - ignore
-		mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{serverTerm, true})
+		mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
 		mrs.checkSentRpcs(t, []mockSentRpc{})
 
 		// s3 denies vote - ignore
-		mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{serverTerm, false})
+		mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, false})
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
