@@ -135,9 +135,10 @@ func (cm *passiveConsensusModule) rpc(
 		}
 		return rpcReply
 	case *RpcRequestVote:
-		success := cm._processRpc_RequestVote(serverState, from, rpc)
+		voteGranted := cm._processRpc_RequestVote(serverState, from, rpc)
 		rpcReply := &RpcRequestVoteReply{
-			success,
+			cm.persistentState.GetCurrentTerm(),
+			voteGranted,
 		}
 		return rpcReply
 	default:

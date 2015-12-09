@@ -265,8 +265,9 @@ func testSetupMCM_Leader_WithTerms(
 	terms []TermNo,
 ) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
-	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{true})
-	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{true})
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{serverTerm, true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}

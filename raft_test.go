@@ -121,7 +121,9 @@ func TestConsensusModule_ProcessRpcAsync(t *testing.T) {
 
 	select {
 	case reply := <-replyChan:
-		expectedRpc := &RpcRequestVoteReply{false}
+		// FIXME: unsafe concurrent access
+		serverTerm := cm.passiveConsensusModule.persistentState.GetCurrentTerm()
+		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
 		}
