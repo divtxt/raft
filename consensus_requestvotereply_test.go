@@ -80,22 +80,27 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 	testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(t, mcm, mrs, testCurrentTerm+2)
 }
 
-// Extra: follower ignores vote
-func TestCM_RpcRVR_Follower_Ignores(t *testing.T) {
-	mcm, mrs := testSetupMCM_Follower_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+// Extra: follower or leader ignores vote
+func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
+	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
+		mcm, mrs := setup(t)
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		beforeState := mcm.pcm.getServerState()
 
-	// s2 grants vote - ignore
-	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{serverTerm, true})
-	if mcm.pcm.getServerState() != FOLLOWER {
-		t.Fatal()
-	}
-	mrs.checkSentRpcs(t, []mockSentRpc{})
+		// s2 grants vote - ignore
+		mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{serverTerm, true})
+		if mcm.pcm.getServerState() != beforeState {
+			t.Fatal()
+		}
+		mrs.checkSentRpcs(t, []mockSentRpc{})
 
-	// s3 denies vote - ignore
-	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{serverTerm, false})
-	if mcm.pcm.getServerState() != FOLLOWER {
-		t.Fatal()
+		// s3 denies vote - ignore
+		mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{serverTerm, false})
+		if mcm.pcm.getServerState() != beforeState {
+			t.Fatal()
+		}
+		mrs.checkSentRpcs(t, []mockSentRpc{})
 	}
-	mrs.checkSentRpcs(t, []mockSentRpc{})
+
+	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
