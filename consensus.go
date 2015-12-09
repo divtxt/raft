@@ -226,9 +226,13 @@ func (cm *passiveConsensusModule) becomeLeader() {
 	// TODO: more leader things!
 }
 
-func (cm *passiveConsensusModule) becomeFollower(newTerm TermNo) {
+func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
+	var votedFor ServerId = ""
+	if newTerm == cm.persistentState.GetCurrentTerm() {
+		votedFor = cm.persistentState.GetVotedFor()
+	}
 	cm._setServerState(FOLLOWER)
-	cm.persistentState.SetCurrentTermAndVotedFor(newTerm, "")
+	cm.persistentState.SetCurrentTermAndVotedFor(newTerm, votedFor)
 	// TODO: more follower things!
 }
 

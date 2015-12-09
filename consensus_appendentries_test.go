@@ -121,18 +121,14 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 
 	// Leader
 	f(testSetupMCM_Leader_WithTerms, true)
-	{
-		var mcm *managedConsensusModule
-
-		// Extra: raft violation - two leaders with same term
-		test_ExpectPanic(
-			t,
-			func() {
-				mcm, _ = f(testSetupMCM_Leader_WithTerms, false)
-			},
-			"FATAL: two leaders with same term - got AppendEntries from: s3 with term: 9",
-		)
-	}
+	// Extra: raft violation - two leaders with same term
+	test_ExpectPanic(
+		t,
+		func() {
+			f(testSetupMCM_Leader_WithTerms, false)
+		},
+		"FATAL: two leaders with same term - got AppendEntries from: s3 with term: 9",
+	)
 }
 
 // 3. If an existing entry conflicts with a new one (same index
@@ -145,89 +141,153 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 // have success set to true.
 // Note: this test case based on Figure 7, case (e) in the Raft paper but adds
 // some extra entries to also test step 3
-func TestCM_RpcAE_Follower_AppendNewEntries(t *testing.T) {
-	mcm, _ := setupManagedConsensusModuleR2(
+func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
+	f := func(
+		setup func(t *testing.T, terms []TermNo) (mcm *managedConsensusModule, mrs *mockRpcSender),
+		senderTermIsNewer bool,
+	) {
+		mcm, _ := setup(
+			t,
+			[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
+		)
+		mcm.pcm.volatileState.commitIndex = 3
+
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+		senderTerm := serverTerm
+		if senderTermIsNewer {
+			senderTerm += 1
+		}
+
+		if mcm.pcm.log.getLogEntryAtIndex(6).Command != "c6" {
+			t.Error()
+		}
+
+		sentLogEntries := []LogEntry{
+			{5, "c6'"},
+			{5, "c7'"},
+			{6, "c8'"},
+		}
+
+		appendEntries := &RpcAppendEntries{senderTerm, 5, 4, sentLogEntries, 7}
+
+		reply := mcm.pcm.rpc("s4", appendEntries)
+
+		expectedRpc := &RpcAppendEntriesReply{senderTerm, true}
+		if !reflect.DeepEqual(reply, expectedRpc) {
+			t.Fatal(reply)
+		}
+
+		if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 8 {
+			t.Fatal(iole)
+		}
+		addedLogEntry := mcm.pcm.log.getLogEntryAtIndex(6)
+		if addedLogEntry.TermNo != 5 {
+			t.Error()
+		}
+		if addedLogEntry.Command != "c6'" {
+			t.Error()
+		}
+
+		if mcm.pcm.volatileState.commitIndex != 7 {
+			t.Error()
+		}
+	}
+
+	// Follower
+	f(testSetupMCM_Follower_WithTerms, false)
+	f(testSetupMCM_Follower_WithTerms, false)
+
+	// Candidate
+	f(testSetupMCM_Candidate_WithTerms, false)
+	f(testSetupMCM_Candidate_WithTerms, false)
+
+	// Leader
+	f(testSetupMCM_Leader_WithTerms, true)
+	test_ExpectPanic(
 		t,
-		[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
+		func() {
+			f(testSetupMCM_Leader_WithTerms, false)
+		},
+		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 9",
 	)
-	mcm.pcm.volatileState.commitIndex = 3
-	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
-
-	if mcm.pcm.log.getLogEntryAtIndex(6).Command != "c6" {
-		t.Error()
-	}
-
-	sentLogEntries := []LogEntry{
-		{5, "c6'"},
-		{5, "c7'"},
-		{6, "c8'"},
-	}
-
-	appendEntries := &RpcAppendEntries{testCurrentTerm, 5, 4, sentLogEntries, 7}
-
-	reply := mcm.pcm.rpc("s4", appendEntries)
-
-	expectedRpc := &RpcAppendEntriesReply{followerTerm, true}
-	if !reflect.DeepEqual(reply, expectedRpc) {
-		t.Fatal(reply)
-	}
-
-	if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 8 {
-		t.Fatal(iole)
-	}
-	addedLogEntry := mcm.pcm.log.getLogEntryAtIndex(6)
-	if addedLogEntry.TermNo != 5 {
-		t.Error()
-	}
-	if addedLogEntry.Command != "c6'" {
-		t.Error()
-	}
-
-	if mcm.pcm.volatileState.commitIndex != 7 {
-		t.Error()
-	}
 }
 
 // Variant of TestRpcAEAppendNewEntries to test alternate path for step 5.
 // Note: this test case based on Figure 7, case (b) in the Raft paper
-func TestCM_RpcAE_Follower_AppendNewEntriesB(t *testing.T) {
-	mcm, _ := setupManagedConsensusModuleR2(
+func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
+	f := func(
+		setup func(t *testing.T, terms []TermNo) (mcm *managedConsensusModule, mrs *mockRpcSender),
+		senderTermIsNewer bool,
+		expectedVotedFor ServerId,
+	) {
+		mcm, _ := setup(
+			t,
+			[]TermNo{1, 1, 1, 4},
+		)
+		mcm.pcm.volatileState.commitIndex = 3
+
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+		senderTerm := serverTerm
+		if senderTermIsNewer {
+			senderTerm += 1
+		}
+
+		if mcm.pcm.log.getLogEntryAtIndex(4).Command != "c4" {
+			t.Error()
+		}
+
+		sentLogEntries := []LogEntry{
+			{4, "c5'"},
+			{5, "c6'"},
+		}
+
+		appendEntries := &RpcAppendEntries{senderTerm, 4, 4, sentLogEntries, 7}
+
+		reply := mcm.pcm.rpc("s4", appendEntries)
+
+		expectedRpc := &RpcAppendEntriesReply{senderTerm, true}
+		if !reflect.DeepEqual(reply, expectedRpc) {
+			t.Fatal(reply)
+		}
+
+		if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 6 {
+			t.Fatal(iole)
+		}
+		addedLogEntry := mcm.pcm.log.getLogEntryAtIndex(6)
+		if addedLogEntry.TermNo != 5 {
+			t.Error()
+		}
+		if addedLogEntry.Command != "c6'" {
+			t.Error()
+		}
+
+		if mcm.pcm.volatileState.commitIndex != 6 {
+			t.Error()
+		}
+
+		if mcm.pcm.persistentState.GetVotedFor() != expectedVotedFor {
+			t.Fatal()
+		}
+	}
+
+	// Follower
+	f(testSetupMCM_Follower_WithTerms, true, "")
+	f(testSetupMCM_Follower_WithTerms, false, "")
+
+	// Candidate
+	f(testSetupMCM_Candidate_WithTerms, true, "")
+	f(testSetupMCM_Candidate_WithTerms, false, "s1")
+
+	// Leader
+	f(testSetupMCM_Leader_WithTerms, true, "")
+	test_ExpectPanic(
 		t,
-		[]TermNo{1, 1, 1, 4},
+		func() {
+			f(testSetupMCM_Leader_WithTerms, false, "s1")
+		},
+		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 9",
 	)
-	mcm.pcm.volatileState.commitIndex = 3
-	followerTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
-	if mcm.pcm.log.getLogEntryAtIndex(4).Command != "c4" {
-		t.Error()
-	}
-
-	sentLogEntries := []LogEntry{
-		{4, "c5'"},
-		{5, "c6'"},
-	}
-
-	appendEntries := &RpcAppendEntries{testCurrentTerm, 4, 4, sentLogEntries, 7}
-
-	reply := mcm.pcm.rpc("s4", appendEntries)
-
-	expectedRpc := &RpcAppendEntriesReply{followerTerm, true}
-	if !reflect.DeepEqual(reply, expectedRpc) {
-		t.Fatal(reply)
-	}
-
-	if iole := mcm.pcm.log.getIndexOfLastEntry(); iole != 6 {
-		t.Fatal(iole)
-	}
-	addedLogEntry := mcm.pcm.log.getLogEntryAtIndex(6)
-	if addedLogEntry.TermNo != 5 {
-		t.Error()
-	}
-	if addedLogEntry.Command != "c6'" {
-		t.Error()
-	}
-
-	if mcm.pcm.volatileState.commitIndex != 6 {
-		t.Error()
-	}
 }
