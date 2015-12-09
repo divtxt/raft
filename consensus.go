@@ -157,14 +157,14 @@ func (cm *passiveConsensusModule) rpcReply(
 	case *RpcAppendEntries:
 		switch rpcReply := rpcReply.(type) {
 		case *RpcAppendEntriesReply:
-			cm._processRpc_AppendEntriesReply(serverState, from, rpcReply)
+			cm._processRpc_AppendEntriesReply(serverState, from, rpc, rpcReply)
 		default:
 			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v - expected *RpcAppendEntriesReply", rpcReply, from))
 		}
 	case *RpcRequestVote:
 		switch rpcReply := rpcReply.(type) {
 		case *RpcRequestVoteReply:
-			cm._processRpc_RequestVoteReply(serverState, from, rpcReply)
+			cm._processRpc_RequestVoteReply(serverState, from, rpc, rpcReply)
 		default:
 			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v - expected *RpcRequestVoteReply", rpcReply, from))
 		}

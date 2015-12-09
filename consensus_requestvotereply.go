@@ -6,6 +6,7 @@ package raft
 func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(
 	serverState ServerState,
 	fromPeer ServerId,
+	rpcRequestVote *RpcRequestVote,
 	rpcRequestVoteReply *RpcRequestVoteReply,
 ) {
 
