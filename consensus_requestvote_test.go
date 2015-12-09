@@ -20,7 +20,7 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 
 		reply := mcm.pcm.rpc("s2", requestVote)
 
-		expectedRpc := &RpcRequestVoteReply{false}
+		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
 		}

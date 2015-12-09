@@ -43,6 +43,9 @@ type RpcRequestVote struct {
 }
 
 type RpcRequestVoteReply struct {
-	// term
+	// - currentTerm, for candidate to update itself
+	Term TermNo
+
+	// - true means candidate receive vote
 	VoteGranted bool
 }
