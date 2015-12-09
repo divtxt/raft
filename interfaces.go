@@ -12,25 +12,27 @@
 
 package raft
 
-// Persistent state on all servers
+// Persistent state on all servers.
+//
+// This state should be persisted to stable storage.
+//
+// No one else should be modifying these values, and the consensus module does
+// not cache these values, so it is recommended that implementations cache the
+// values for getter performance.
 type PersistentState interface {
 	// Get the latest term server has seen.
 	// (initialized to 0, increases monotonically)
-	// The ConsensusModule will only ever use call this method from a
-	// single goroutine.
 	GetCurrentTerm() TermNo
 
 	// Get the candidate id this server has voted for. ("" if none)
-	// The ConsensusModule will only ever call this method from it's
-	// single goroutine.
 	GetVotedFor() ServerId
 
 	// Set the latest term this server has seen and the candidate
 	// it has voted for in this term.
-	// The ConsensusModule will only ever use call this method from a
-	// single goroutine.
+	// This call should be synchronous i.e. not return until the values
+	// have been written to persistent storage.
+	//
 	// TODO: should this call error for decreasing/same term
-	// TODO: sync/async semantics & persistence error?!
 	SetCurrentTermAndVotedFor(currentTerm TermNo, votedFor ServerId)
 }
 
