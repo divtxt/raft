@@ -69,13 +69,13 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 	f := func(
 		setup func(*testing.T, []TermNo) (*managedConsensusModule, *mockRpcSender),
-		senderTermIsSame bool,
+		senderTermIsNewer bool,
 	) (*managedConsensusModule, *mockRpcSender) {
 		mcm, mrs := setup(t, []TermNo{1, 1, 1, 4})
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 		senderTerm := serverTerm
-		if !senderTermIsSame {
+		if senderTermIsNewer {
 			senderTerm += 1
 		}
 
@@ -88,7 +88,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 			t.Fatal(reply)
 		}
 
-		if !senderTermIsSame {
+		if senderTermIsNewer {
 			// #RFS-A2: If RPC request or response contains term T > currentTerm:
 			// set currentTerm = T, convert to follower (#5.1)
 			// #5.1-p3s4: ...; if one server's current term is smaller than the
@@ -103,38 +103,24 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 			if mcm.pcm.getServerState() != FOLLOWER {
 				t.Fatal()
 			}
-			if mcm.pcm.persistentState.GetCurrentTerm() != senderTerm {
-				t.Fatal()
-			}
+		}
+		if mcm.pcm.persistentState.GetCurrentTerm() != senderTerm {
+			t.Fatal()
 		}
 
 		return mcm, mrs
 	}
 
 	// Follower
-	f(testSetupMCM_Follower_WithTerms, false)
 	f(testSetupMCM_Follower_WithTerms, true)
+	f(testSetupMCM_Follower_WithTerms, false)
 
 	// Candidate
-	{
-		mcm, _ := f(testSetupMCM_Candidate_WithTerms, false)
-
-		// #5.2-p4s1: While waiting for votes, a candidate may receive an
-		// AppendEntries RPC from another server claiming to be leader.
-		// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as
-		// large as the candidate’s current term, then the candidate recognizes the
-		// leader as legitimate and returns to follower state.
-		if mcm.pcm.getServerState() != FOLLOWER {
-			t.Fatal()
-		}
-		if mcm.pcm.persistentState.GetCurrentTerm() != testCurrentTerm+2 {
-			t.Fatal()
-		}
-	}
 	f(testSetupMCM_Candidate_WithTerms, true)
+	f(testSetupMCM_Candidate_WithTerms, false)
 
 	// Leader
-	f(testSetupMCM_Leader_WithTerms, false)
+	f(testSetupMCM_Leader_WithTerms, true)
 	{
 		var mcm *managedConsensusModule
 
@@ -142,7 +128,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 		test_ExpectPanic(
 			t,
 			func() {
-				mcm, _ = f(testSetupMCM_Leader_WithTerms, true)
+				mcm, _ = f(testSetupMCM_Leader_WithTerms, false)
 			},
 			"FATAL: two leaders with same term - got AppendEntries from: s3 with term: 9",
 		)
