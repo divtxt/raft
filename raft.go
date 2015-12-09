@@ -8,6 +8,9 @@ import (
 type ConsensusModule struct {
 	passiveConsensusModule *passiveConsensusModule
 
+	// -- External components - these fields meant to be immutable
+	rpcService RpcService
+
 	// -- State - these fields may be accessed concurrently
 	stopped int32
 
@@ -29,26 +32,20 @@ type ConsensusModule struct {
 func NewConsensusModule(
 	persistentState PersistentState,
 	log Log,
-	rpcSender RpcSender,
+	rpcService RpcService,
 	thisServerId ServerId,
 	peerServerIds []ServerId,
 	timeSettings TimeSettings,
 ) *ConsensusModule {
-	pcm, _ := newPassiveConsensusModule(
-		persistentState,
-		log,
-		rpcSender,
-		thisServerId,
-		peerServerIds,
-		timeSettings,
-	)
-
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	rpcReplyChannel := make(chan rpcReplyTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 
 	cm := &ConsensusModule{
-		pcm,
+		nil, // temp value, to be replaced before goroutine start
+
+		// -- External components
+		rpcService,
 
 		// -- State
 		0,
@@ -62,6 +59,18 @@ func NewConsensusModule(
 		make(chan struct{}),
 		&atomic.Value{},
 	}
+
+	pcm, _ := newPassiveConsensusModule(
+		persistentState,
+		log,
+		cm,
+		thisServerId,
+		peerServerIds,
+		timeSettings,
+	)
+
+	// we can only set the value here because it's a cyclic reference
+	cm.passiveConsensusModule = pcm
 
 	// Start the go routine
 	go cm.processor()
@@ -116,6 +125,14 @@ func (cm *ConsensusModule) ProcessRpcAsync(
 	return replyChan
 }
 
+// imlement rpcSender
+func (cm *ConsensusModule) sendAsync(toServer ServerId, rpc interface{}) {
+	replyAsync := func(rpcReply interface{}) {
+		cm.processRpcReplyAsync(toServer, rpc, rpcReply)
+	}
+	cm.rpcService.SendAsync(toServer, rpc, replyAsync)
+}
+
 // Process the given RPC reply message from the given peer asynchronously.
 //
 // This method sends the rpc reply to the consensus module's goroutine.
@@ -124,7 +141,7 @@ func (cm *ConsensusModule) ProcessRpcAsync(
 // and stop.
 //
 // TODO: behavior when channel full?
-func (cm *ConsensusModule) ProcessRpcReplyAsync(
+func (cm *ConsensusModule) processRpcReplyAsync(
 	from ServerId,
 	rpc interface{},
 	rpcReply interface{},

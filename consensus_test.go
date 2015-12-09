@@ -109,7 +109,7 @@ func TestCM_RpcReply_UnknownRpcReplyTypePanics(t *testing.T) {
 			sentRpc := &RpcRequestVote{1, 0, 0}
 			mcm.pcm.rpcReply("s2", sentRpc, &struct{ int }{42})
 		},
-		"FATAL: mismatched rpcReply type: *struct { int } from: s2",
+		"FATAL: mismatched rpcReply type: *struct { int } from: s2 - expected *RpcRequestVoteReply",
 	)
 }
 
