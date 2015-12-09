@@ -30,6 +30,9 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
+	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+		t.Fatal()
+	}
 
 	// leader setup
 	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(mcm.pcm.log)
@@ -51,6 +54,9 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 	// s5 grants vote - should stay leader
 	mcm.pcm.rpcReply("s5", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
+	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
 }
@@ -106,4 +112,46 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 	}
 
 	f(testSetupMCM_Leader_Figure7LeaderLine)
+}
+
+// Extra: ignore replies for previous term rpc
+// #RFS-A2: If RPC request or response contains term T > currentTerm:
+// set currentTerm = T, convert to follower (#5.1)
+// #5.1-p3s4: ...; if one server's current term is smaller than the
+// other's, then it updates its current term to the larger value.
+// #5.1-p3s5: If a candidate or leader discovers that its term is out of
+// date, it immediately reverts to follower state.
+func TestCM_RpcRVR_Candidate_RpcTermMismatches(t *testing.T) {
+	mcm, _ := testSetupMCM_Candidate_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
+
+	// s2 grants vote - should stay as candidate
+	mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	if mcm.pcm.getServerState() != CANDIDATE {
+		t.Fatal()
+	}
+
+	// s5 grants vote for previous term election - ignore and stay as candidate
+	mcm.pcm.rpcReply(
+		"s5",
+		&RpcRequestVote{serverTerm - 1, 0, 0},
+		&RpcRequestVoteReply{serverTerm - 1, true},
+	)
+	if mcm.pcm.getServerState() != CANDIDATE {
+		t.Fatal()
+	}
+
+	// s3 denies vote for this election indicating a newer term - increase term
+	// and become follower
+	mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm + 1, false})
+	if mcm.pcm.getServerState() != FOLLOWER {
+		t.Fatal()
+	}
+	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm+1 {
+		t.Fatal()
+	}
+	if mcm.pcm.persistentState.GetVotedFor() != "" {
+		t.Fatal()
+	}
 }

@@ -44,16 +44,17 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntries(
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
 	// set currentTerm = T, convert to follower (#5.1)
-	// #5.1-p3s4: ...; if one server's current term is smaller than the other's, then
-	// it updates its current term to the larger value.
-	// #5.1-p3s5: If a candidate or leader discovers that its term is out of date, it
-	// immediately reverts to follower state.
-	// #5.2-p4s1: While waiting for votes, a candidate may receive an AppendEntries
-	// RPC from another server claiming to be leader.
-	// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as large as
-	// the candidate’s current term, then the candidate recognizes the leader as
-	// legitimate and returns to follower state.
-	cm.becomeFollower()
+	// #5.1-p3s4: ...; if one server's current term is smaller than the
+	// other's, then it updates its current term to the larger value.
+	// #5.1-p3s5: If a candidate or leader discovers that its term is out of
+	// date, it immediately reverts to follower state.
+	// #5.2-p4s1: While waiting for votes, a candidate may receive an
+	// AppendEntries RPC from another server claiming to be leader.
+	// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as
+	// large as the candidate’s current term, then the candidate recognizes
+	// the leader as legitimate and returns to follower state.
+	// FIXME: not if already follower
+	cm.becomeFollower(leaderCurrentTerm)
 
 	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose
 	// term matches prevLogTerm (#5.3)
