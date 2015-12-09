@@ -8,8 +8,9 @@ import (
 func TestCM_RpcAER_Follower_Ignores(t *testing.T) {
 	mcm, mrs := testSetupMCM_Follower_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	sentRpc := makeAEWithTerm(serverTerm)
 
-	mcm.pcm.rpcReply("s2", &RpcAppendEntriesReply{serverTerm, true})
+	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
@@ -20,8 +21,9 @@ func TestCM_RpcAER_Follower_Ignores(t *testing.T) {
 func TestCM_RpcAER_Candidate_Ignores(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	sentRpc := makeAEWithTerm(serverTerm)
 
-	mcm.pcm.rpcReply("s2", &RpcAppendEntriesReply{serverTerm, true})
+	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}

@@ -92,13 +92,24 @@ func TestCM_UnknownRpcTypePanics(t *testing.T) {
 	)
 }
 
-func TestCM_UnknownRpcReplyTypePanics(t *testing.T) {
+func TestCM_RpcReply_UnknownRpcTypePanics(t *testing.T) {
 	testCM_setupMCMAndExpectPanicFor(
 		t,
 		func(mcm *managedConsensusModule) {
-			mcm.pcm.rpcReply("s2", &struct{ int }{42})
+			mcm.pcm.rpcReply("s2", &struct{ int }{42}, &struct{ int }{42})
 		},
-		"FATAL: unknown rpcReply type: *struct { int } from: s2",
+		"FATAL: unknown rpc type: *struct { int } from: s2",
+	)
+}
+
+func TestCM_RpcReply_UnknownRpcReplyTypePanics(t *testing.T) {
+	testCM_setupMCMAndExpectPanicFor(
+		t,
+		func(mcm *managedConsensusModule) {
+			sentRpc := &RpcRequestVote{1, 0, 0}
+			mcm.pcm.rpcReply("s2", sentRpc, &struct{ int }{42})
+		},
+		"FATAL: mismatched rpcReply type: *struct { int } from: s2",
 	)
 }
 
@@ -266,8 +277,9 @@ func testSetupMCM_Leader_WithTerms(
 ) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.rpcReply("s2", &RpcRequestVoteReply{serverTerm, true})
-	mcm.pcm.rpcReply("s3", &RpcRequestVoteReply{serverTerm, true})
+	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
+	mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
