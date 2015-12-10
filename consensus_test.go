@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	testServerId = "s1"
+	testThisServerId = "s1"
 	// Note: value for tests based on Figure 7
 	testCurrentTerm = 8
 
@@ -18,7 +18,7 @@ const (
 	testSleepJustMoreThanATick = testTickerDuration + testSleepToLetGoroutineRun
 )
 
-var testPeerIds = []ServerId{"s2", "s3", "s4", "s5"}
+var testAllServerIds = []ServerId{testThisServerId, "s2", "s3", "s4", "s5"}
 
 func setupManagedConsensusModule(t *testing.T, logTerms []TermNo) *managedConsensusModule {
 	mcm, _ := setupManagedConsensusModuleR2(t, logTerms)
@@ -33,7 +33,8 @@ func setupManagedConsensusModuleR2(
 	imle := newIMLEWithDummyCommands(logTerms)
 	mrs := newMockRpcSender()
 	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}
-	cm, now := newPassiveConsensusModule(ps, imle, mrs, testServerId, testPeerIds, ts)
+	ci := NewClusterInfo(testAllServerIds, testThisServerId)
+	cm, now := newPassiveConsensusModule(ps, imle, mrs, ci, ts)
 	if cm == nil {
 		t.Fatal()
 	}
@@ -209,7 +210,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 		t.Fatal()
 	}
 	// candidate has voted for itself
-	if mcm.pcm.persistentState.GetVotedFor() != testServerId {
+	if mcm.pcm.persistentState.GetVotedFor() != testThisServerId {
 		t.Fatal()
 	}
 

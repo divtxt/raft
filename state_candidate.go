@@ -12,19 +12,18 @@ type candidateVolatileState struct {
 }
 
 // New instance set up for a fresh election
-func newCandidateVolatileState(peerServerIds []ServerId) *candidateVolatileState {
+func newCandidateVolatileState(clusterInfo *ClusterInfo) *candidateVolatileState {
 	cvs := &candidateVolatileState{}
 
-	var clusterSize uint
-	clusterSize = (uint)(len(peerServerIds) + 1)
-
 	cvs.receivedVotes = 1 // assumes we always vote for ourself
-	cvs.requiredVotes = QuorumSizeForClusterSize(clusterSize)
+	cvs.requiredVotes = clusterInfo.QuorumSizeForCluster()
 	cvs.votedPeers = make(map[ServerId]bool)
 
-	for _, peerId := range peerServerIds {
-		cvs.votedPeers[peerId] = false
-	}
+	clusterInfo.ForEachPeer(
+		func(peerId ServerId) {
+			cvs.votedPeers[peerId] = false
+		},
+	)
 
 	return cvs
 }

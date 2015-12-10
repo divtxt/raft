@@ -33,8 +33,7 @@ func NewConsensusModule(
 	persistentState PersistentState,
 	log Log,
 	rpcService RpcService,
-	thisServerId ServerId,
-	peerServerIds []ServerId,
+	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
 ) *ConsensusModule {
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
@@ -64,8 +63,7 @@ func NewConsensusModule(
 		persistentState,
 		log,
 		cm,
-		thisServerId,
-		peerServerIds,
+		clusterInfo,
 		timeSettings,
 	)
 

@@ -25,8 +25,7 @@ type passiveConsensusModule struct {
 	rpcSender       rpcSender
 
 	// -- Config - these fields meant to be immutable
-	thisServerId           ServerId
-	peerServerIds          []ServerId
+	clusterInfo            *ClusterInfo
 	electionTimeoutLow     time.Duration
 	currentElectionTimeout time.Duration
 
@@ -43,8 +42,7 @@ func newPassiveConsensusModule(
 	persistentState PersistentState,
 	log Log,
 	rpcSender rpcSender,
-	thisServerId ServerId,
-	peerServerIds []ServerId,
+	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
 ) (*passiveConsensusModule, time.Time) {
 	// Param checks
@@ -57,8 +55,8 @@ func newPassiveConsensusModule(
 	if rpcSender == nil {
 		panic("'rpcSender' cannot be nil")
 	}
-	if emsg := ValidateServerIds(thisServerId, peerServerIds); emsg != "" {
-		panic(emsg)
+	if clusterInfo == nil {
+		panic("clusterInfo cannot be nil")
 	}
 	if emsg := ValidateTimeSettings(timeSettings); emsg != "" {
 		panic(emsg)
@@ -73,8 +71,7 @@ func newPassiveConsensusModule(
 		rpcSender,
 
 		// -- Config
-		thisServerId,
-		peerServerIds,
+		clusterInfo,
 		timeSettings.ElectionTimeoutLow,
 		0, // temp value, to be replaced later in initialization
 
@@ -203,16 +200,18 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
-	cm.candidateVolatileState = newCandidateVolatileState(cm.peerServerIds)
+	cm.candidateVolatileState = newCandidateVolatileState(cm.clusterInfo)
 	cm._setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
-	cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.thisServerId)
+	cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.clusterInfo.GetThisServerId())
 	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(cm.log)
-	for _, serverId := range cm.peerServerIds {
-		rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-		cm.rpcSender.sendAsync(serverId, rpcRequestVote)
-	}
+	cm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) {
+			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
+			cm.rpcSender.sendAsync(serverId, rpcRequestVote)
+		},
+	)
 	// Reset election timeout!
 	cm.chooseNewRandomElectionTimeout()
 	cm.resetElectionTimeoutTime(now)
@@ -247,9 +246,11 @@ func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
 		[]LogEntry{},
 		cm.volatileState.commitIndex,
 	}
-	for _, serverId := range cm.peerServerIds {
-		cm.rpcSender.sendAsync(serverId, rpcAppendEntries)
-	}
+	cm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) {
+			cm.rpcSender.sendAsync(serverId, rpcAppendEntries)
+		},
+	)
 }
 
 // -- rpc bridging things
