@@ -1,3 +1,23 @@
+// Package raft is an implementation of the Raft consensus protocol.
+//
+// Call NewConsensusModule with appropriate parameters to start an instance.
+// Incoming RPC calls can then be sent to it using the ProcessRpcAsync method.
+//
+// You will have to provide implementations of the following interfaces:
+//
+//  - raft.PersistentState
+//  - raft.Log
+//  - raft.RpcService
+//
+// Notes for implementers of these interfaces:
+//
+// - Concurrency: a ConsensusModule will only ever call the methods of these
+// interfaces from it's single goroutine.
+//
+// - Errors: all errors should be indicated using panic(). This includes both
+// invalid parameters sent by the consensus module and internal errors in the
+// implementation. Note that such a panic will shutdown the ConsensusModule.
+//
 package raft
 
 import (
@@ -5,6 +25,7 @@ import (
 	"time"
 )
 
+// A ConsensusModule is an active Raft consensus module implementation.
 type ConsensusModule struct {
 	passiveConsensusModule *passiveConsensusModule
 
@@ -24,11 +45,12 @@ type ConsensusModule struct {
 	stopError  *atomic.Value
 }
 
-// Initialize a consensus module with the given components and settings.
+// Allocate and initialize a ConsensusModule with the given components and
+// settings.
+//
 // A goroutine that handles consensus processing is created.
-// All parameters are required and cannot be nil.
-// Server ids are check using ValidateServerIds().
-// Time settings is checked using ValidateTimeSettings().
+// All parameters are required.
+// timeSettings is checked using ValidateTimeSettings().
 func NewConsensusModule(
 	persistentState PersistentState,
 	log Log,
@@ -76,42 +98,44 @@ func NewConsensusModule(
 	return cm
 }
 
-// Check if the goroutine is stopped.
+// Check if the ConsensusModule is stopped.
 func (cm *ConsensusModule) IsStopped() bool {
 	return atomic.LoadInt32(&cm.stopped) != 0
 }
 
-// Stop the consensus module asynchronously.
+// Stop the ConsensusModule asynchronously.
+//
 // This will stop the goroutine that does the processing.
-// Safe to call even if the goroutine has stopped.
-// Will panic if called more than once.
+// This is safe to call even if the goroutine has already stopped, but it
+// will panic if called more than once.
 func (cm *ConsensusModule) StopAsync() {
 	close(cm.stopSignal)
 }
 
-// Get the panic error value that stopped the goroutine.
-// The value will be nil if the goroutine is not stopped, or stopped
+// Get the error that stopped the ConsensusModule goroutine.
+//
+// Gets the recover value for the panic that stopped the goroutine.
+// The value will be nil if the goroutine is not stopped, stopped
 // without an error, or  panicked with a nil value.
 func (cm *ConsensusModule) GetStopError() interface{} {
 	return cm.stopError.Load()
 }
 
-// Get the current server state
+// Get the current server state.
 func (cm *ConsensusModule) GetServerState() ServerState {
 	return cm.passiveConsensusModule.getServerState()
 }
 
 // Process the given RPC message from the given peer asynchronously.
 //
-// This method sends the rpc to the consensus module's goroutine. The RPC reply
-// will be sent later on the returned channel.
-//
-// An unknown rpc message will cause the consensus module's goroutine to panic
+// This method sends the RPC message to the ConsensusModule's goroutine.
+// The RPC reply will be sent later on the returned channel.
+// An unknown RPC message will cause the consensus module's goroutine to panic
 // and stop.
 //
-// See rpctypes.go for the various RPC message types.
+// See Rpc* types (in rpctypes.go) for the various RPC message and reply types.
 //
-// See RpcSender in interfaces.go for outgoing RPC.
+// See RpcSender (in interfaces.go) for outgoing RPC.
 //
 // TODO: behavior when channel full?
 func (cm *ConsensusModule) ProcessRpcAsync(
