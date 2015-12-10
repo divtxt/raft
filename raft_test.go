@@ -20,7 +20,8 @@ func setupConsensusModuleR2(
 	imle := newIMLEWithDummyCommands(logTerms)
 	mrs := newMockRpcSender()
 	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}
-	cm := NewConsensusModule(ps, imle, mrs, testServerId, testPeerIds, ts)
+	ci := NewClusterInfo(testAllServerIds, testThisServerId)
+	cm := NewConsensusModule(ps, imle, mrs, ci, ts)
 	if cm == nil {
 		t.Fatal()
 	}
