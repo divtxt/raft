@@ -25,7 +25,10 @@ type RpcAppendEntries struct {
 }
 
 type RpcAppendEntriesReply struct {
-	Term    TermNo
+	// - currentTerm, for candidate to update itself
+	Term TermNo
+
+	// - true if follower contained entry matching prevLogIndex and prevLogTerm
 	Success bool
 }
 
