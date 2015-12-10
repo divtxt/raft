@@ -226,26 +226,12 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(mcm.pcm.log)
 
 	mrs.checkSentRpcs(t, []mockSentRpc{})
 
 	mcm.tick()
 
-	expectedRpc := &RpcAppendEntries{
-		serverTerm,
-		lastLogIndex,
-		lastLogTerm,
-		[]LogEntry{},
-		0, // TODO: tests for this?!
-	}
-	expectedRpcs := []mockSentRpc{
-		{"s2", expectedRpc},
-		{"s3", expectedRpc},
-		{"s4", expectedRpc},
-		{"s5", expectedRpc},
-	}
-	mrs.checkSentRpcs(t, expectedRpcs)
+	testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 }
 
 func testSetupMCM_Follower_WithTerms(
