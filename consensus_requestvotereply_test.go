@@ -27,6 +27,24 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 
 	// s4 grants vote - should become leader
 	mcm.pcm.rpcReply("s4", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	testJustBecameLeaderWithTerm(t, mcm, mrs, serverTerm)
+
+	// s5 grants vote - should stay leader
+	mcm.pcm.rpcReply("s5", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
+	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+		t.Fatal()
+	}
+}
+
+func testJustBecameLeaderWithTerm(
+	t *testing.T,
+	mcm *managedConsensusModule,
+	mrs *mockRpcSender,
+	serverTerm TermNo,
+) {
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -50,15 +68,6 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 		{"s5", expectedRpc},
 	}
 	mrs.checkSentRpcs(t, expectedRpcs)
-
-	// s5 grants vote - should stay leader
-	mcm.pcm.rpcReply("s5", sentRpc, &RpcRequestVoteReply{serverTerm, true})
-	if mcm.pcm.getServerState() != LEADER {
-		t.Fatal()
-	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
-		t.Fatal()
-	}
 }
 
 // #5.2-p5s1: The third possible outcome is that a candidate neither
@@ -85,7 +94,7 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 	}
 
 	// no more votes - election timeout causes a new election
-	testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(t, mcm, mrs, testCurrentTerm+2)
+	testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(t, mcm, mrs, serverTerm+1)
 }
 
 // Extra: follower or leader ignores vote
@@ -109,8 +118,16 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 			t.Fatal()
 		}
 		mrs.checkSentRpcs(t, []mockSentRpc{})
+
+		// s4 grants vote - ignore
+		mcm.pcm.rpcReply("s4", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+		if mcm.pcm.getServerState() != beforeState {
+			t.Fatal()
+		}
+		mrs.checkSentRpcs(t, []mockSentRpc{})
 	}
 
+	f(testSetupMCM_Follower_Figure7LeaderLine)
 	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
 
@@ -121,37 +138,64 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 // other's, then it updates its current term to the larger value.
 // #5.1-p3s5: If a candidate or leader discovers that its term is out of
 // date, it immediately reverts to follower state.
-func TestCM_RpcRVR_Candidate_RpcTermMismatches(t *testing.T) {
-	mcm, _ := testSetupMCM_Candidate_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
+func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender),
+		sendMajorityVote bool,
+	) {
+		mcm, mrs := setup(t)
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		sentRpc := &RpcRequestVote{serverTerm, 0, 0}
+		beforeState := mcm.pcm.getServerState()
 
-	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
-	if mcm.pcm.getServerState() != CANDIDATE {
-		t.Fatal()
+		// s2 grants vote - should stay as candidate
+		mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+		if mcm.pcm.getServerState() != beforeState {
+			t.Fatal()
+		}
+
+		// s3 grants vote for previous term election - ignore and stay as candidate
+		mcm.pcm.rpcReply(
+			"s3",
+			&RpcRequestVote{serverTerm - 1, 0, 0},
+			&RpcRequestVoteReply{serverTerm - 1, true},
+		)
+		if mcm.pcm.getServerState() != beforeState {
+			t.Fatal()
+		}
+
+		if sendMajorityVote {
+			// s3 grants vote for this election - become leader only if candidate
+			mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+			if beforeState == CANDIDATE {
+				testJustBecameLeaderWithTerm(t, mcm, mrs, serverTerm)
+			} else {
+				if mcm.pcm.getServerState() != beforeState {
+					t.Fatal()
+				}
+			}
+		}
+
+		// s4 denies vote for this election indicating a newer term - increase term
+		// and become follower
+		mcm.pcm.rpcReply("s4", sentRpc, &RpcRequestVoteReply{serverTerm + 1, false})
+		if mcm.pcm.getServerState() != FOLLOWER {
+			t.Fatal()
+		}
+		if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm+1 {
+			t.Fatal()
+		}
+		if mcm.pcm.persistentState.GetVotedFor() != "" {
+			t.Fatal()
+		}
 	}
 
-	// s5 grants vote for previous term election - ignore and stay as candidate
-	mcm.pcm.rpcReply(
-		"s5",
-		&RpcRequestVote{serverTerm - 1, 0, 0},
-		&RpcRequestVoteReply{serverTerm - 1, true},
-	)
-	if mcm.pcm.getServerState() != CANDIDATE {
-		t.Fatal()
-	}
+	f(testSetupMCM_Candidate_Figure7LeaderLine, true)
+	f(testSetupMCM_Candidate_Figure7LeaderLine, false)
 
-	// s3 denies vote for this election indicating a newer term - increase term
-	// and become follower
-	mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm + 1, false})
-	if mcm.pcm.getServerState() != FOLLOWER {
-		t.Fatal()
-	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm+1 {
-		t.Fatal()
-	}
-	if mcm.pcm.persistentState.GetVotedFor() != "" {
-		t.Fatal()
-	}
+	f(testSetupMCM_Follower_Figure7LeaderLine, true)
+	f(testSetupMCM_Follower_Figure7LeaderLine, false)
+
+	f(testSetupMCM_Leader_Figure7LeaderLine, true)
+	f(testSetupMCM_Leader_Figure7LeaderLine, false)
 }
