@@ -107,9 +107,17 @@ func TestCM_RpcReply_UnknownRpcReplyTypePanics(t *testing.T) {
 		t,
 		func(mcm *managedConsensusModule) {
 			sentRpc := &RpcRequestVote{1, 0, 0}
-			mcm.pcm.rpcReply("s2", sentRpc, &struct{ int }{42})
+			mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{1, false})
 		},
-		"FATAL: mismatched rpcReply type: *struct { int } from: s2 - expected *RpcRequestVoteReply",
+		"FATAL: mismatched rpcReply type: *raft.RpcAppendEntriesReply from: s2 - expected *raft.RpcRequestVoteReply",
+	)
+	testCM_setupMCMAndExpectPanicFor(
+		t,
+		func(mcm *managedConsensusModule) {
+			sentRpc := &RpcAppendEntries{1, 0, 0, nil, 0}
+			mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{1, false})
+		},
+		"FATAL: mismatched rpcReply type: *raft.RpcRequestVoteReply from: s2 - expected *raft.RpcAppendEntriesReply",
 	)
 }
 
