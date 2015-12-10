@@ -27,7 +27,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 
 	// s4 grants vote - should become leader
 	mcm.pcm.rpcReply("s4", sentRpc, &RpcRequestVoteReply{serverTerm, true})
-	testJustBecameLeaderWithTerm(t, mcm, mrs, serverTerm)
+	testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 
 	// s5 grants vote - should stay leader
 	mcm.pcm.rpcReply("s5", sentRpc, &RpcRequestVoteReply{serverTerm, true})
@@ -39,7 +39,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 	}
 }
 
-func testJustBecameLeaderWithTerm(
+func testIsLeaderWithTermAndSentEmptyAppendEntries(
 	t *testing.T,
 	mcm *managedConsensusModule,
 	mrs *mockRpcSender,
@@ -168,7 +168,7 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 			// s3 grants vote for this election - become leader only if candidate
 			mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 			if beforeState == CANDIDATE {
-				testJustBecameLeaderWithTerm(t, mcm, mrs, serverTerm)
+				testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 			} else {
 				if mcm.pcm.getServerState() != beforeState {
 					t.Fatal()
