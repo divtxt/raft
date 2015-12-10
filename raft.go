@@ -125,31 +125,18 @@ func (cm *ConsensusModule) ProcessRpcAsync(
 	return replyChan
 }
 
-// imlement rpcSender
+// -- protected methods
+
+// Implement rpcSender.sendAsync to bridge to RpcService.SendAsync() with
+// an appropriate callback function.
 func (cm *ConsensusModule) sendAsync(toServer ServerId, rpc interface{}) {
 	replyAsync := func(rpcReply interface{}) {
-		cm.processRpcReplyAsync(toServer, rpc, rpcReply)
+		// Process the given RPC reply message from the given peer asynchronously.
+		// TODO: behavior when channel full?
+		cm.rpcReplyChannel <- rpcReplyTuple{toServer, rpc, rpcReply}
 	}
 	cm.rpcService.SendAsync(toServer, rpc, replyAsync)
 }
-
-// Process the given RPC reply message from the given peer asynchronously.
-//
-// This method sends the rpc reply to the consensus module's goroutine.
-//
-// An unknown rpc message will cause the consensus module's goroutine to panic
-// and stop.
-//
-// TODO: behavior when channel full?
-func (cm *ConsensusModule) processRpcReplyAsync(
-	from ServerId,
-	rpc interface{},
-	rpcReply interface{},
-) {
-	cm.rpcReplyChannel <- rpcReplyTuple{from, rpc, rpcReply}
-}
-
-// -- protected methods
 
 func (cm *ConsensusModule) processor() {
 	defer func() {
