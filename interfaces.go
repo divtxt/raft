@@ -1,23 +1,15 @@
 // Interfaces that users of this package must implement.
-//
-// Notes for implementers:
-//
-// - Concurrency: the consensus module will only ever call the methods from it's
-// single goroutine.
-//
-// - Errors: all errors should be indicated using panic(). This includes both
-// invalid parameters sent by the consensus module and internal errors in the
-// implementation. Note that such a panic will shutdown the consensus module.
-//
 
 package raft
 
-// Persistent state on all servers.
+// Raft persistent state on all servers.
+//
+// You must implement this interface!
 //
 // This state should be persisted to stable storage.
 //
-// No one else should be modifying these values, and the consensus module does
-// not cache these values, so it is recommended that implementations cache the
+// No one else should modify these values, and the ConsensusModule does not
+// cache these values, so it is recommended that implementations cache the
 // values for getter performance.
 type PersistentState interface {
 	// Get the latest term server has seen.
@@ -38,16 +30,13 @@ type PersistentState interface {
 
 // Asynchronous RPC service.
 //
-// Since the consensus module is implemented as a single threaded component, an
-// asynchronous programming model is used for RPC.
-// In this model, RPC requests and replies are independent message types that
-// are sent and received using the same interfaces.
+// You must implement this interface!
 //
 // The choice of RPC protocol is unspecified here.
 //
-// See rpctypes.go for the various RPC message types.
+// See Rpc* types (in rpctypes.go) for the various RPC message and reply types.
 //
-// See the consensus module's ProcessRpcAsync() for incoming RPC.
+// See ConsensusModule's ProcessRpcAsync (in raft.go) for incoming RPC.
 type RpcService interface {
 	// Send the given RPC message to the given server asynchronously.
 	//
@@ -63,20 +52,20 @@ type RpcService interface {
 	// function parameter.
 	//
 	// - replyAsync() will process the reply asynchronously. It sends the rpc
-	// reply to the consensus module's goroutine and returns immediately.
+	// reply to the ConsensusModule's goroutine and returns immediately.
 	//
-	// - An unknown or unexpected rpc reply message will cause the consensus
-	// module's goroutine to panic and stop.
+	// - An unknown or unexpected rpc reply message will cause the
+	// ConsensusModule's goroutine to panic and stop.
 	//
 	// - If the RPC fails, there is no need to do anything.
 	//
 	// - It is expected that multiple RPC messages will be sent independently to
 	// different servers.
 	//
-	// - The consensus module only expects to send one RPC to a given server.
-	// Since RPC failure is not reported to consensus module, implementations can
+	// - The ConsensusModule only expects to send one RPC to a given server.
+	// Since RPC failure is not reported to ConsensusModule, implementations can
 	// choose how to handle extra RPCs to a server for which they already have an
-	// RPC in flight: cancel the first message, drop the second or enqueue it.
+	// RPC in flight i.e. cancel the first message and/or drop the second.
 	//
 	// - The RPC is time-sensitive and expected to be immediate. If any queueing
 	// or retrying is implemented, it should be very limited in time and queue
