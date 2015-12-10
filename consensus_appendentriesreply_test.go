@@ -1,31 +1,46 @@
 package raft
 
 import (
+	"fmt"
 	"testing"
 )
 
-// Extra: follower ignores
-func TestCM_RpcAER_Follower_Ignores(t *testing.T) {
-	mcm, mrs := testSetupMCM_Follower_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	sentRpc := makeAEWithTerm(serverTerm)
+// Extra: ignore replies for previous term rpc
+func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
+	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
+		mcm, mrs := setup(t)
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		sentRpc := makeAEWithTerm(serverTerm - 1)
+		beforeState := mcm.pcm.getServerState()
 
-	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
-	if mcm.pcm.getServerState() != FOLLOWER {
-		t.Fatal()
+		mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
+		if mcm.pcm.getServerState() != beforeState {
+			t.Fatal()
+		}
+		mrs.checkSentRpcs(t, []mockSentRpc{})
 	}
-	mrs.checkSentRpcs(t, []mockSentRpc{})
+
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
+	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
 
-// Extra: candidate ignores
-func TestCM_RpcAER_Candidate_Ignores(t *testing.T) {
-	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	sentRpc := makeAEWithTerm(serverTerm)
+// Extra: raft violation - only leader can get AppendEntriesReply
+func TestCM_RpcAER_FollowerOrCandidate_PanicsForSameTermReply(t *testing.T) {
+	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
+		mcm, _ := setup(t)
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		sentRpc := makeAEWithTerm(serverTerm)
 
-	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
-	if mcm.pcm.getServerState() != CANDIDATE {
-		t.Fatal()
+		test_ExpectPanic(
+			t,
+			func() {
+				mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
+			},
+			fmt.Sprintf("FATAL: two leaders with same term - got AppendEntriesReply from: s2 with term: %v", serverTerm),
+		)
 	}
-	mrs.checkSentRpcs(t, []mockSentRpc{})
+
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
 }

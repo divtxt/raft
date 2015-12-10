@@ -3,6 +3,10 @@
 
 package raft
 
+import (
+	"fmt"
+)
+
 func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 	serverState ServerState,
 	from ServerId,
@@ -11,21 +15,24 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 ) {
 	serverTerm := cm.persistentState.GetCurrentTerm()
 
-	// Ignore reply - rpc was for a previous term
+	// Extra: ignore replies for previous term rpc
 	if appendEntries.Term != serverTerm {
 		return
 	}
 
 	switch serverState {
 	case FOLLOWER:
-		// Do nothing since this server is already a follower.
-		return
+		// Extra: raft violation - only leader should get AppendEntriesReply
+		fallthrough
 	case CANDIDATE:
-		// Do nothing since this server is already a follower.
-		return
+		// Extra: raft violation - only leader should get AppendEntriesReply
+		panic(fmt.Sprintf(
+			"FATAL: two leaders with same term - got AppendEntriesReply from: %v with term: %v",
+			from,
+			serverTerm,
+		))
 	case LEADER:
 		// Pass through to main logic below
 		panic("TODO: _processRpc_AppendEntriesReply / LEADER")
 	}
-
 }
