@@ -57,8 +57,16 @@ type RpcService interface {
 	//
 	// - No guarantee of RPC success is expected.
 	//
-	// - If the RPC succeeds, the reply rpc should be sent to the replyAsync
-	// function paramter. It will return immediately.
+	// - A bad server id or unknown rpc type should be treated as an error.
+	//
+	// - If the RPC succeeds, the reply rpc should be sent to the replyAsync()
+	// function parameter.
+	//
+	// - replyAsync() will process the reply asynchronously. It sends the rpc
+	// reply to the consensus module's goroutine and returns immediately.
+	//
+	// - An unknown or unexpected rpc reply message will cause the consensus
+	// module's goroutine to panic and stop.
 	//
 	// - If the RPC fails, there is no need to do anything.
 	//
@@ -73,8 +81,5 @@ type RpcService interface {
 	// - The RPC is time-sensitive and expected to be immediate. If any queueing
 	// or retrying is implemented, it should be very limited in time and queue
 	// size.
-	//
-	// TODO: should this call error if rpc type is unknown?
-	// TODO: should this call error if bad server id?
 	SendAsync(toServer ServerId, rpc interface{}, replyAsync func(interface{}))
 }
