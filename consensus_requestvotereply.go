@@ -11,20 +11,8 @@ func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(
 ) {
 	serverTerm := cm.persistentState.GetCurrentTerm()
 
-	// Ignore reply - rpc was for a previous term
+	// Extra: ignore replies for previous term rpc
 	if rpcRequestVote.Term != serverTerm {
-		return
-	}
-
-	switch serverState {
-	case FOLLOWER:
-		// Do nothing since this server is already a follower.
-		// FIXME: is this correct?
-		return
-	case CANDIDATE:
-		// Pass through to main logic below
-	case LEADER:
-		// Do nothing since this candidate has already won the election.
 		return
 	}
 
@@ -36,15 +24,23 @@ func (cm *passiveConsensusModule) _processRpc_RequestVoteReply(
 	// date, it immediately reverts to follower state.
 	senderCurrentTerm := rpcRequestVoteReply.Term
 	if senderCurrentTerm > serverTerm {
-		cm.becomeFollower(senderCurrentTerm)
+		cm.becomeFollowerWithTerm(senderCurrentTerm)
 	}
 
-	// #5.2-p3s1: A candidate wins an election if it receives votes from a
-	// majority of the servers in the full cluster for the same term.
-	if rpcRequestVoteReply.VoteGranted {
-		haveQuorum := cm.candidateVolatileState.addVoteFrom(fromPeer)
-		if haveQuorum {
-			cm.becomeLeader()
+	switch serverState {
+	case FOLLOWER:
+		// Ignore - not a candidate
+	case CANDIDATE:
+		// #5.2-p3s1: A candidate wins an election if it receives votes from a
+		// majority of the servers in the full cluster for the same term.
+		if rpcRequestVoteReply.VoteGranted {
+			haveQuorum := cm.candidateVolatileState.addVoteFrom(fromPeer)
+			if haveQuorum {
+				cm.becomeLeader()
+			}
 		}
-	} // else TODO
+	case LEADER:
+		// Ignore - not a candidate
+	}
+
 }
