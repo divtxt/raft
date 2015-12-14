@@ -95,6 +95,7 @@ func (cm *passiveConsensusModule) _setServerState(serverState ServerState) {
 func (cm *passiveConsensusModule) rpc(
 	from ServerId,
 	rpc interface{},
+	now time.Time,
 ) interface{} {
 	serverState := cm.getServerState()
 
@@ -107,7 +108,7 @@ func (cm *passiveConsensusModule) rpc(
 		}
 		return rpcReply
 	case *RpcRequestVote:
-		voteGranted := cm._processRpc_RequestVote(serverState, from, rpc)
+		voteGranted := cm._processRpc_RequestVote(serverState, from, rpc, now)
 		rpcReply := &RpcRequestVoteReply{
 			cm.persistentState.GetCurrentTerm(),
 			voteGranted,

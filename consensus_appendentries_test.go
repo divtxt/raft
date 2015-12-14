@@ -23,7 +23,7 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 
 		appendEntries := makeAEWithTerm(serverTerm - 1)
 
-		reply := mcm.pcm.rpc("s2", appendEntries)
+		reply := mcm.rpc("s2", appendEntries)
 
 		expectedRpc := &RpcAppendEntriesReply{serverTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
@@ -81,7 +81,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 
 		appendEntries := makeAEWithTermAndPrevLogDetails(senderTerm, 10, 6)
 
-		reply := mcm.pcm.rpc("s3", appendEntries)
+		reply := mcm.rpc("s3", appendEntries)
 
 		expectedRpc := &RpcAppendEntriesReply{senderTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
@@ -171,7 +171,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 
 		appendEntries := &RpcAppendEntries{senderTerm, 5, 4, sentLogEntries, 7}
 
-		reply := mcm.pcm.rpc("s4", appendEntries)
+		reply := mcm.rpc("s4", appendEntries)
 
 		expectedRpc := &RpcAppendEntriesReply{senderTerm, true}
 		if !reflect.DeepEqual(reply, expectedRpc) {
@@ -245,7 +245,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 
 		appendEntries := &RpcAppendEntries{senderTerm, 4, 4, sentLogEntries, 7}
 
-		reply := mcm.pcm.rpc("s4", appendEntries)
+		reply := mcm.rpc("s4", appendEntries)
 
 		expectedRpc := &RpcAppendEntriesReply{senderTerm, true}
 		if !reflect.DeepEqual(reply, expectedRpc) {
