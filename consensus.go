@@ -190,8 +190,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 		},
 	)
 	// Reset election timeout!
-	cm.electionTimeoutTracker.chooseNewRandomElectionTimeout()
-	cm.electionTimeoutTracker.resetElectionTimeoutTime(now)
+	cm.electionTimeoutTracker.chooseNewRandomElectionTimeoutAndTouch(now)
 }
 
 func (cm *passiveConsensusModule) becomeLeader() {
