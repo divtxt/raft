@@ -45,10 +45,15 @@ func setupManagedConsensusModuleR2(
 }
 
 // #5.2-p1s2: When servers start up, they begin as followers
-func TestCM_StartsAsFollower(t *testing.T) {
+func TestCM_InitialState(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 
 	if mcm.pcm.getServerState() != FOLLOWER {
+		t.Fatal()
+	}
+
+	// Volatile state on all servers
+	if mcm.pcm.volatileState != (volatileState{0, 0}) {
 		t.Fatal()
 	}
 }
