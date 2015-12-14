@@ -200,11 +200,12 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
+	cm.persistentState.SetCurrentTerm(newTerm)
 	cm.candidateVolatileState = newCandidateVolatileState(cm.clusterInfo)
 	cm._setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
-	cm.persistentState.SetCurrentTermAndVotedFor(newTerm, cm.clusterInfo.GetThisServerId())
+	cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
 	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(cm.log)
 	cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
@@ -226,12 +227,8 @@ func (cm *passiveConsensusModule) becomeLeader() {
 }
 
 func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
-	var votedFor ServerId = ""
-	if newTerm == cm.persistentState.GetCurrentTerm() {
-		votedFor = cm.persistentState.GetVotedFor()
-	}
 	cm._setServerState(FOLLOWER)
-	cm.persistentState.SetCurrentTermAndVotedFor(newTerm, votedFor)
+	cm.persistentState.SetCurrentTerm(newTerm)
 	// TODO: more follower things!
 }
 

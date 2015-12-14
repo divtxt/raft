@@ -21,18 +21,89 @@ func PartialTest_PersistentState_BlackboxTest(t *testing.T, persistentState Pers
 		t.Fatal()
 	}
 
-	// Set & get tests
-	persistentState.SetCurrentTermAndVotedFor(1, "s1")
+	// Set currentTerm to 0 is an error
+	test_ExpectPanic(
+		t,
+		func() {
+			persistentState.SetCurrentTerm(0)
+		},
+		"FATAL: attempt to set currentTerm to 0",
+	)
+	if persistentState.GetCurrentTerm() != 0 {
+		t.Fatal()
+	}
+	// Set votedFor while currentTerm is 0 is an error
+	test_ExpectPanic(
+		t,
+		func() {
+			persistentState.SetVotedFor("s1")
+		},
+		"FATAL: attempt to set votedFor while currentTerm is 0",
+	)
+	if persistentState.GetCurrentTerm() != 0 {
+		t.Fatal()
+	}
+	// Set currentTerm greater is ok, clears votedFor
+	persistentState.SetCurrentTerm(1)
 	if persistentState.GetCurrentTerm() != 1 {
 		t.Fatal()
 	}
+	// Set votedFor of blank is an error
+	test_ExpectPanic(
+		t,
+		func() {
+			persistentState.SetVotedFor("")
+		},
+		"FATAL: attempt to set blank votedFor",
+	)
+	if persistentState.GetVotedFor() != "" {
+		t.Fatal()
+	}
+	// Set votedFor is ok
+	persistentState.SetVotedFor("s1")
 	if persistentState.GetVotedFor() != "s1" {
 		t.Fatal()
 	}
-	persistentState.SetCurrentTermAndVotedFor(4, "s2")
+	// Set currentTerm greater is ok, clears votedFor
+	persistentState.SetCurrentTerm(4)
 	if persistentState.GetCurrentTerm() != 4 {
 		t.Fatal()
 	}
+	if persistentState.GetVotedFor() != "" {
+		t.Fatal(persistentState.GetVotedFor())
+	}
+	// Set votedFor while blank is ok
+	persistentState.SetVotedFor("s2")
+	if persistentState.GetVotedFor() != "s2" {
+		t.Fatal()
+	}
+	// Set currentTerm same is ok, does not affect votedFor
+	persistentState.SetCurrentTerm(4)
+	if persistentState.GetCurrentTerm() != 4 {
+		t.Fatal()
+	}
+	if persistentState.GetVotedFor() != "s2" {
+		t.Fatal()
+	}
+	// Set currentTerm less is an error
+	test_ExpectPanic(
+		t,
+		func() {
+			persistentState.SetCurrentTerm(3)
+		},
+		"FATAL: attempt to decrease currentTerm: 4 to 3",
+	)
+	if persistentState.GetCurrentTerm() != 4 {
+		t.Fatal()
+	}
+	// Set votedFor while not blank is an error
+	test_ExpectPanic(
+		t,
+		func() {
+			persistentState.SetVotedFor("s3")
+		},
+		"FATAL: attempt to change non-blank votedFor: s2 to s3",
+	)
 	if persistentState.GetVotedFor() != "s2" {
 		t.Fatal()
 	}
@@ -57,13 +128,33 @@ func (imps *inMemoryPersistentState) GetVotedFor() ServerId {
 	return imps.votedFor
 }
 
-func (imps *inMemoryPersistentState) SetCurrentTermAndVotedFor(
-	currentTerm TermNo,
-	votedFor ServerId,
-) {
+func (imps *inMemoryPersistentState) SetCurrentTerm(currentTerm TermNo) {
 	imps.mutex.Lock()
 	defer imps.mutex.Unlock()
+	if currentTerm == 0 {
+		panic("FATAL: attempt to set currentTerm to 0")
+	}
+	if currentTerm < imps.currentTerm {
+		panic(fmt.Sprintf("FATAL: attempt to decrease currentTerm: %v to %v", imps.currentTerm, currentTerm))
+	}
+	if currentTerm > imps.currentTerm {
+		imps.votedFor = ""
+	}
 	imps.currentTerm = currentTerm
+}
+
+func (imps *inMemoryPersistentState) SetVotedFor(votedFor ServerId) {
+	imps.mutex.Lock()
+	defer imps.mutex.Unlock()
+	if imps.currentTerm == 0 {
+		panic("FATAL: attempt to set votedFor while currentTerm is 0")
+	}
+	if votedFor == "" {
+		panic("FATAL: attempt to set blank votedFor")
+	}
+	if imps.votedFor != "" {
+		panic(fmt.Sprintf("FATAL: attempt to change non-blank votedFor: %v to %v", imps.votedFor, votedFor))
+	}
 	imps.votedFor = votedFor
 }
 

@@ -142,14 +142,13 @@ func testSetupMCM_FollowerThatVotedForS2_Figure7LeaderLine(
 	t *testing.T,
 ) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := testSetupMCM_Follower_WithTerms(t, makeLogTerms_Figure7LeaderLine())
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 	// sanity check
 	if mcm.pcm.persistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
 	// pretend server voted
-	mcm.pcm.persistentState.SetCurrentTermAndVotedFor(serverTerm, "s2")
+	mcm.pcm.persistentState.SetVotedFor("s2")
 
 	return mcm, mrs
 }
@@ -270,7 +269,7 @@ func testSetupMCM_FollowerTerm9_Figure7LeaderLine(t *testing.T) (*managedConsens
 		t.Fatal(serverTerm)
 	}
 	// pretend server was pushed to term 9
-	mcm.pcm.persistentState.SetCurrentTermAndVotedFor(9, "")
+	mcm.pcm.persistentState.SetCurrentTerm(9)
 
 	return mcm, mrs
 }

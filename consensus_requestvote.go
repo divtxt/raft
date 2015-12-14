@@ -59,8 +59,9 @@ func (cm *passiveConsensusModule) _processRpc_RequestVote(
 	// up-to-date as receiver's log, grant vote (#5.2, #5.4)
 	votedFor := cm.persistentState.GetVotedFor()
 	if (votedFor == "" || votedFor == fromPeer) && senderIsAtLeastAsUpToDate {
-		// FIXME: serverTerm ?! follower ?
-		cm.persistentState.SetCurrentTermAndVotedFor(serverTerm, fromPeer)
+		if votedFor == "" {
+			cm.persistentState.SetVotedFor(fromPeer)
+		}
 		return true
 	}
 
