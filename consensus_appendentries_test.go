@@ -20,6 +20,7 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 	) (*managedConsensusModule, *mockRpcSender) {
 		mcm, mrs := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		appendEntries := makeAEWithTerm(serverTerm - 1)
 
@@ -28,6 +29,12 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 		expectedRpc := &RpcAppendEntriesReply{serverTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
+		}
+
+		// #RFS-F2: (paraphrasing) AppendEntries RPC not from current leader should
+		// allow election timeout
+		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime != electionTimeoutTime1 {
+			t.Fatal()
 		}
 
 		return mcm, mrs
@@ -73,6 +80,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 	) (*managedConsensusModule, *mockRpcSender) {
 		mcm, mrs := setup(t, []TermNo{1, 1, 1, 4})
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		senderTerm := serverTerm
 		if senderTermIsNewer {
@@ -105,6 +113,12 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 			}
 		}
 		if mcm.pcm.persistentState.GetCurrentTerm() != senderTerm {
+			t.Fatal()
+		}
+
+		// #RFS-F2: (paraphrasing) AppendEntries RPC from current leader should
+		// prevent election timeout
+		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime == electionTimeoutTime1 {
 			t.Fatal()
 		}
 
@@ -153,6 +167,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		mcm.pcm.volatileState.commitIndex = 3
 
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		senderTerm := serverTerm
 		if senderTermIsNewer {
@@ -192,6 +207,12 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if mcm.pcm.volatileState.commitIndex != 7 {
 			t.Error()
 		}
+
+		// #RFS-F2: (paraphrasing) AppendEntries RPC from current leader should
+		// prevent election timeout
+		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime == electionTimeoutTime1 {
+			t.Fatal()
+		}
 	}
 
 	// Follower
@@ -228,6 +249,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		mcm.pcm.volatileState.commitIndex = 3
 
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		senderTerm := serverTerm
 		if senderTermIsNewer {
@@ -268,6 +290,12 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		}
 
 		if mcm.pcm.persistentState.GetVotedFor() != expectedVotedFor {
+			t.Fatal()
+		}
+
+		// #RFS-F2: (paraphrasing) AppendEntries RPC from current leader should
+		// prevent election timeout
+		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime == electionTimeoutTime1 {
 			t.Fatal()
 		}
 	}

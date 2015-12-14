@@ -101,7 +101,7 @@ func (cm *passiveConsensusModule) rpc(
 
 	switch rpc := rpc.(type) {
 	case *RpcAppendEntries:
-		success := cm._processRpc_AppendEntries(serverState, from, rpc)
+		success := cm._processRpc_AppendEntries(serverState, from, rpc, now)
 		rpcReply := &RpcAppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(),
 			success,
