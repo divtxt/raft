@@ -184,9 +184,6 @@ func testCM_Follower_StartsElectionOnElectionTimeout(
 	if mcm.pcm.persistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
-	if mcm.pcm.currentElectionTimeout < testElectionTimeoutLow || mcm.pcm.currentElectionTimeout > 2*testElectionTimeoutLow {
-		t.Fatal()
-	}
 
 	// Test that a tick before election timeout causes no state change.
 	mcm.tick()
@@ -317,14 +314,14 @@ func (mcm *managedConsensusModule) tick() {
 }
 
 func (mcm *managedConsensusModule) tickTilElectionTimeout() {
-	electionTimeoutTime := mcm.pcm.electionTimeoutTime
+	electionTimeoutTime := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 	for {
 		mcm.tick()
 		if mcm.now.After(electionTimeoutTime) {
 			break
 		}
 	}
-	if mcm.pcm.electionTimeoutTime != electionTimeoutTime {
+	if mcm.pcm.electionTimeoutTracker.electionTimeoutTime != electionTimeoutTime {
 		panic("electionTimeoutTime changed!")
 	}
 	// Because tick() increments "now" after calling tick(),

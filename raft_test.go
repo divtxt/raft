@@ -138,7 +138,8 @@ func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
 	defer cm.StopAsync()
 
 	// FIXME: unsafe concurrent access
-	time.Sleep(cm.passiveConsensusModule.currentElectionTimeout + testSleepJustMoreThanATick)
+	ett := cm.passiveConsensusModule.electionTimeoutTracker
+	time.Sleep(ett.currentElectionTimeout + testSleepJustMoreThanATick)
 
 	if cm.GetServerState() != CANDIDATE {
 		t.Fatal()
