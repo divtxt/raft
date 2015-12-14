@@ -92,7 +92,7 @@ func TestCM_UnknownRpcTypePanics(t *testing.T) {
 	testCM_setupMCMAndExpectPanicFor(
 		t,
 		func(mcm *managedConsensusModule) {
-			mcm.pcm.rpc("s2", &struct{ int }{42})
+			mcm.rpc("s2", &struct{ int }{42})
 		},
 		"FATAL: unknown rpc type: *struct { int } from: s2",
 	)
@@ -157,7 +157,7 @@ func TestCM_BadServerStatePanicsRpc(t *testing.T) {
 
 			requestVote := &RpcRequestVote{1, 0, 0}
 
-			mcm.pcm.rpc("s2", requestVote)
+			mcm.rpc("s2", requestVote)
 		},
 		"FATAL: unknown ServerState: 42",
 	)
@@ -311,6 +311,13 @@ type managedConsensusModule struct {
 func (mcm *managedConsensusModule) tick() {
 	mcm.pcm.tick(mcm.now)
 	mcm.now = mcm.now.Add(testTickerDuration)
+}
+
+func (mcm *managedConsensusModule) rpc(
+	from ServerId,
+	rpc interface{},
+) interface{} {
+	return mcm.pcm.rpc(from, rpc, mcm.now)
 }
 
 func (mcm *managedConsensusModule) tickTilElectionTimeout() {

@@ -2,10 +2,15 @@
 
 package raft
 
+import (
+	"time"
+)
+
 func (cm *passiveConsensusModule) _processRpc_RequestVote(
 	serverState ServerState,
 	fromPeer ServerId,
 	rpcRequestVote *RpcRequestVote,
+	now time.Time,
 ) bool {
 	switch serverState {
 	case FOLLOWER:
@@ -62,6 +67,8 @@ func (cm *passiveConsensusModule) _processRpc_RequestVote(
 		if votedFor == "" {
 			cm.persistentState.SetVotedFor(fromPeer)
 		}
+		// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
+		cm.electionTimeoutTracker.resetElectionTimeoutTime(now)
 		return true
 	}
 

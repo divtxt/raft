@@ -182,7 +182,8 @@ loop:
 				// theoretically unreachable as we don't close the channel til shutdown
 				panic("FATAL: rpcChannel closed")
 			}
-			rpcReply := cm.passiveConsensusModule.rpc(rpc.from, rpc.rpc)
+			now := time.Now()
+			rpcReply := cm.passiveConsensusModule.rpc(rpc.from, rpc.rpc, now)
 			select {
 			case rpc.replyChan <- rpcReply:
 			default:

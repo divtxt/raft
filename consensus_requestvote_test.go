@@ -11,14 +11,20 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		requestVote := &RpcRequestVote{7, 9, 6}
 
-		reply := mcm.pcm.rpc("s2", requestVote)
+		reply := mcm.rpc("s2", requestVote)
 
 		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
+		}
+
+		// #RFS-F2: (paraphrasing) not granting vote should allow election timeout
+		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime != electionTimeoutTime1 {
+			t.Fatal()
 		}
 	}
 
@@ -41,6 +47,7 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		beforeState := mcm.pcm.getServerState()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity check
 		votedFor := mcm.pcm.persistentState.GetVotedFor()
@@ -50,7 +57,7 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.pcm.rpc("s3", requestVote)
+		reply := mcm.rpc("s3", requestVote)
 
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
@@ -62,6 +69,11 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
+		}
+
+		// #RFS-F2: (paraphrasing) not granting vote should allow election timeout
+		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime != electionTimeoutTime1 {
+			t.Fatal()
 		}
 	}
 
@@ -80,6 +92,7 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity check
 		votedFor := mcm.pcm.persistentState.GetVotedFor()
@@ -89,11 +102,16 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.pcm.rpc("s2", requestVote)
+		reply := mcm.rpc("s2", requestVote)
 
 		expectedRpc := &RpcRequestVoteReply{serverTerm, true}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
+		}
+
+		// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
+		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime == electionTimeoutTime1 {
+			t.Fatal()
 		}
 	}
 
@@ -112,6 +130,7 @@ func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity check
 		votedFor := mcm.pcm.persistentState.GetVotedFor()
@@ -121,11 +140,16 @@ func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.pcm.rpc("s2", requestVote)
+		reply := mcm.rpc("s2", requestVote)
 
 		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
+		}
+
+		// #RFS-F2: (paraphrasing) not granting vote should allow election timeout
+		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime != electionTimeoutTime1 {
+			t.Fatal()
 		}
 	}
 
@@ -214,6 +238,7 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity checks
 		if serverTerm != 9 {
@@ -226,7 +251,7 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 
 		requestVote := &RpcRequestVote{10, senderLastEntryIndex, senderLastEntryTerm}
 
-		reply := mcm.pcm.rpc("s5", requestVote)
+		reply := mcm.rpc("s5", requestVote)
 
 		// #RFS-A2: If RPC request or response contains term T > currentTerm:
 		// set currentTerm = T, convert to follower (#5.1)
@@ -252,6 +277,18 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 		expectedRpc := &RpcRequestVoteReply{10, expectedVote}
 		if !reflect.DeepEqual(reply, expectedRpc) {
 			t.Fatal(reply)
+		}
+
+		if expectedVote {
+			// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
+			if mcm.pcm.electionTimeoutTracker.electionTimeoutTime == electionTimeoutTime1 {
+				t.Fatal()
+			}
+		} else {
+			// #RFS-F2: (paraphrasing) not granting vote should allow election timeout
+			if mcm.pcm.electionTimeoutTracker.electionTimeoutTime != electionTimeoutTime1 {
+				t.Fatal()
+			}
 		}
 	}
 
