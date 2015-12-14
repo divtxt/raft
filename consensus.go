@@ -80,8 +80,8 @@ func newPassiveConsensusModule(
 		FOLLOWER,
 
 		// -- State
-		volatileState{}, // TODO: do these values need to be initialized?
-		now,             // temp value, to be replaced before goroutine start
+		volatileState{},
+		now, // temp value, to be replaced before goroutine start
 		nil,
 	}
 
