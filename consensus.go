@@ -2,17 +2,9 @@ package raft
 
 import (
 	"fmt"
-	"math/rand"
 	"sync/atomic"
 	"time"
 )
-
-type TimeSettings struct {
-	TickerDuration time.Duration
-
-	// Election timeout low value - 2x this value is used as high value.
-	ElectionTimeoutLow time.Duration
-}
 
 const (
 	RPC_CHANNEL_BUFFER_SIZE = 100
@@ -25,16 +17,14 @@ type passiveConsensusModule struct {
 	rpcSender       rpcSender
 
 	// -- Config - these fields meant to be immutable
-	clusterInfo            *ClusterInfo
-	electionTimeoutLow     time.Duration
-	currentElectionTimeout time.Duration
+	clusterInfo *ClusterInfo
 
 	// -- State - these fields may be accessed concurrently
 	_unsafe_serverState ServerState
 
 	// -- State - these fields meant for single-threaded access
 	volatileState          volatileState
-	electionTimeoutTime    time.Time
+	electionTimeoutTracker *electionTimeoutTracker
 	candidateVolatileState *candidateVolatileState
 }
 
@@ -72,8 +62,6 @@ func newPassiveConsensusModule(
 
 		// -- Config
 		clusterInfo,
-		timeSettings.ElectionTimeoutLow,
-		0, // temp value, to be replaced later in initialization
 
 		// -- State
 		// #5.2-p1s2: When servers start up, they begin as followers
@@ -81,12 +69,9 @@ func newPassiveConsensusModule(
 
 		// -- State
 		volatileState{},
-		now, // temp value, to be replaced before goroutine start
+		newElectionTimeoutTracker(timeSettings.ElectionTimeoutLow, now),
 		nil,
 	}
-
-	pcm.chooseNewRandomElectionTimeout()
-	pcm.resetElectionTimeoutTime(now)
 
 	return pcm, now
 }
@@ -104,16 +89,6 @@ func (cm *passiveConsensusModule) getServerState() ServerState {
 func (cm *passiveConsensusModule) _setServerState(serverState ServerState) {
 	_validateServerState(serverState)
 	atomic.StoreUint32((*uint32)(&cm._unsafe_serverState), (uint32)(serverState))
-}
-
-func (cm *passiveConsensusModule) chooseNewRandomElectionTimeout() {
-	// #5.2-p6s2: ..., election timeouts are chosen randomly from a fixed
-	// interval (e.g., 150-300ms)
-	cm.currentElectionTimeout = cm.electionTimeoutLow + time.Duration(rand.Int63n(int64(cm.electionTimeoutLow)+1))
-}
-
-func (cm *passiveConsensusModule) resetElectionTimeoutTime(now time.Time) {
-	cm.electionTimeoutTime = now.Add(cm.currentElectionTimeout)
 }
 
 // Process the given rpc message
@@ -186,7 +161,7 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		// #5.2-p5s2: When this happens, each candidate will time out and
 		// start a new election by incrementing its term and initiating
 		// another round of RequestVote RPCs.
-		if now.After(cm.electionTimeoutTime) {
+		if cm.electionTimeoutTracker.electionTimeoutHasOccurred(now) {
 			cm.becomeCandidateAndBeginElection(now)
 		}
 		// TODO: else/and anything else?
@@ -214,8 +189,8 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 		},
 	)
 	// Reset election timeout!
-	cm.chooseNewRandomElectionTimeout()
-	cm.resetElectionTimeoutTime(now)
+	cm.electionTimeoutTracker.chooseNewRandomElectionTimeout()
+	cm.electionTimeoutTracker.resetElectionTimeoutTime(now)
 }
 
 func (cm *passiveConsensusModule) becomeLeader() {
