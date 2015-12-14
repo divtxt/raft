@@ -57,7 +57,8 @@ func TestElectionTimeoutTracker(t *testing.T) {
 		t.Fatal(timeout1)
 	}
 
-	ett.chooseNewRandomElectionTimeout()
+	now2 := now1.Add(testTickerish)
+	ett.chooseNewRandomElectionTimeoutAndTouch(now2)
 	timeout2 := ett.currentElectionTimeout
 	if timeout2 < testElectionTimeoutLow || timeout2 > testElectionTimeoutHigh {
 		t.Fatal(timeout2)
@@ -68,18 +69,18 @@ func TestElectionTimeoutTracker(t *testing.T) {
 		t.Fatal(timeout1)
 	}
 
-	now2 := now1.Add(testTickerish)
-	ett.resetElectionTimeoutTime(now2)
-	if ett.electionTimeoutTime != now2.Add(ett.currentElectionTimeout) {
+	now3 := now2.Add(testTickerish)
+	ett.touch(now3)
+	if ett.electionTimeoutTime != now3.Add(ett.currentElectionTimeout) {
 		t.Fatal()
 	}
 
-	if ett.electionTimeoutHasOccurred(now2) {
+	if ett.electionTimeoutHasOccurred(now3) {
 		t.Fatal()
 	}
 
-	now3 := now2.Add(ett.currentElectionTimeout).Add(testTickerish)
-	if !ett.electionTimeoutHasOccurred(now3) {
+	now4 := now3.Add(ett.currentElectionTimeout).Add(testTickerish)
+	if !ett.electionTimeoutHasOccurred(now4) {
 		t.Fatal()
 	}
 }

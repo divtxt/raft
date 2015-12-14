@@ -46,7 +46,7 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntries(
 
 	// #RFS-F2: (paraphrasing) AppendEntries RPC from current leader should
 	// prevent election timeout
-	cm.electionTimeoutTracker.resetElectionTimeoutTime(now)
+	cm.electionTimeoutTracker.touch(now)
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
 	// set currentTerm = T, convert to follower (#5.1)

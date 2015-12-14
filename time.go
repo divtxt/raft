@@ -43,19 +43,19 @@ func newElectionTimeoutTracker(electionTimeoutLow time.Duration, now time.Time) 
 		now, // temp value, to be replaced before goroutine start
 	}
 
-	ett.chooseNewRandomElectionTimeout()
-	ett.resetElectionTimeoutTime(now)
+	ett.chooseNewRandomElectionTimeoutAndTouch(now)
 
 	return ett
 }
 
-func (ett *electionTimeoutTracker) chooseNewRandomElectionTimeout() {
+func (ett *electionTimeoutTracker) chooseNewRandomElectionTimeoutAndTouch(now time.Time) {
 	// #5.2-p6s2: ..., election timeouts are chosen randomly from a fixed
 	// interval (e.g., 150-300ms)
 	ett.currentElectionTimeout = ett.electionTimeoutLow + time.Duration(rand.Int63n(int64(ett.electionTimeoutLow)+1))
+	ett.touch(now)
 }
 
-func (ett *electionTimeoutTracker) resetElectionTimeoutTime(now time.Time) {
+func (ett *electionTimeoutTracker) touch(now time.Time) {
 	ett.electionTimeoutTime = now.Add(ett.currentElectionTimeout)
 }
 

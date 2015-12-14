@@ -68,7 +68,7 @@ func (cm *passiveConsensusModule) _processRpc_RequestVote(
 			cm.persistentState.SetVotedFor(fromPeer)
 		}
 		// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
-		cm.electionTimeoutTracker.resetElectionTimeoutTime(now)
+		cm.electionTimeoutTracker.touch(now)
 		return true
 	}
 
