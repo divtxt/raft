@@ -122,7 +122,6 @@ func TestConsensusModule_ProcessRpcAsync(t *testing.T) {
 
 	select {
 	case reply := <-replyChan:
-		// FIXME: unsafe concurrent access
 		serverTerm := cm.passiveConsensusModule.persistentState.GetCurrentTerm()
 		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
 		if !reflect.DeepEqual(reply, expectedRpc) {
@@ -157,7 +156,6 @@ func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// reply true for all votes
-	// FIXME: unsafe concurrent access
 	serverTerm := cm.passiveConsensusModule.persistentState.GetCurrentTerm()
 	if mrs.sendReplies(&RpcRequestVoteReply{serverTerm, true}) != 4 {
 		t.Fatal()
