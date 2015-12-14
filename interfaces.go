@@ -8,6 +8,8 @@ package raft
 //
 // This state should be persisted to stable storage.
 //
+// The initial values should be 0 for the currentTerm and "" for votedFor.
+//
 // No one else should modify these values, and the ConsensusModule does not
 // cache these values, so it is recommended that implementations cache the
 // values for getter performance.
@@ -19,13 +21,33 @@ type PersistentState interface {
 	// Get the candidate id this server has voted for. ("" if none)
 	GetVotedFor() ServerId
 
-	// Set the latest term this server has seen and the candidate
-	// it has voted for in this term.
+	// Set the latest term this server has seen.
+	//
+	// The following are errors and should panic without chaning the current
+	// values:
+	//
+	//  - trying to set a value of 0
+	//  - trying to set a value less than the current value
+	//
+	// If the new value is different from the current value, the current votedFor
+	// value for this new term should be set to blank.
+	//
 	// This call should be synchronous i.e. not return until the values
 	// have been written to persistent storage.
+	SetCurrentTerm(currentTerm TermNo)
+
+	// Set the voted for value for the current term.
 	//
-	// TODO: should this call error for decreasing/same term
-	SetCurrentTermAndVotedFor(currentTerm TermNo, votedFor ServerId)
+	// The following are errors and should panic without chaning the current
+	// values:
+	//
+	//  - trying to set the value when currentTerm is 0
+	//  - trying to set a blank value
+	//  - trying to set the value when the current value is not blank
+	//
+	// This call should be synchronous i.e. not return until the values
+	// have been written to persistent storage.
+	SetVotedFor(votedFor ServerId)
 }
 
 // Asynchronous RPC service.
