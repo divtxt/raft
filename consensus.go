@@ -184,7 +184,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
 	cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
-	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(cm.log)
+	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(cm.log)
 	cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
@@ -196,7 +196,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 }
 
 func (cm *passiveConsensusModule) becomeLeader() {
-	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo, cm.log.getIndexOfLastEntry())
+	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo, cm.log.GetIndexOfLastEntry())
 	cm._setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
@@ -213,7 +213,7 @@ func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
 // leader code
 func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
 	serverTerm := cm.persistentState.GetCurrentTerm()
-	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(cm.log)
+	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(cm.log)
 	rpcAppendEntries := &RpcAppendEntries{
 		serverTerm,
 		lastLogIndex,

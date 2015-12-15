@@ -146,7 +146,7 @@ func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(cm.passiveConsensusModule.log)
+	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(cm.passiveConsensusModule.log)
 	expectedRpc := &RpcRequestVote{testCurrentTerm + 1, lastLogIndex, lastLogTerm}
 	expectedRpcs := []mockSentRpc{
 		{"s2", expectedRpc},
