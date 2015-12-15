@@ -203,6 +203,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	mrs *mockRpcSender,
 	expectedNewTerm TermNo,
 ) {
+	timeout1 := mcm.pcm.electionTimeoutTracker.currentElectionTimeout
 	// Test that election timeout causes a new election
 	mcm.tickTilElectionTimeout()
 	if mcm.pcm.persistentState.GetCurrentTerm() != expectedNewTerm {
@@ -213,6 +214,11 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	}
 	// candidate has voted for itself
 	if mcm.pcm.persistentState.GetVotedFor() != testThisServerId {
+		t.Fatal()
+	}
+	// a new election timeout was chosen
+	// Playing the odds here :P
+	if mcm.pcm.electionTimeoutTracker.currentElectionTimeout == timeout1 {
 		t.Fatal()
 	}
 
