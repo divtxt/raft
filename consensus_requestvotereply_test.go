@@ -64,7 +64,7 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 	}
 
 	// leader setup
-	lastLogIndex, lastLogTerm := getIndexAndTermOfLastEntry(mcm.pcm.log)
+	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(mcm.pcm.log)
 	expectedRpc := &RpcAppendEntries{
 		serverTerm,
 		lastLogIndex,

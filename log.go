@@ -24,17 +24,17 @@ type LogIndex uint64
 //
 type Log interface {
 	// An index of 0 indicates no entries present.
-	getIndexOfLastEntry() LogIndex
+	GetIndexOfLastEntry() LogIndex
 
 	// An index of 0 is invalid for this call.
-	getLogEntryAtIndex(LogIndex) LogEntry
+	GetLogEntryAtIndex(LogIndex) LogEntry
 
 	// Get the term of the entry at the given index.
 	// Equivalent to getLogEntryAtIndex(...).TermNo but this call allows
 	// the Log implementation to not fetch the Command if that's a useful
 	// optimization.
 	// An index of 0 is invalid for this call.
-	getTermAtIndex(LogIndex) TermNo
+	GetTermAtIndex(LogIndex) TermNo
 
 	// Set the entries after the given index.
 	//
@@ -57,15 +57,15 @@ type Log interface {
 	//
 	// A zero length slice and nil both indicate no new entries to be added
 	// after deleting.
-	setEntriesAfterIndex(LogIndex, []LogEntry)
+	SetEntriesAfterIndex(LogIndex, []LogEntry)
 }
 
 // Helper method
-func getIndexAndTermOfLastEntry(log Log) (LogIndex, TermNo) {
-	lastLogIndex := log.getIndexOfLastEntry()
+func GetIndexAndTermOfLastEntry(log Log) (LogIndex, TermNo) {
+	lastLogIndex := log.GetIndexOfLastEntry()
 	var lastLogTerm TermNo = 0
 	if lastLogIndex > 0 {
-		lastLogTerm = log.getTermAtIndex(lastLogIndex)
+		lastLogTerm = log.GetTermAtIndex(lastLogIndex)
 	}
 	return lastLogIndex, lastLogTerm
 }

@@ -16,15 +16,15 @@ func makeLogTerms_Figure7LeaderLine() []TermNo {
 // Send a Log with 10 entries with terms as shown in Figure 7, leader line
 func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	// Initial data tests
-	if log.getIndexOfLastEntry() != 10 {
+	if log.GetIndexOfLastEntry() != 10 {
 		t.Fatal()
 	}
-	if log.getTermAtIndex(10) != 6 {
+	if log.GetTermAtIndex(10) != 6 {
 		t.Fatal()
 	}
 
 	// get entry test
-	le := log.getLogEntryAtIndex(10)
+	le := log.GetLogEntryAtIndex(10)
 	if le.TermNo != 6 {
 		t.Fatal(le.TermNo)
 	}
@@ -45,47 +45,47 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 				}
 			}
 		}()
-		log.setEntriesAfterIndex(11, logEntries)
+		log.SetEntriesAfterIndex(11, logEntries)
 		stopThePanic = false
 		t.Fatal()
 	}
 
 	// set test - no replacing
 	logEntries = []LogEntry{{7, "c11"}, {8, "c12"}}
-	log.setEntriesAfterIndex(10, logEntries)
-	if log.getIndexOfLastEntry() != 12 {
+	log.SetEntriesAfterIndex(10, logEntries)
+	if log.GetIndexOfLastEntry() != 12 {
 		t.Fatal()
 	}
-	le = log.getLogEntryAtIndex(12)
+	le = log.GetLogEntryAtIndex(12)
 	if !reflect.DeepEqual(le, LogEntry{8, "c12"}) {
 		t.Fatal(le)
 	}
 
 	// set test - partial replacing
 	logEntries = []LogEntry{{7, "c11"}, {9, "c12"}, {9, "c13'"}}
-	log.setEntriesAfterIndex(10, logEntries)
-	if log.getIndexOfLastEntry() != 13 {
+	log.SetEntriesAfterIndex(10, logEntries)
+	if log.GetIndexOfLastEntry() != 13 {
 		t.Fatal()
 	}
-	le = log.getLogEntryAtIndex(12)
+	le = log.GetLogEntryAtIndex(12)
 	if !reflect.DeepEqual(le, LogEntry{9, "c12"}) {
 		t.Fatal(le)
 	}
 
 	// set test - no new entries with empty slice
 	logEntries = []LogEntry{}
-	log.setEntriesAfterIndex(3, logEntries)
-	if log.getIndexOfLastEntry() != 3 {
+	log.SetEntriesAfterIndex(3, logEntries)
+	if log.GetIndexOfLastEntry() != 3 {
 		t.Fatal()
 	}
-	le = log.getLogEntryAtIndex(3)
+	le = log.GetLogEntryAtIndex(3)
 	if !reflect.DeepEqual(le, LogEntry{1, "c3"}) {
 		t.Fatal(le)
 	}
 
 	// set test - delete all entries; no new entries with nil
-	log.setEntriesAfterIndex(0, nil)
-	if log.getIndexOfLastEntry() != 0 {
+	log.SetEntriesAfterIndex(0, nil)
+	if log.GetIndexOfLastEntry() != 0 {
 		t.Fatal()
 	}
 
@@ -96,20 +96,20 @@ type inMemoryLog struct {
 	entries []LogEntry
 }
 
-func (imle *inMemoryLog) getIndexOfLastEntry() LogIndex {
+func (imle *inMemoryLog) GetIndexOfLastEntry() LogIndex {
 	return LogIndex(len(imle.entries))
 }
 
-func (imle *inMemoryLog) getTermAtIndex(li LogIndex) TermNo {
+func (imle *inMemoryLog) GetTermAtIndex(li LogIndex) TermNo {
 	return imle.entries[li-1].TermNo
 }
 
-func (imle *inMemoryLog) getLogEntryAtIndex(li LogIndex) LogEntry {
+func (imle *inMemoryLog) GetLogEntryAtIndex(li LogIndex) LogEntry {
 	return imle.entries[li-1]
 }
 
-func (imle *inMemoryLog) setEntriesAfterIndex(li LogIndex, entries []LogEntry) {
-	iole := imle.getIndexOfLastEntry()
+func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
+	iole := imle.GetIndexOfLastEntry()
 	if iole < li {
 		panic(fmt.Sprintf("inMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", li, iole))
 	}
