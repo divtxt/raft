@@ -23,7 +23,7 @@ type PersistentState interface {
 
 	// Set the latest term this server has seen.
 	//
-	// The following are errors and should panic without chaning the current
+	// The following are errors and should panic without changing the current
 	// values:
 	//
 	//  - trying to set a value of 0
@@ -38,7 +38,7 @@ type PersistentState interface {
 
 	// Set the voted for value for the current term.
 	//
-	// The following are errors and should panic without chaning the current
+	// The following are errors and should panic without changing the current
 	// values:
 	//
 	//  - trying to set the value when currentTerm is 0
