@@ -2,6 +2,7 @@ package raft
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -219,6 +220,11 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	// a new election timeout was chosen
 	// Playing the odds here :P
 	if mcm.pcm.electionTimeoutTracker.currentElectionTimeout == timeout1 {
+		t.Fatal()
+	}
+	// candidate state is fresh
+	expectedCvs := newCandidateVolatileState(mcm.pcm.clusterInfo)
+	if !reflect.DeepEqual(mcm.pcm.candidateVolatileState, expectedCvs) {
 		t.Fatal()
 	}
 
