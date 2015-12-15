@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -49,6 +50,12 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 		t.Fatal()
 	}
 	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+		t.Fatal()
+	}
+
+	// leader state is fresh
+	expectedLvs := newLeaderVolatileState(mcm.pcm.clusterInfo)
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState, expectedLvs) {
 		t.Fatal()
 	}
 

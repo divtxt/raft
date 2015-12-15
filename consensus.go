@@ -26,6 +26,7 @@ type passiveConsensusModule struct {
 	volatileState          volatileState
 	electionTimeoutTracker *electionTimeoutTracker
 	candidateVolatileState *candidateVolatileState
+	leaderVolatileState    *leaderVolatileState
 }
 
 func newPassiveConsensusModule(
@@ -70,6 +71,7 @@ func newPassiveConsensusModule(
 		// -- State
 		volatileState{},
 		newElectionTimeoutTracker(timeSettings.ElectionTimeoutLow, now),
+		nil,
 		nil,
 	}
 
@@ -194,6 +196,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 }
 
 func (cm *passiveConsensusModule) becomeLeader() {
+	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo)
 	cm._setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
