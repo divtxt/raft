@@ -54,8 +54,12 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 	}
 
 	// leader state is fresh
-	expectedLvs := newLeaderVolatileState(mcm.pcm.clusterInfo)
-	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState, expectedLvs) {
+	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
 

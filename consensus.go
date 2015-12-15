@@ -196,7 +196,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 }
 
 func (cm *passiveConsensusModule) becomeLeader() {
-	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo)
+	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo, cm.log.getIndexOfLastEntry())
 	cm._setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
