@@ -107,6 +107,12 @@ func (imle *inMemoryLog) GetIndexOfLastEntry() LogIndex {
 }
 
 func (imle *inMemoryLog) GetTermAtIndex(li LogIndex) TermNo {
+	if li == 0 {
+		panic("GetTermAtIndex(): li=0")
+	}
+	if li > LogIndex(len(imle.entries)) {
+		panic(fmt.Sprintf("GetTermAtIndex(): li=%v > iole=%v", li, len(imle.entries)))
+	}
 	return imle.entries[li-1].TermNo
 }
 
