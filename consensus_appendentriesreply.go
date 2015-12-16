@@ -48,6 +48,8 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 		return
 	}
 
+	// #RFS-L3.2: If AppendEntries fails because of log inconsistency:
+	// decrement nextIndex and retry (#5.3)
 	// #5.3-p8s6: After a rejection, the leader decrements nextIndex and
 	// retries the AppendEntries RPC.
 	if !appendEntriesReply.Success {
@@ -57,5 +59,8 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 		return
 	}
 
-	panic("TODO: _processRpc_AppendEntriesReply / LEADER")
+	// #RFS-L3.1: If successful: update nextIndex and matchIndex for
+	// follower (#5.3)
+	newMatchIndex := appendEntries.PrevLogIndex + LogIndex(len(appendEntries.Entries))
+	cm.leaderVolatileState.setMatchIndexAndNextIndex(from, newMatchIndex)
 }

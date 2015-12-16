@@ -58,3 +58,12 @@ func (lvs *leaderVolatileState) decrementNextIndex(peerId ServerId) {
 	}
 	lvs.nextIndex[peerId] = nextIndex - 1
 }
+
+// Set matchIndex for the given peer and update nextIndex to matchIndex+1
+func (lvs *leaderVolatileState) setMatchIndexAndNextIndex(peerId ServerId, matchIndex LogIndex) {
+	if _, ok := lvs.nextIndex[peerId]; !ok {
+		panic(fmt.Sprintf("leaderVolatileState.setNextIndexAndMatchIndex(): unknown peer: %v", peerId))
+	}
+	lvs.nextIndex[peerId] = matchIndex + 1
+	lvs.matchIndex[peerId] = matchIndex
+}

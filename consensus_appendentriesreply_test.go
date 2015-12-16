@@ -18,7 +18,20 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
-		mrs.checkSentRpcs(t, []mockSentRpc{})
+		if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+			t.Fatal()
+		}
+		if beforeState == LEADER {
+			expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+			if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+				t.Fatal()
+			}
+			expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+			if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+				t.Fatal()
+			}
+			mrs.checkSentRpcs(t, []mockSentRpc{})
+		}
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
@@ -69,6 +82,8 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	}
 }
 
+// #RFS-L3.2: If AppendEntries fails because of log inconsistency:
+// decrement nextIndex and retry (#5.3)
 // #5.3-p8s6: After a rejection, the leader decrements nextIndex and
 // retries the AppendEntries RPC.
 // Note: test based on Figure 7; server is leader line; peer is case (a)
@@ -81,12 +96,16 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
+	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
 
 	sentRpc := &RpcAppendEntries{
 		serverTerm,
 		10,
 		6,
-		nil,
+		[]LogEntry{},
 		0, // TODO: tests for this?!
 	}
 
@@ -99,6 +118,10 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	}
 	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 10, "s4": 11, "s5": 11}
 	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex = map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
 	//
@@ -114,5 +137,98 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	expectedRpcs := []mockSentRpc{
 		{"s3", expectedRpc},
 	}
+	mrs.checkSentRpcs(t, expectedRpcs)
+}
+
+// #RFS-L3.1: If successful: update nextIndex and matchIndex for
+// follower (#5.3)
+// Note: test based on Figure 7; server is leader line; peer is the same
+func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+	// sanity check
+	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+
+	sentRpc := &RpcAppendEntries{
+		serverTerm,
+		10,
+		6,
+		[]LogEntry{},
+		0, // TODO: tests for this?!
+	}
+
+	mcm.pcm.rpcReply("s3", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
+	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
+	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+		t.Fatal()
+	}
+	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex = map[ServerId]LogIndex{"s2": 0, "s3": 10, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+	// no new follow-on AppendEntries expected
+	expectedRpcs := []mockSentRpc{}
+	mrs.checkSentRpcs(t, expectedRpcs)
+}
+
+// #RFS-L3.1: If successful: update nextIndex and matchIndex for
+// follower (#5.3)
+// Note: test based on Figure 7; server is leader line; peer is case (a)
+func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+	// hack & sanity check
+	mcm.pcm.leaderVolatileState.nextIndex["s2"] = 10
+	expectedNextIndex := map[ServerId]LogIndex{"s2": 10, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+
+	sentRpc := &RpcAppendEntries{
+		serverTerm,
+		9,
+		6,
+		[]LogEntry{
+			{6, Command("c10")},
+		},
+		0, // TODO: tests for this?!
+	}
+
+	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
+	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
+	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+		t.Fatal()
+	}
+	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal(mcm.pcm.leaderVolatileState.nextIndex)
+	}
+	expectedMatchIndex = map[ServerId]LogIndex{"s2": 10, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+	// no new follow-on AppendEntries expected
+	expectedRpcs := []mockSentRpc{}
 	mrs.checkSentRpcs(t, expectedRpcs)
 }
