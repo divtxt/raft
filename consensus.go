@@ -35,7 +35,7 @@ func newPassiveConsensusModule(
 	log Log,
 	rpcSender rpcSender,
 	clusterInfo *ClusterInfo,
-	timeSettings TimeSettings,
+	electionTimeoutLow time.Duration,
 	maxEntriesPerAppendEntry uint64,
 ) (*passiveConsensusModule, time.Time) {
 	// Param checks
@@ -51,8 +51,8 @@ func newPassiveConsensusModule(
 	if clusterInfo == nil {
 		panic("clusterInfo cannot be nil")
 	}
-	if emsg := ValidateTimeSettings(timeSettings); emsg != "" {
-		panic(emsg)
+	if electionTimeoutLow.Nanoseconds() <= 0 {
+		panic("electionTimeoutLow must be greater than zero")
 	}
 
 	now := time.Now()
@@ -73,7 +73,7 @@ func newPassiveConsensusModule(
 
 		// -- State
 		volatileState{},
-		newElectionTimeoutTracker(timeSettings.ElectionTimeoutLow, now),
+		newElectionTimeoutTracker(electionTimeoutLow, now),
 		nil,
 		nil,
 	}

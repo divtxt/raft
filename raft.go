@@ -87,7 +87,7 @@ func NewConsensusModule(
 		log,
 		cm,
 		clusterInfo,
-		timeSettings,
+		timeSettings.ElectionTimeoutLow,
 		maxEntriesPerAppendEntry,
 	)
 
