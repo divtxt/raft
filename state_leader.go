@@ -1,5 +1,9 @@
 package raft
 
+import (
+	"fmt"
+)
+
 // Volatile state on leaders
 // (Reinitialized after election)
 type leaderVolatileState struct {
@@ -32,4 +36,22 @@ func newLeaderVolatileState(clusterInfo *ClusterInfo, indexOfLastEntry LogIndex)
 	)
 
 	return lvs
+}
+
+// Get nextIndex for the given peer
+func (lvs *leaderVolatileState) getNextIndex(peerId ServerId) LogIndex {
+	nextIndex, ok := lvs.nextIndex[peerId]
+	if !ok {
+		panic(fmt.Sprintf("leaderVolatileState.getNextIndex(): unknown peer: %v", peerId))
+	}
+	return nextIndex
+}
+
+// Decrement nextIndex for the given peer
+func (lvs *leaderVolatileState) decrementNextIndex(peerId ServerId) {
+	nextIndex, ok := lvs.nextIndex[peerId]
+	if !ok {
+		panic(fmt.Sprintf("leaderVolatileState.decrementNextIndex(): unknown peer: %v", peerId))
+	}
+	lvs.nextIndex[peerId] = nextIndex - 1
 }

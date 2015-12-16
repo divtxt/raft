@@ -48,5 +48,23 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 		return
 	}
 
+	// #5.3-p8s6: After a rejection, the leader decrements nextIndex and
+	// retries the AppendEntries RPC.
+	if !appendEntriesReply.Success {
+		cm.leaderVolatileState.decrementNextIndex(from)
+		peerLastLogIndex := cm.leaderVolatileState.getNextIndex(from) - 1
+		peerLastLogTerm := cm.log.GetTermAtIndex(peerLastLogIndex)
+		rpcAppendEntries := &RpcAppendEntries{
+			serverTerm,
+			peerLastLogIndex,
+			peerLastLogTerm,
+			[]LogEntry{}, // TODO: include commands
+			0,            // TODO: cm.volatileState.commitIndex
+		}
+		cm.rpcSender.sendAsync(from, rpcAppendEntries)
+		// TODO: test for this
+		return
+	}
+
 	panic("TODO: _processRpc_AppendEntriesReply / LEADER")
 }

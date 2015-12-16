@@ -22,4 +22,33 @@ func TestLeaderVolatileState(t *testing.T) {
 	if !reflect.DeepEqual(lvs.matchIndex, expectedMatchIndex) {
 		t.Fatal(lvs.matchIndex)
 	}
+
+	// getNextIndex
+	if lvs.getNextIndex("s2") != 43 {
+		t.Fatal()
+	}
+	test_ExpectPanic(
+		t,
+		func() {
+			lvs.getNextIndex("s5")
+		},
+		"leaderVolatileState.getNextIndex(): unknown peer: s5",
+	)
+
+	// decrementNextIndex
+	lvs.decrementNextIndex("s2")
+	test_ExpectPanic(
+		t,
+		func() {
+			lvs.decrementNextIndex("s3")
+		},
+		"leaderVolatileState.decrementNextIndex(): unknown peer: s3",
+	)
+	expectedNextIndex = map[ServerId]LogIndex{"s1": 43, "s2": 42}
+	if !reflect.DeepEqual(lvs.nextIndex, expectedNextIndex) {
+		t.Fatal(lvs.nextIndex)
+	}
+	if lvs.getNextIndex("s2") != 42 {
+		t.Fatal()
+	}
 }
