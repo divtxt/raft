@@ -27,7 +27,7 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 	case CANDIDATE:
 		// Extra: raft violation - only leader should get AppendEntriesReply
 		panic(fmt.Sprintf(
-			"FATAL: two leaders with same term - got AppendEntriesReply from: %v with term: %v",
+			"FATAL: non-leader got AppendEntriesReply from: %v with term: %v",
 			from,
 			serverTerm,
 		))

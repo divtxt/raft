@@ -37,7 +37,7 @@ func TestCM_RpcAER_FollowerOrCandidate_PanicsForSameTermReply(t *testing.T) {
 			func() {
 				mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
 			},
-			fmt.Sprintf("FATAL: two leaders with same term - got AppendEntriesReply from: s2 with term: %v", serverTerm),
+			fmt.Sprintf("FATAL: non-leader got AppendEntriesReply from: s2 with term: %v", serverTerm),
 		)
 	}
 
