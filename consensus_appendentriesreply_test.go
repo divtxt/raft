@@ -2,6 +2,7 @@ package raft
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -66,5 +67,50 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	if mcm.pcm.persistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
+}
 
+// #5.3-p8s6: After a rejection, the leader decrements nextIndex and
+// retries the AppendEntries RPC.
+// Note: test based on Figure 7; server is leader line; peer is case (a)
+func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+	// sanity check
+	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+
+	sentRpc := &RpcAppendEntries{
+		serverTerm,
+		10,
+		6,
+		nil,
+		0, // TODO: tests for this?!
+	}
+
+	mcm.pcm.rpcReply("s3", sentRpc, &RpcAppendEntriesReply{serverTerm, false})
+	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
+	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+		t.Fatal()
+	}
+	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 10, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	//
+	expectedRpc := &RpcAppendEntries{
+		serverTerm,
+		9,
+		6,
+		[]LogEntry{}, // FIXME: "c10"
+		0,
+	}
+	expectedRpcs := []mockSentRpc{
+		{"s3", expectedRpc},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 }
