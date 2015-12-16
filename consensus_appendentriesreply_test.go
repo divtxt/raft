@@ -106,7 +106,9 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 		serverTerm,
 		9,
 		6,
-		[]LogEntry{}, // FIXME: "c10"
+		[]LogEntry{
+			{6, Command("c10")},
+		},
 		0,
 	}
 	expectedRpcs := []mockSentRpc{

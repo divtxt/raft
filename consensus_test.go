@@ -274,7 +274,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		10,
 		6,
 		[]LogEntry{},
-		0,
+		0, // TODO: test this
 	}
 	expectedRpcs := []mockSentRpc{
 		{"s2", expectedRpc},
@@ -288,7 +288,9 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		serverTerm,
 		9,
 		6,
-		[]LogEntry{}, // FIXME: c10
+		[]LogEntry{
+			{6, Command("c10")},
+		},
 		0,
 	}
 	expectedRpcs = []mockSentRpc{
@@ -304,13 +306,79 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		serverTerm,
 		7,
 		5,
-		[]LogEntry{}, // FIXME: c8, c9, c10
+		[]LogEntry{
+			{6, Command("c8")},
+			{6, Command("c9")},
+			{6, Command("c10")},
+		},
 		0,
 	}
 	expectedRpcs = []mockSentRpc{
 		{"s2", expectedRpc},
 	}
 	mrs.checkSentRpcs(t, expectedRpcs)
+}
+
+func TestCM_getEntriesAfterLogIndex(t *testing.T) {
+	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
+
+	// none
+	actualEntries := mcm.pcm.getEntriesAfterLogIndex(10)
+	expectedEntries := []LogEntry{}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// one
+	actualEntries = mcm.pcm.getEntriesAfterLogIndex(9)
+	expectedEntries = []LogEntry{
+		{6, Command("c10")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// multiple
+	actualEntries = mcm.pcm.getEntriesAfterLogIndex(7)
+	expectedEntries = []LogEntry{
+		{6, Command("c8")},
+		{6, Command("c9")},
+		{6, Command("c10")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// max
+	actualEntries = mcm.pcm.getEntriesAfterLogIndex(2)
+	expectedEntries = []LogEntry{
+		{1, Command("c3")},
+		{4, Command("c4")},
+		{4, Command("c5")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// index of 0
+	actualEntries = mcm.pcm.getEntriesAfterLogIndex(0)
+	expectedEntries = []LogEntry{
+		{1, Command("c1")},
+		{1, Command("c2")},
+		{1, Command("c3")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// index more than last log entry
+	test_ExpectPanic(
+		t,
+		func() {
+			mcm.pcm.getEntriesAfterLogIndex(11)
+		},
+		"indexOfLastEntry=11 is < afterLogIndex=10",
+	)
 }
 
 func testSetupMCM_Follower_WithTerms(
