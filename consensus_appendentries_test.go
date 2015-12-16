@@ -174,14 +174,14 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if mcm.pcm.log.GetLogEntryAtIndex(6).Command != "c6" {
+		if !testCommandEquals(mcm.pcm.log.GetLogEntryAtIndex(6).Command, "c6") {
 			t.Error()
 		}
 
 		sentLogEntries := []LogEntry{
-			{5, "c6'"},
-			{5, "c7'"},
-			{6, "c8'"},
+			{5, Command("c6'")},
+			{5, Command("c7'")},
+			{6, Command("c8'")},
 		}
 
 		appendEntries := &RpcAppendEntries{senderTerm, 5, 4, sentLogEntries, 7}
@@ -200,7 +200,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
-		if addedLogEntry.Command != "c6'" {
+		if !testCommandEquals(addedLogEntry.Command, "c6'") {
 			t.Error()
 		}
 
@@ -256,13 +256,13 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if mcm.pcm.log.GetLogEntryAtIndex(4).Command != "c4" {
+		if !testCommandEquals(mcm.pcm.log.GetLogEntryAtIndex(4).Command, "c4") {
 			t.Error()
 		}
 
 		sentLogEntries := []LogEntry{
-			{4, "c5'"},
-			{5, "c6'"},
+			{4, Command("c5'")},
+			{5, Command("c6'")},
 		}
 
 		appendEntries := &RpcAppendEntries{senderTerm, 4, 4, sentLogEntries, 7}
@@ -281,7 +281,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
-		if addedLogEntry.Command != "c6'" {
+		if !testCommandEquals(addedLogEntry.Command, "c6'") {
 			t.Error()
 		}
 
