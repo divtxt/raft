@@ -51,4 +51,12 @@ func TestLeaderVolatileState(t *testing.T) {
 	if lvs.getNextIndex("s2") != 42 {
 		t.Fatal()
 	}
+	lvs.nextIndex["s1"] = 1
+	test_ExpectPanic(
+		t,
+		func() {
+			lvs.decrementNextIndex("s1")
+		},
+		"leaderVolatileState.decrementNextIndex(): nextIndex <=1 for peer: s1",
+	)
 }
