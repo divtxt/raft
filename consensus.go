@@ -172,7 +172,9 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		}
 		// TODO: else/and anything else?
 	case LEADER:
-		cm._sendEmptyAppendEntriesToAllPeers()
+		// #RFS-L3.0: If last log index >= nextIndex for a follower: send
+		// AppendEntries RPC with log entries starting at nextIndex
+		cm.sendAppendEntriesToAllPeers(false)
 		// TODO: more leader things
 	}
 }
@@ -203,7 +205,7 @@ func (cm *passiveConsensusModule) becomeLeader() {
 	cm._setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
-	cm._sendEmptyAppendEntriesToAllPeers()
+	cm.sendAppendEntriesToAllPeers(true)
 	// TODO: more leader things!
 }
 
@@ -232,13 +234,34 @@ func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
 	)
 }
 
-func (cm *passiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId) {
+func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) {
+	cm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) {
+			cm.sendAppendEntriesToPeer(serverId, empty)
+		},
+	)
+}
+
+func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
+	peerId ServerId,
+	empty bool,
+) {
 	serverTerm := cm.persistentState.GetCurrentTerm()
 	//
 	peerLastLogIndex := cm.leaderVolatileState.getNextIndex(peerId) - 1
-	peerLastLogTerm := cm.log.GetTermAtIndex(peerLastLogIndex)
+	var peerLastLogTerm TermNo
+	if peerLastLogIndex == 0 {
+		peerLastLogTerm = 0
+	} else {
+		peerLastLogTerm = cm.log.GetTermAtIndex(peerLastLogIndex)
+	}
 	//
-	entriesToSend := cm.getEntriesAfterLogIndex(peerLastLogIndex)
+	var entriesToSend []LogEntry
+	if empty {
+		entriesToSend = []LogEntry{}
+	} else {
+		entriesToSend = cm.getEntriesAfterLogIndex(peerLastLogIndex)
+	}
 	//
 	rpcAppendEntries := &RpcAppendEntries{
 		serverTerm,

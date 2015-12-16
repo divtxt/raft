@@ -265,6 +265,55 @@ func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 	testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 }
 
+// #RFS-L3.0: If last log index >= nextIndex for a follower: send
+// AppendEntries RPC with log entries starting at nextIndex
+func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t)
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+	// repatch some peers as not caught up
+	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
+	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 7)
+
+	// tick should trigger check & appropriate sends
+	mcm.tick()
+
+	expectedRpcEmpty := &RpcAppendEntries{
+		serverTerm,
+		10,
+		6,
+		[]LogEntry{},
+		0, // TODO: tests for this?!
+	}
+	expectedRpcS2 := &RpcAppendEntries{
+		serverTerm,
+		9,
+		6,
+		[]LogEntry{
+			{6, Command("c10")},
+		},
+		0, // TODO: tests for this?!
+	}
+	expectedRpcS5 := &RpcAppendEntries{
+		serverTerm,
+		7,
+		5,
+		[]LogEntry{
+			{6, Command("c8")},
+			{6, Command("c9")},
+			{6, Command("c10")},
+		},
+		0, // TODO: tests for this?!
+	}
+	expectedRpcs := []mockSentRpc{
+		{"s2", expectedRpcS2},
+		{"s3", expectedRpcEmpty},
+		{"s4", expectedRpcEmpty},
+		{"s5", expectedRpcS5},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
+}
+
 func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
@@ -275,8 +324,8 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		t.Fatal()
 	}
 
-	// empty send
-	mcm.pcm.sendAppendEntriesToPeer("s2")
+	// nothing to send
+	mcm.pcm.sendAppendEntriesToPeer("s2", false)
 	expectedRpc := &RpcAppendEntries{
 		serverTerm,
 		10,
@@ -289,9 +338,23 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	}
 	mrs.checkSentRpcs(t, expectedRpcs)
 
-	// send one
+	// empty send
 	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
-	mcm.pcm.sendAppendEntriesToPeer("s2")
+	mcm.pcm.sendAppendEntriesToPeer("s2", true)
+	expectedRpc = &RpcAppendEntries{
+		serverTerm,
+		9,
+		6,
+		[]LogEntry{},
+		0, // TODO: test this
+	}
+	expectedRpcs = []mockSentRpc{
+		{"s2", expectedRpc},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
+
+	// send one
+	mcm.pcm.sendAppendEntriesToPeer("s2", false)
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
 		9,
@@ -309,7 +372,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	// send multiple
 	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
 	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
-	mcm.pcm.sendAppendEntriesToPeer("s2")
+	mcm.pcm.sendAppendEntriesToPeer("s2", false)
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
 		7,
@@ -449,6 +512,40 @@ func testSetupMCM_Candidate_Figure7LeaderLine(t *testing.T) (*managedConsensusMo
 
 func testSetupMCM_Leader_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
 	return testSetupMCM_Leader_WithTerms(t, makeLogTerms_Figure7LeaderLine())
+}
+
+func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+	mcm, mrs := testSetupMCM_Leader_WithTerms(t, makeLogTerms_Figure7LeaderLine())
+
+	// sanity check - before
+	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+
+	// pretend peers caught up!
+	lastLogIndex := mcm.pcm.log.GetIndexOfLastEntry()
+	mcm.pcm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) {
+			mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex(serverId, lastLogIndex)
+		},
+	)
+
+	// after check
+	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex = map[ServerId]LogIndex{"s2": 10, "s3": 10, "s4": 10, "s5": 10}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+
+	return mcm, mrs
 }
 
 func TestCM_Follower_StartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {

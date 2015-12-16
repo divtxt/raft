@@ -54,7 +54,7 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 	// retries the AppendEntries RPC.
 	if !appendEntriesReply.Success {
 		cm.leaderVolatileState.decrementNextIndex(from)
-		cm.sendAppendEntriesToPeer(from)
+		cm.sendAppendEntriesToPeer(from, false)
 		// TODO: test for this
 		return
 	}
