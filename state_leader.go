@@ -67,3 +67,45 @@ func (lvs *leaderVolatileState) setMatchIndexAndNextIndex(peerId ServerId, match
 	lvs.nextIndex[peerId] = matchIndex + 1
 	lvs.matchIndex[peerId] = matchIndex
 }
+
+// Helper method to find potential new commitIndex.
+// Returns 0 if no match found.
+// #RFS-L4: If there exists an N such that N > commitIndex, a majority
+// of matchIndex[i] >= N, and log[N].term == currentTerm:
+// set commitIndex = N (#5.3, #5.4)
+func findNewerCommitIndex(
+	ci *ClusterInfo,
+	lvs *leaderVolatileState,
+	log Log,
+	currentTerm TermNo,
+	commitIndex LogIndex,
+) LogIndex {
+	indexOfLastEntry := log.GetIndexOfLastEntry()
+	requiredMatches := ci.QuorumSizeForCluster()
+	// cover all N > commitIndex
+	// stop when we pass the end of the log
+	for N := commitIndex + 1; N <= indexOfLastEntry; N++ {
+		// check log[N].term
+		termAtN := log.GetTermAtIndex(N)
+		if termAtN > currentTerm {
+			// term has gone too high for log[N].term == currentTerm
+			// no point trying further
+			return 0
+		}
+		if termAtN < currentTerm {
+			continue
+		}
+		// finally, check for majority of matchIndex
+		var foundMatches uint = 1 // 1 because we already match!
+		for _, peerMatchIndex := range lvs.matchIndex {
+			if peerMatchIndex >= N {
+				foundMatches++
+			}
+		}
+		if foundMatches >= requiredMatches {
+			return N
+		}
+	}
+
+	return 0
+}
