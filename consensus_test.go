@@ -257,6 +257,62 @@ func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 	testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 }
 
+func TestCM_sendAppendEntriesToPeer(t *testing.T) {
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+	// sanity check
+	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+
+	// empty send
+	mcm.pcm.sendAppendEntriesToPeer("s2")
+	expectedRpc := &RpcAppendEntries{
+		serverTerm,
+		10,
+		6,
+		[]LogEntry{},
+		0,
+	}
+	expectedRpcs := []mockSentRpc{
+		{"s2", expectedRpc},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
+
+	// send one
+	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	mcm.pcm.sendAppendEntriesToPeer("s2")
+	expectedRpc = &RpcAppendEntries{
+		serverTerm,
+		9,
+		6,
+		[]LogEntry{}, // FIXME: c10
+		0,
+	}
+	expectedRpcs = []mockSentRpc{
+		{"s2", expectedRpc},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
+
+	// send multiple
+	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	mcm.pcm.sendAppendEntriesToPeer("s2")
+	expectedRpc = &RpcAppendEntries{
+		serverTerm,
+		7,
+		5,
+		[]LogEntry{}, // FIXME: c8, c9, c10
+		0,
+	}
+	expectedRpcs = []mockSentRpc{
+		{"s2", expectedRpc},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
+}
+
 func testSetupMCM_Follower_WithTerms(
 	t *testing.T,
 	terms []TermNo,

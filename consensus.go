@@ -210,7 +210,8 @@ func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
 	// TODO: more follower things!
 }
 
-// leader code
+// -- leader code
+
 func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
 	serverTerm := cm.persistentState.GetCurrentTerm()
 	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(cm.log)
@@ -226,6 +227,20 @@ func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
 			cm.rpcSender.sendAsync(serverId, rpcAppendEntries)
 		},
 	)
+}
+
+func (cm *passiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId) {
+	serverTerm := cm.persistentState.GetCurrentTerm()
+	peerLastLogIndex := cm.leaderVolatileState.getNextIndex(peerId) - 1
+	peerLastLogTerm := cm.log.GetTermAtIndex(peerLastLogIndex)
+	rpcAppendEntries := &RpcAppendEntries{
+		serverTerm,
+		peerLastLogIndex,
+		peerLastLogTerm,
+		[]LogEntry{}, // TODO: include commands
+		0,            // TODO: cm.volatileState.commitIndex
+	}
+	cm.rpcSender.sendAsync(peerId, rpcAppendEntries)
 }
 
 // -- rpc bridging things

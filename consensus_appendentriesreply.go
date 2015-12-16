@@ -52,16 +52,7 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 	// retries the AppendEntries RPC.
 	if !appendEntriesReply.Success {
 		cm.leaderVolatileState.decrementNextIndex(from)
-		peerLastLogIndex := cm.leaderVolatileState.getNextIndex(from) - 1
-		peerLastLogTerm := cm.log.GetTermAtIndex(peerLastLogIndex)
-		rpcAppendEntries := &RpcAppendEntries{
-			serverTerm,
-			peerLastLogIndex,
-			peerLastLogTerm,
-			[]LogEntry{}, // TODO: include commands
-			0,            // TODO: cm.volatileState.commitIndex
-		}
-		cm.rpcSender.sendAsync(from, rpcAppendEntries)
+		cm.sendAppendEntriesToPeer(from)
 		// TODO: test for this
 		return
 	}
