@@ -17,7 +17,8 @@ type passiveConsensusModule struct {
 	rpcSender       rpcSender
 
 	// -- Config - these fields meant to be immutable
-	clusterInfo *ClusterInfo
+	clusterInfo              *ClusterInfo
+	maxEntriesPerAppendEntry uint64
 
 	// -- State - these fields may be accessed concurrently
 	_unsafe_serverState ServerState
@@ -35,6 +36,7 @@ func newPassiveConsensusModule(
 	rpcSender rpcSender,
 	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
+	maxEntriesPerAppendEntry uint64,
 ) (*passiveConsensusModule, time.Time) {
 	// Param checks
 	if persistentState == nil {
@@ -63,6 +65,7 @@ func newPassiveConsensusModule(
 
 		// -- Config
 		clusterInfo,
+		maxEntriesPerAppendEntry,
 
 		// -- State
 		// #5.2-p1s2: When servers start up, they begin as followers
@@ -247,8 +250,6 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId) {
 	cm.rpcSender.sendAsync(peerId, rpcAppendEntries)
 }
 
-const _MAX_ENTRIES_TO_FETCH = 3
-
 func (cm *passiveConsensusModule) getEntriesAfterLogIndex(afterLogIndex LogIndex) []LogEntry {
 	indexOfLastEntry := cm.log.GetIndexOfLastEntry()
 
@@ -267,8 +268,8 @@ func (cm *passiveConsensusModule) getEntriesAfterLogIndex(afterLogIndex LogIndex
 		return []LogEntry{}
 	}
 
-	if numEntriesToGet > _MAX_ENTRIES_TO_FETCH {
-		numEntriesToGet = _MAX_ENTRIES_TO_FETCH
+	if numEntriesToGet > cm.maxEntriesPerAppendEntry {
+		numEntriesToGet = cm.maxEntriesPerAppendEntry
 	}
 
 	logEntries := make([]LogEntry, numEntriesToGet)

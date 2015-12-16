@@ -57,6 +57,7 @@ func NewConsensusModule(
 	rpcService RpcService,
 	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
+	maxEntriesPerAppendEntry uint64,
 ) *ConsensusModule {
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	rpcReplyChannel := make(chan rpcReplyTuple, RPC_CHANNEL_BUFFER_SIZE)
@@ -87,6 +88,7 @@ func NewConsensusModule(
 		cm,
 		clusterInfo,
 		timeSettings,
+		maxEntriesPerAppendEntry,
 	)
 
 	// we can only set the value here because it's a cyclic reference
