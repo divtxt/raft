@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -10,6 +11,11 @@ import (
 // Log with 10 entries with terms as shown in Figure 7, leader line
 func makeLogTerms_Figure7LeaderLine() []TermNo {
 	return []TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6, 6}
+}
+
+// Helper
+func testCommandEquals(c Command, s string) bool {
+	return bytes.Equal(c, Command(s))
 }
 
 // Blackbox test
@@ -28,14 +34,14 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	if le.TermNo != 6 {
 		t.Fatal(le.TermNo)
 	}
-	if le.Command != "c10" {
+	if !testCommandEquals(le.Command, "c10") {
 		t.Fatal(le.Command)
 	}
 
 	var logEntries []LogEntry
 
 	// set test - invalid index
-	logEntries = []LogEntry{{8, "c12"}}
+	logEntries = []LogEntry{{8, Command("c12")}}
 	{
 		stopThePanic := true
 		defer func() {
@@ -51,24 +57,24 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	}
 
 	// set test - no replacing
-	logEntries = []LogEntry{{7, "c11"}, {8, "c12"}}
+	logEntries = []LogEntry{{7, Command("c11")}, {8, Command("c12")}}
 	log.SetEntriesAfterIndex(10, logEntries)
 	if log.GetIndexOfLastEntry() != 12 {
 		t.Fatal()
 	}
 	le = log.GetLogEntryAtIndex(12)
-	if !reflect.DeepEqual(le, LogEntry{8, "c12"}) {
+	if !reflect.DeepEqual(le, LogEntry{8, Command("c12")}) {
 		t.Fatal(le)
 	}
 
 	// set test - partial replacing
-	logEntries = []LogEntry{{7, "c11"}, {9, "c12"}, {9, "c13'"}}
+	logEntries = []LogEntry{{7, Command("c11")}, {9, Command("c12")}, {9, Command("c13'")}}
 	log.SetEntriesAfterIndex(10, logEntries)
 	if log.GetIndexOfLastEntry() != 13 {
 		t.Fatal()
 	}
 	le = log.GetLogEntryAtIndex(12)
-	if !reflect.DeepEqual(le, LogEntry{9, "c12"}) {
+	if !reflect.DeepEqual(le, LogEntry{9, Command("c12")}) {
 		t.Fatal(le)
 	}
 
@@ -79,7 +85,7 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 		t.Fatal()
 	}
 	le = log.GetLogEntryAtIndex(3)
-	if !reflect.DeepEqual(le, LogEntry{1, "c3"}) {
+	if !reflect.DeepEqual(le, LogEntry{1, Command("c3")}) {
 		t.Fatal(le)
 	}
 
@@ -125,7 +131,7 @@ func newIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {
 	imle := new(inMemoryLog)
 	entries := []LogEntry{}
 	for i, term := range logTerms {
-		entries = append(entries, LogEntry{term, "c" + strconv.Itoa(i+1)})
+		entries = append(entries, LogEntry{term, Command("c" + strconv.Itoa(i+1))})
 	}
 	imle.entries = entries
 	return imle

@@ -1,10 +1,8 @@
 package raft
 
 // A state machine command.
-// The Raft consensus module does not care about an actual type of a Command.
-// It is up to you to make sure that the other components that the consensus
-// module talks to agree on the actual type.
-type Command interface{}
+// The contents of the slice are opaque to the ConsensusModule.
+type Command []byte
 
 // An entry in the Raft Log
 type LogEntry struct {
