@@ -17,6 +17,8 @@ const (
 
 	testSleepToLetGoroutineRun = 3 * time.Millisecond
 	testSleepJustMoreThanATick = testTickerDuration + testSleepToLetGoroutineRun
+
+	testMaxEntriesPerAppendEntry = 3
 )
 
 var testAllServerIds = []ServerId{testThisServerId, "s2", "s3", "s4", "s5"}
@@ -35,7 +37,7 @@ func setupManagedConsensusModuleR2(
 	mrs := newMockRpcSender()
 	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}
 	ci := NewClusterInfo(testAllServerIds, testThisServerId)
-	cm, now := newPassiveConsensusModule(ps, imle, mrs, ci, ts)
+	cm, now := newPassiveConsensusModule(ps, imle, mrs, ci, ts, testMaxEntriesPerAppendEntry)
 	if cm == nil {
 		t.Fatal()
 	}
@@ -366,6 +368,17 @@ func TestCM_getEntriesAfterLogIndex(t *testing.T) {
 		{1, Command("c1")},
 		{1, Command("c2")},
 		{1, Command("c3")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// max alternate value
+	mcm.pcm.maxEntriesPerAppendEntry = 2
+	actualEntries = mcm.pcm.getEntriesAfterLogIndex(2)
+	expectedEntries = []LogEntry{
+		{1, Command("c3")},
+		{4, Command("c4")},
 	}
 	if !reflect.DeepEqual(actualEntries, expectedEntries) {
 		t.Fatal(actualEntries)

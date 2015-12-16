@@ -21,7 +21,7 @@ func setupConsensusModuleR2(
 	mrs := newMockRpcSender()
 	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}
 	ci := NewClusterInfo(testAllServerIds, testThisServerId)
-	cm := NewConsensusModule(ps, imle, mrs, ci, ts)
+	cm := NewConsensusModule(ps, imle, mrs, ci, ts, testMaxEntriesPerAppendEntry)
 	if cm == nil {
 		t.Fatal()
 	}
