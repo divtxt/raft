@@ -235,14 +235,22 @@ loop:
 
 	sort.Sort(mockRpcSenderSlice(rpcs))
 
-	if !reflect.DeepEqual(rpcs, expectedRpcs) {
-		if len(rpcs) == 1 && len(expectedRpcs) == 1 {
-			t.Fatal(fmt.Sprintf(
-				"Expected: [{%v %v}]; got: [{%v %v}]",
-				expectedRpcs[0].toServer, expectedRpcs[0].rpc,
-				rpcs[0].toServer, rpcs[0].rpc,
+	if len(rpcs) != len(expectedRpcs) {
+		t.Fatal(fmt.Sprintf("Expected len: %v; got len: %v", len(expectedRpcs), len(rpcs)))
+	}
+	diffs := false
+	for i := 0; i < len(rpcs); i++ {
+		if !reflect.DeepEqual(rpcs[i], expectedRpcs[i]) {
+			t.Error(fmt.Sprintf(
+				"diff at [%v] - expected: [{%v %v}]; got: [{%v %v}]",
+				i,
+				expectedRpcs[i].toServer, expectedRpcs[i].rpc,
+				rpcs[i].toServer, rpcs[i].rpc,
 			))
+			diffs = true
 		}
+	}
+	if diffs {
 		t.Fatal(fmt.Sprintf("Expected: %v; got: %v", expectedRpcs, rpcs))
 	}
 }
