@@ -59,4 +59,24 @@ func TestLeaderVolatileState(t *testing.T) {
 		},
 		"leaderVolatileState.decrementNextIndex(): nextIndex <=1 for peer: s1",
 	)
+
+	// setMatchIndexAndNextIndex
+	lvs.setMatchIndexAndNextIndex("s2", 24)
+	expectedNextIndex = map[ServerId]LogIndex{"s1": 1, "s2": 25}
+	if !reflect.DeepEqual(lvs.nextIndex, expectedNextIndex) {
+		t.Fatal(lvs.nextIndex)
+	}
+	expectedMatchIndex = map[ServerId]LogIndex{"s1": 0, "s2": 24}
+	if !reflect.DeepEqual(lvs.matchIndex, expectedMatchIndex) {
+		t.Fatal(lvs.matchIndex)
+	}
+	lvs.setMatchIndexAndNextIndex("s2", 0)
+	expectedNextIndex = map[ServerId]LogIndex{"s1": 1, "s2": 1}
+	if !reflect.DeepEqual(lvs.nextIndex, expectedNextIndex) {
+		t.Fatal(lvs.nextIndex)
+	}
+	expectedMatchIndex = map[ServerId]LogIndex{"s1": 0, "s2": 0}
+	if !reflect.DeepEqual(lvs.matchIndex, expectedMatchIndex) {
+		t.Fatal(lvs.matchIndex)
+	}
 }
