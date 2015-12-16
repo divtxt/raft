@@ -231,16 +231,57 @@ func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
 
 func (cm *passiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId) {
 	serverTerm := cm.persistentState.GetCurrentTerm()
+	//
 	peerLastLogIndex := cm.leaderVolatileState.getNextIndex(peerId) - 1
 	peerLastLogTerm := cm.log.GetTermAtIndex(peerLastLogIndex)
+	//
+	entriesToSend := cm.getEntriesAfterLogIndex(peerLastLogIndex)
+	//
 	rpcAppendEntries := &RpcAppendEntries{
 		serverTerm,
 		peerLastLogIndex,
 		peerLastLogTerm,
-		[]LogEntry{}, // TODO: include commands
-		0,            // TODO: cm.volatileState.commitIndex
+		entriesToSend,
+		0, // TODO: cm.volatileState.commitIndex
 	}
 	cm.rpcSender.sendAsync(peerId, rpcAppendEntries)
+}
+
+const _MAX_ENTRIES_TO_FETCH = 3
+
+func (cm *passiveConsensusModule) getEntriesAfterLogIndex(afterLogIndex LogIndex) []LogEntry {
+	indexOfLastEntry := cm.log.GetIndexOfLastEntry()
+
+	if indexOfLastEntry < afterLogIndex {
+		panic(fmt.Sprintf(
+			"indexOfLastEntry=%v is < afterLogIndex=%v",
+			afterLogIndex,
+			indexOfLastEntry,
+		))
+	}
+
+	var numEntriesToGet uint64 = uint64(indexOfLastEntry - afterLogIndex)
+
+	// Short-circuit allocation for common case
+	if numEntriesToGet == 0 {
+		return []LogEntry{}
+	}
+
+	if numEntriesToGet > _MAX_ENTRIES_TO_FETCH {
+		numEntriesToGet = _MAX_ENTRIES_TO_FETCH
+	}
+
+	logEntries := make([]LogEntry, numEntriesToGet)
+	var i uint64 = 0
+	nextIndexToGet := afterLogIndex + 1
+
+	for i < numEntriesToGet {
+		logEntries[i] = cm.log.GetLogEntryAtIndex(nextIndexToGet)
+		i++
+		nextIndexToGet++
+	}
+
+	return logEntries
 }
 
 // -- rpc bridging things

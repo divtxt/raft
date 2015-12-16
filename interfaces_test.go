@@ -236,6 +236,13 @@ loop:
 	sort.Sort(mockRpcSenderSlice(rpcs))
 
 	if !reflect.DeepEqual(rpcs, expectedRpcs) {
+		if len(rpcs) == 1 && len(expectedRpcs) == 1 {
+			t.Fatal(fmt.Sprintf(
+				"Expected: [{%v %v}]; got: [{%v %v}]",
+				expectedRpcs[0].toServer, expectedRpcs[0].rpc,
+				rpcs[0].toServer, rpcs[0].rpc,
+			))
+		}
 		t.Fatal(fmt.Sprintf("Expected: %v; got: %v", expectedRpcs, rpcs))
 	}
 }
