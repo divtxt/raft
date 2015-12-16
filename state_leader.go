@@ -53,5 +53,8 @@ func (lvs *leaderVolatileState) decrementNextIndex(peerId ServerId) {
 	if !ok {
 		panic(fmt.Sprintf("leaderVolatileState.decrementNextIndex(): unknown peer: %v", peerId))
 	}
+	if nextIndex <= 1 {
+		panic(fmt.Sprintf("leaderVolatileState.decrementNextIndex(): nextIndex <=1 for peer: %v", peerId))
+	}
 	lvs.nextIndex[peerId] = nextIndex - 1
 }
