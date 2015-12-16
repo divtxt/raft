@@ -164,6 +164,7 @@ func (cm *ConsensusModule) sendAsync(toServer ServerId, rpc interface{}) {
 
 func (cm *ConsensusModule) processor() {
 	defer func() {
+		// TODO: should we really recover?!
 		// Recover & save the panic reason
 		if r := recover(); r != nil {
 			cm.stopError.Store(r)
