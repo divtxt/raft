@@ -241,7 +241,7 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity checks
-		if serverTerm != 9 {
+		if serverTerm != 8 {
 			t.Fatal(serverTerm)
 		}
 		votedFor := mcm.pcm.persistentState.GetVotedFor()
@@ -292,21 +292,21 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 		}
 	}
 
-	f(testSetupMCM_FollowerTerm9_Figure7LeaderLine)
+	f(testSetupMCM_FollowerTerm8_Figure7LeaderLine)
 	f(testSetupMCM_Candidate_Figure7LeaderLine)
 	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
 
-func testSetupMCM_FollowerTerm9_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
+func testSetupMCM_FollowerTerm8_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := testSetupMCM_Follower_WithTerms(t, makeLogTerms_Figure7LeaderLine())
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 	// sanity check
-	if serverTerm != 8 {
+	if serverTerm != 7 {
 		t.Fatal(serverTerm)
 	}
-	// pretend server was pushed to term 9
-	mcm.pcm.persistentState.SetCurrentTerm(9)
+	// pretend server was pushed to term 8
+	mcm.pcm.persistentState.SetCurrentTerm(8)
 
 	return mcm, mrs
 }

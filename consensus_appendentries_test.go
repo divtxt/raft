@@ -141,7 +141,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 		func() {
 			f(testSetupMCM_Leader_WithTerms, false)
 		},
-		"FATAL: two leaders with same term - got AppendEntries from: s3 with term: 9",
+		"FATAL: two leaders with same term - got AppendEntries from: s3 with term: 8",
 	)
 }
 
@@ -230,7 +230,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		func() {
 			f(testSetupMCM_Leader_WithTerms, false)
 		},
-		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 9",
+		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 8",
 	)
 }
 
@@ -315,7 +315,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		func() {
 			f(testSetupMCM_Leader_WithTerms, false, "s1")
 		},
-		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 9",
+		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 8",
 	)
 
 }
