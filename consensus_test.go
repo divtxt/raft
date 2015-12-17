@@ -9,8 +9,10 @@ import (
 
 const (
 	testThisServerId = "s1"
+
 	// Note: value for tests based on Figure 7
-	testCurrentTerm = 8
+	// Start as follower at term 7 so that leader will be at term 8
+	testCurrentTerm = 7
 
 	testTickerDuration     = 15 * time.Millisecond
 	testElectionTimeoutLow = 150 * time.Millisecond
@@ -472,9 +474,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 	// pre checks
-	// FIXME: Figure 7 leader line shows leader at term 8 but we started
-	// the test setup as follower at term 8, so leader will be term 9
-	if serverTerm != 9 {
+	if serverTerm != 8 {
 		t.Fatal()
 	}
 	if mcm.pcm.volatileState.commitIndex != 0 {
