@@ -463,6 +463,59 @@ func TestCM_getEntriesAfterLogIndex(t *testing.T) {
 	)
 }
 
+// #RFS-L4: If there exists an N such that N > commitIndex, a majority
+// of matchIndex[i] >= N, and log[N].term == currentTerm:
+// set commitIndex = N (#5.3, #5.4)
+// Note: this test uses data from Figure 7, leader line and other cases
+func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
+	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+	// pre checks
+	// FIXME: Figure 7 leader line shows leader at term 8 but we started
+	// the test setup as follower at term 8, so leader will be term 9
+	if serverTerm != 9 {
+		t.Fatal()
+	}
+	if mcm.pcm.volatileState.commitIndex != 0 {
+		t.Fatal()
+	}
+
+	// match peers for cases (a), (b), (c) & (d)
+	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
+	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 4)
+	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s4", 10)
+	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 10)
+
+	// tick should try to advance commit but nothing should happen
+	mcm.tick()
+	if mcm.pcm.volatileState.commitIndex != 0 {
+		t.Fatal()
+	}
+
+	// let's make a new log entry
+	// TODO: drive this via a command?
+	logEntries := []LogEntry{{serverTerm, Command("c11")}, {serverTerm, Command("c12")}}
+	mcm.pcm.log.SetEntriesAfterIndex(10, logEntries)
+
+	// tick should try to advance commit but nothing should happen
+	mcm.tick()
+	if mcm.pcm.volatileState.commitIndex != 0 {
+		t.Fatal()
+	}
+
+	// 2 peers - for cases (a) & (b) - catch up
+	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 11)
+	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 11)
+
+	// tick advances commit
+	mcm.tick()
+
+	if mcm.pcm.volatileState.commitIndex != 11 {
+		t.Fatal(mcm.pcm.volatileState.commitIndex)
+	}
+}
+
 func testSetupMCM_Follower_WithTerms(
 	t *testing.T,
 	terms []TermNo,
