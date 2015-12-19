@@ -13,18 +13,28 @@ type LogEntry struct {
 // Log entry index. First index is 1.
 type LogIndex uint64
 
-// The Raft Log
-// An ordered array of `LogEntry`s with first index 1.
+// The Raft Log.
+//
+// This is a combined interface that the ConsensusModule uses to
+// manage the Raft log and the state machine.
+//
+// The log is an ordered array of 'LogEntry's with first index 1.
+// A LogEntry is a tuple of a Raft term number and a command to be applied
+// to the state machine.
 //
 // All errors should be indicated using panic(). This includes both invalid
 // parameters sent by the consensus module and internal errors in the Log.
 // Note that such a panic will shutdown the consensus module.
 //
 type Log interface {
+	// Get the index of the last entry in the log.
 	// An index of 0 indicates no entries present.
+	// This should be 0 for the Log of a new server.
 	GetIndexOfLastEntry() LogIndex
 
+	// Get the LogEntry at the given index.
 	// An index of 0 is invalid for this call.
+	// There should be no entries for the Log of a new server.
 	GetLogEntryAtIndex(LogIndex) LogEntry
 
 	// Get the term of the entry at the given index.
@@ -35,6 +45,10 @@ type Log interface {
 	GetTermAtIndex(LogIndex) TermNo
 
 	// Set the entries after the given index.
+	//
+	// It is an error if commands after the given index have already been
+	// applied to the state machine.
+	// (i.e. given index is less than lastIndexAppliedToStateMachine)
 	//
 	// Theoretically, the Log can just delete all existing entries
 	// following the given index and then append the given new
@@ -56,6 +70,20 @@ type Log interface {
 	// A zero length slice and nil both indicate no new entries to be added
 	// after deleting.
 	SetEntriesAfterIndex(LogIndex, []LogEntry)
+
+	// Get the index of the last entry that has been applied to
+	// the state machine.
+	//
+	// This should be 0 for the Log of a new server.
+	GetLastIndexAppliedToStateMachine() LogIndex
+
+	// Apply the next command to be applied to the state machine.
+	//
+	// This will result in lastIndexAppliedToStateMachine being incremented.
+	//
+	// It is an error if there is no next command to be applied i.e.
+	// if lastIndexAppliedToStateMachine == indexOfLastEntry.
+	ApplyNextCommandToStateMachine()
 }
 
 // Helper method
