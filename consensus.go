@@ -181,6 +181,10 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		cm.advanceCommitIndexIfPossible()
 		// TODO: more leader things
 	}
+
+	// #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
+	// log[lastApplied] to state machine (#5.3)
+	cm.advanceLastAppliedIfPossible()
 }
 
 func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) {
@@ -312,6 +316,9 @@ func (cm *passiveConsensusModule) getEntriesAfterLogIndex(afterLogIndex LogIndex
 	return logEntries
 }
 
+// #RFS-L4: If there exists an N such that N > commitIndex, a majority
+// of matchIndex[i] >= N, and log[N].term == currentTerm:
+// set commitIndex = N (#5.3, #5.4)
 func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
 	newerCommitIndex := findNewerCommitIndex(
 		cm.clusterInfo,
@@ -322,6 +329,24 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
 	)
 	if newerCommitIndex != 0 && newerCommitIndex > cm.volatileState.commitIndex {
 		cm.volatileState.commitIndex = newerCommitIndex
+	}
+}
+
+// #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
+// log[lastApplied] to state machine (#5.3)
+func (cm *passiveConsensusModule) advanceLastAppliedIfPossible() {
+	lastAppliedVolatile := cm.volatileState.lastApplied
+	if cm.volatileState.commitIndex > lastAppliedVolatile {
+		lastIndexAppliedToStateMachine := cm.log.GetLastIndexAppliedToStateMachine()
+		if lastIndexAppliedToStateMachine != lastAppliedVolatile {
+			panic(fmt.Sprintf(
+				"lastIndexAppliedToStateMachine=%v is != lastApplied=%v",
+				lastIndexAppliedToStateMachine,
+				lastAppliedVolatile,
+			))
+		}
+		cm.log.ApplyNextCommandToStateMachine()
+		cm.volatileState.lastApplied = cm.log.GetLastIndexAppliedToStateMachine()
 	}
 }
 
