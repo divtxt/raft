@@ -483,7 +483,7 @@ func TestCM_getEntriesAfterLogIndex(t *testing.T) {
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
-// Note: this test uses data from Figure 7, leader line and other cases
+// Note: test based on Figure 7; server is leader line; peers are other cases
 func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
@@ -502,7 +502,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s4", 10)
 	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 10)
 
-	// tick should try to advance commit but nothing should happen
+	// tick should try to advance commitIndex but nothing should happen
 	mcm.tick()
 	if mcm.pcm.volatileState.commitIndex != 0 {
 		t.Fatal()
@@ -513,7 +513,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	logEntries := []LogEntry{{serverTerm, Command("c11")}, {serverTerm, Command("c12")}}
 	mcm.pcm.log.SetEntriesAfterIndex(10, logEntries)
 
-	// tick should try to advance commit but nothing should happen
+	// tick should try to advance commitIndex but nothing should happen
 	mcm.tick()
 	if mcm.pcm.volatileState.commitIndex != 0 {
 		t.Fatal()
@@ -523,12 +523,88 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 11)
 	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 11)
 
-	// tick advances commit
+	// tick advances commitIndex
 	mcm.tick()
 
 	if mcm.pcm.volatileState.commitIndex != 11 {
 		t.Fatal(mcm.pcm.volatileState.commitIndex)
 	}
+}
+
+// #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
+// log[lastApplied] to state machine (#5.3)
+// Note: test based on Figure 7; server is leader line
+func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
+	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
+		mcm, _ := setup(t)
+		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+		// make a new log entry
+		// TODO: drive this via a command?
+		logEntries := []LogEntry{{serverTerm, Command("c11")}, {serverTerm, Command("c12")}}
+		mcm.pcm.log.SetEntriesAfterIndex(10, logEntries)
+
+		// pre checks
+		if serverTerm != 8 {
+			t.Fatal()
+		}
+		if mcm.pcm.volatileState.commitIndex != 0 {
+			t.Fatal()
+		}
+		if mcm.pcm.volatileState.lastApplied != 0 {
+			t.Fatal()
+		}
+		// TODO: log may have applied things!
+		if mcm.pcm.log.GetLastIndexAppliedToStateMachine() != 0 {
+			t.Fatal()
+		}
+
+		// tick should try to advance lastApplied but nothing should happen
+		mcm.tick()
+		if mcm.pcm.volatileState.commitIndex != 0 {
+			t.Fatal()
+		}
+		if mcm.pcm.volatileState.lastApplied != 0 {
+			t.Fatal()
+		}
+		// TODO: log may have applied things!
+		if mcm.pcm.log.GetLastIndexAppliedToStateMachine() != 0 {
+			t.Fatal()
+		}
+
+		// manually advance commitIndex a lot
+		mcm.pcm.volatileState.commitIndex = 11
+
+		// tick should advance lastApplied
+		mcm.tick()
+		if mcm.pcm.volatileState.commitIndex != 11 {
+			t.Fatal()
+		}
+		if mcm.pcm.volatileState.lastApplied != 1 {
+			t.Fatal()
+		}
+		// TODO: log may have applied things!
+		if mcm.pcm.log.GetLastIndexAppliedToStateMachine() != 1 {
+			t.Fatal()
+		}
+
+		// and again...
+		mcm.tick()
+		if mcm.pcm.volatileState.commitIndex != 11 {
+			t.Fatal()
+		}
+		if mcm.pcm.volatileState.lastApplied != 2 {
+			t.Fatal()
+		}
+		// TODO: log may have applied things!
+		if mcm.pcm.log.GetLastIndexAppliedToStateMachine() != 2 {
+			t.Fatal()
+		}
+	}
+
+	f(testSetupMCM_FollowerTerm8_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
+	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
 
 func testSetupMCM_Follower_WithTerms(
