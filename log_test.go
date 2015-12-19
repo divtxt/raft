@@ -19,13 +19,17 @@ func testCommandEquals(c Command, s string) bool {
 }
 
 // Blackbox test
-// Send a Log with 10 entries with terms as shown in Figure 7, leader line
+// Send a Log with 10 entries with terms as shown in Figure 7, leader line.
+// No commands should have been applied yet.
 func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	// Initial data tests
 	if log.GetIndexOfLastEntry() != 10 {
 		t.Fatal()
 	}
 	if log.GetTermAtIndex(10) != 6 {
+		t.Fatal()
+	}
+	if log.GetLastIndexAppliedToStateMachine() != 0 {
 		t.Fatal()
 	}
 
@@ -42,19 +46,12 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 
 	// set test - invalid index
 	logEntries = []LogEntry{{8, Command("c12")}}
-	{
-		stopThePanic := true
-		defer func() {
-			if stopThePanic {
-				if recover() == nil {
-					t.Fatal()
-				}
-			}
-		}()
-		log.SetEntriesAfterIndex(11, logEntries)
-		stopThePanic = false
-		t.Fatal()
-	}
+	test_ExpectPanicAnyRecover(
+		t,
+		func() {
+			log.SetEntriesAfterIndex(11, logEntries)
+		},
+	)
 
 	// set test - no replacing
 	logEntries = []LogEntry{{7, Command("c11")}, {8, Command("c12")}}
@@ -78,6 +75,20 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 		t.Fatal(le)
 	}
 
+	// command application tests
+	if log.GetLastIndexAppliedToStateMachine() != 0 {
+		t.Fatal()
+	}
+	log.ApplyNextCommandToStateMachine()
+	if log.GetLastIndexAppliedToStateMachine() != 1 {
+		t.Fatal()
+	}
+	log.ApplyNextCommandToStateMachine()
+	log.ApplyNextCommandToStateMachine()
+	if log.GetLastIndexAppliedToStateMachine() != 3 {
+		t.Fatal()
+	}
+
 	// set test - no new entries with empty slice
 	logEntries = []LogEntry{}
 	log.SetEntriesAfterIndex(3, logEntries)
@@ -89,17 +100,28 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 		t.Fatal(le)
 	}
 
-	// set test - delete all entries; no new entries with nil
-	log.SetEntriesAfterIndex(0, nil)
-	if log.GetIndexOfLastEntry() != 0 {
-		t.Fatal()
-	}
+	// command application tests - error to apply past end of log
+	test_ExpectPanicAnyRecover(
+		t,
+		func() {
+			log.ApplyNextCommandToStateMachine()
+		},
+	)
 
+	// set test - error to modify log before applied entry
+	test_ExpectPanicAnyRecover(
+		t,
+		func() {
+			logEntries = []LogEntry{}
+			log.SetEntriesAfterIndex(2, logEntries)
+		},
+	)
 }
 
 // In-memory implementation of LogEntries - meant only for tests
 type inMemoryLog struct {
-	entries []LogEntry
+	entries          []LogEntry
+	lastAppliedIndex LogIndex
 }
 
 func (imle *inMemoryLog) GetIndexOfLastEntry() LogIndex {
@@ -121,6 +143,10 @@ func (imle *inMemoryLog) GetLogEntryAtIndex(li LogIndex) LogEntry {
 }
 
 func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
+	liatsm := imle.GetLastIndexAppliedToStateMachine()
+	if li < liatsm {
+		panic(fmt.Sprintf("inMemoryLog: setEntriesAfterIndex(%d, ...) but liatsm=%d", li, liatsm))
+	}
 	iole := imle.GetIndexOfLastEntry()
 	if iole < li {
 		panic(fmt.Sprintf("inMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", li, iole))
@@ -131,6 +157,17 @@ func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
 	}
 	// append entries
 	imle.entries = append(imle.entries, entries...)
+}
+
+func (imle *inMemoryLog) GetLastIndexAppliedToStateMachine() LogIndex {
+	return imle.lastAppliedIndex
+}
+
+func (imle *inMemoryLog) ApplyNextCommandToStateMachine() {
+	if imle.lastAppliedIndex >= imle.GetIndexOfLastEntry() {
+		panic("inMemoryLog: ApplyNextCommandToStateMachine() but lai >= iole")
+	}
+	imle.lastAppliedIndex++
 }
 
 func newIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {

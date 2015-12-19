@@ -84,6 +84,21 @@ func test_ExpectPanic(t *testing.T, f func(), expectedRecover interface{}) {
 	t.Fatal(fmt.Sprintf("Expected panic: %v", expectedRecover))
 }
 
+func test_ExpectPanicAnyRecover(t *testing.T, f func()) {
+	skipRecover := false
+	defer func() {
+		if !skipRecover {
+			if r := recover(); r == nil {
+				t.Fatal("Expected panic, but got panic with recover of nil")
+			}
+		}
+	}()
+
+	f()
+	skipRecover = true
+	t.Fatal("Expected panic")
+}
+
 func testCM_setupMCMAndExpectPanicFor(
 	t *testing.T,
 	f func(*managedConsensusModule),
