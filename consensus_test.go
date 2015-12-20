@@ -64,7 +64,7 @@ func TestCM_InitialState(t *testing.T) {
 	}
 
 	// Volatile state on all servers
-	if mcm.pcm.volatileState != (volatileState{0, 0}) {
+	if mcm.pcm.volatileState != (volatileState{0}) {
 		t.Fatal()
 	}
 }
@@ -551,11 +551,8 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		if mcm.pcm.volatileState.commitIndex != 0 {
 			t.Fatal()
 		}
-		if mcm.pcm.volatileState.lastApplied != 0 {
-			t.Fatal()
-		}
 		// TODO: log may have applied things!
-		if mcm.pcm.log.GetLastIndexAppliedToStateMachine() != 0 {
+		if mcm.pcm.log.GetLastApplied() != 0 {
 			t.Fatal()
 		}
 
@@ -564,11 +561,8 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		if mcm.pcm.volatileState.commitIndex != 0 {
 			t.Fatal()
 		}
-		if mcm.pcm.volatileState.lastApplied != 0 {
-			t.Fatal()
-		}
 		// TODO: log may have applied things!
-		if mcm.pcm.log.GetLastIndexAppliedToStateMachine() != 0 {
+		if mcm.pcm.log.GetLastApplied() != 0 {
 			t.Fatal()
 		}
 
@@ -580,11 +574,8 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		if mcm.pcm.volatileState.commitIndex != 11 {
 			t.Fatal()
 		}
-		if mcm.pcm.volatileState.lastApplied != 1 {
-			t.Fatal()
-		}
 		// TODO: log may have applied things!
-		if mcm.pcm.log.GetLastIndexAppliedToStateMachine() != 1 {
+		if mcm.pcm.log.GetLastApplied() != 1 {
 			t.Fatal()
 		}
 
@@ -593,11 +584,8 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		if mcm.pcm.volatileState.commitIndex != 11 {
 			t.Fatal()
 		}
-		if mcm.pcm.volatileState.lastApplied != 2 {
-			t.Fatal()
-		}
 		// TODO: log may have applied things!
-		if mcm.pcm.log.GetLastIndexAppliedToStateMachine() != 2 {
+		if mcm.pcm.log.GetLastApplied() != 2 {
 			t.Fatal()
 		}
 	}

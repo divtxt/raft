@@ -335,18 +335,8 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
 // log[lastApplied] to state machine (#5.3)
 func (cm *passiveConsensusModule) advanceLastAppliedIfPossible() {
-	lastAppliedVolatile := cm.volatileState.lastApplied
-	if cm.volatileState.commitIndex > lastAppliedVolatile {
-		lastIndexAppliedToStateMachine := cm.log.GetLastIndexAppliedToStateMachine()
-		if lastIndexAppliedToStateMachine != lastAppliedVolatile {
-			panic(fmt.Sprintf(
-				"lastIndexAppliedToStateMachine=%v is != lastApplied=%v",
-				lastIndexAppliedToStateMachine,
-				lastAppliedVolatile,
-			))
-		}
+	if cm.volatileState.commitIndex > cm.log.GetLastApplied() {
 		cm.log.ApplyNextCommandToStateMachine()
-		cm.volatileState.lastApplied = cm.log.GetLastIndexAppliedToStateMachine()
 	}
 }
 
