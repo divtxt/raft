@@ -29,7 +29,7 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	if log.GetTermAtIndex(10) != 6 {
 		t.Fatal()
 	}
-	if log.GetLastIndexAppliedToStateMachine() != 0 {
+	if log.GetLastApplied() != 0 {
 		t.Fatal()
 	}
 
@@ -76,16 +76,16 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	}
 
 	// command application tests
-	if log.GetLastIndexAppliedToStateMachine() != 0 {
+	if log.GetLastApplied() != 0 {
 		t.Fatal()
 	}
 	log.ApplyNextCommandToStateMachine()
-	if log.GetLastIndexAppliedToStateMachine() != 1 {
+	if log.GetLastApplied() != 1 {
 		t.Fatal()
 	}
 	log.ApplyNextCommandToStateMachine()
 	log.ApplyNextCommandToStateMachine()
-	if log.GetLastIndexAppliedToStateMachine() != 3 {
+	if log.GetLastApplied() != 3 {
 		t.Fatal()
 	}
 
@@ -143,7 +143,7 @@ func (imle *inMemoryLog) GetLogEntryAtIndex(li LogIndex) LogEntry {
 }
 
 func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
-	liatsm := imle.GetLastIndexAppliedToStateMachine()
+	liatsm := imle.GetLastApplied()
 	if li < liatsm {
 		panic(fmt.Sprintf("inMemoryLog: setEntriesAfterIndex(%d, ...) but liatsm=%d", li, liatsm))
 	}
@@ -159,7 +159,7 @@ func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
 	imle.entries = append(imle.entries, entries...)
 }
 
-func (imle *inMemoryLog) GetLastIndexAppliedToStateMachine() LogIndex {
+func (imle *inMemoryLog) GetLastApplied() LogIndex {
 	return imle.lastAppliedIndex
 }
 

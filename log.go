@@ -74,15 +74,25 @@ type Log interface {
 	// Get the index of the last entry that has been applied to
 	// the state machine.
 	//
+	// index of highest log entry applied to state machine
+	// (initialized to 0, increases monotonically)
+	//
 	// This should be 0 for the Log of a new server.
-	GetLastIndexAppliedToStateMachine() LogIndex
+	//
+	// #Errata-X1: lastApplied should be as durable as the state machine
+	// From https://github.com/ongardie/dissertation#updates-and-errata :
+	// Although lastApplied is listed as volatile state, it should be as
+	// volatile as the state machine. If the state machine is volatile,
+	// lastApplied should be volatile. If the state machine is persistent,
+	// lastApplied should be just as persistent.
+	GetLastApplied() LogIndex
 
 	// Apply the next command to be applied to the state machine.
 	//
 	// This will result in lastIndexAppliedToStateMachine being incremented.
 	//
 	// It is an error if there is no next command to be applied i.e.
-	// if lastIndexAppliedToStateMachine == indexOfLastEntry.
+	// if lastApplied == indexOfLastEntry.
 	ApplyNextCommandToStateMachine()
 }
 
