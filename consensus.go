@@ -97,6 +97,7 @@ func (cm *passiveConsensusModule) _setServerState(serverState ServerState) {
 }
 
 // Process the given rpc message
+// #RFS-F1: Respond to RPCs from candidates and leaders
 func (cm *passiveConsensusModule) rpc(
 	from ServerId,
 	rpc interface{},
@@ -156,11 +157,15 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 	serverState := cm.getServerState()
 	switch serverState {
 	case FOLLOWER:
+		// #RFS-F2: If election timeout elapses without receiving
+		// AppendEntries RPC from current leader or granting vote
+		// to candidate: convert to candidate
 		// #5.2-p1s5: If a follower receives no communication over a period
 		// of time called the election timeout, then it assumes there is no
 		// viable leader and begins an election to choose a new leader.
 		fallthrough
 	case CANDIDATE:
+		// #RFS-C4: If election timeout elapses: start new election
 		// #5.2-p5s1: The third possible outcome is that a candidate neither
 		// wins nor loses the election; ... votes could be split so that no
 		// candidate obtains a majority.
@@ -188,6 +193,9 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 }
 
 func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) {
+	// #RFS-C1: On conversion to candidate, start election:
+	// Increment currentTerm; Vote for self; Send RequestVote RPCs
+	// to all other servers; Reset election timer
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
