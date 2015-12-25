@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// #RFS-C2: If votes received from majority of servers: become leader
 // #5.2-p3s1: A candidate wins an election if it receives votes from a
 // majority of the servers in the full cluster for the same term.
 // #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
@@ -81,6 +82,7 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
+// #RFS-C4: If election timeout elapses: start new election
 // #5.2-p5s1: The third possible outcome is that a candidate neither
 // wins nor loses the election; ... votes could be split so that no
 // candidate obtains a majority.

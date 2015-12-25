@@ -189,9 +189,15 @@ func TestCM_BadServerStatePanicsRpc(t *testing.T) {
 	)
 }
 
+// #RFS-F2: If election timeout elapses without receiving
+// AppendEntries RPC from current leader or granting vote
+// to candidate: convert to candidate
 // #5.2-p1s5: If a follower receives no communication over a period of time
 // called the election timeout, then it assumes there is no viable leader
 // and begins an election to choose a new leader.
+// #RFS-C1: On conversion to candidate, start election:
+// Increment currentTerm; Vote for self; Send RequestVote RPCs
+// to all other servers; Reset election timer
 // #5.2-p2s1: To begin an election, a follower increments its current term
 // and transitions to candidate state.
 // #5.2-p2s2: It then votes for itself and issues RequestVote RPCs in parallel
