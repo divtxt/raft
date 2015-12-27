@@ -491,7 +491,7 @@ func TestCM_getEntriesAfterLogIndex(t *testing.T) {
 // set commitIndex = N (#5.3, #5.4)
 // Note: test based on Figure 7; server is leader line; peers are other cases
 func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
-	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 	// pre checks
@@ -501,6 +501,8 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.volatileState.commitIndex != 0 {
 		t.Fatal()
 	}
+	expectedRpcs := []mockSentRpc{}
+	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// match peers for cases (a), (b), (c) & (d)
 	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
@@ -513,6 +515,31 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.volatileState.commitIndex != 0 {
 		t.Fatal()
 	}
+	expectedRpcs = []mockSentRpc{
+		{
+			"s2",
+			&RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
+				{6, Command("c10")},
+			}, 0},
+		},
+		{
+			"s3",
+			&RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
+				{4, Command("c5")},
+				{5, Command("c6")},
+				{5, Command("c7")},
+			}, 0},
+		},
+		{
+			"s4",
+			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
+		},
+		{
+			"s5",
+			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
+		},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// let's make a new log entry
 	// TODO: drive this via a command?
@@ -524,6 +551,39 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.volatileState.commitIndex != 0 {
 		t.Fatal()
 	}
+	expectedRpcs = []mockSentRpc{
+		{
+			"s2",
+			&RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
+				{6, Command("c10")},
+				{8, Command("c11")},
+				{8, Command("c12")},
+			}, 0},
+		},
+		{
+			"s3",
+			&RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
+				{4, Command("c5")},
+				{5, Command("c6")},
+				{5, Command("c7")},
+			}, 0},
+		},
+		{
+			"s4",
+			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+				{8, Command("c11")},
+				{8, Command("c12")},
+			}, 0},
+		},
+		{
+			"s5",
+			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+				{8, Command("c11")},
+				{8, Command("c12")},
+			}, 0},
+		},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// 2 peers - for cases (a) & (b) - catch up
 	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 11)
@@ -531,10 +591,38 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 
 	// tick advances commitIndex
 	mcm.tick()
-
 	if mcm.pcm.volatileState.commitIndex != 11 {
 		t.Fatal(mcm.pcm.volatileState.commitIndex)
 	}
+	expectedRpcs = []mockSentRpc{
+		{
+			"s2",
+			&RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
+				{8, Command("c12")},
+			}, 11},
+		},
+		{
+			"s3",
+			&RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
+				{8, Command("c12")},
+			}, 11},
+		},
+		{
+			"s4",
+			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+				{8, Command("c11")},
+				{8, Command("c12")},
+			}, 11},
+		},
+		{
+			"s5",
+			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+				{8, Command("c11")},
+				{8, Command("c12")},
+			}, 11},
+		},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
