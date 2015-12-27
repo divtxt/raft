@@ -11,23 +11,33 @@ const (
 )
 
 type passiveConsensusModule struct {
-	// -- External components - these fields meant to be immutable
+	// ===== the following fields meant to be immutable
+
+	// -- External components
 	persistentState PersistentState
 	log             Log
 	rpcSender       rpcSender
 
-	// -- Config - these fields meant to be immutable
+	// -- Config
 	clusterInfo              *ClusterInfo
 	maxEntriesPerAppendEntry uint64
 
-	// -- State - these fields may be accessed concurrently
+	// ===== the following fields may be accessed concurrently
+
+	// -- State - for all servers
 	_unsafe_serverState ServerState
 
-	// -- State - these fields meant for single-threaded access
+	// ===== the following fields meant for single-threaded access
+
+	// -- State - for all servers
 	volatileState          volatileState
 	electionTimeoutTracker *electionTimeoutTracker
+
+	// -- State - for candidates only
 	candidateVolatileState *candidateVolatileState
-	leaderVolatileState    *leaderVolatileState
+
+	// -- State - for leaders only
+	leaderVolatileState *leaderVolatileState
 }
 
 func newPassiveConsensusModule(
