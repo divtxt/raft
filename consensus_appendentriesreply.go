@@ -63,4 +63,6 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
 	// follower (#5.3)
 	newMatchIndex := appendEntries.PrevLogIndex + LogIndex(len(appendEntries.Entries))
 	cm.leaderVolatileState.setMatchIndexAndNextIndex(from, newMatchIndex)
+
+	// TODO: advanceCommitIndexIfPossible
 }

@@ -177,13 +177,13 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		}
 		// TODO: else/and anything else?
 	case LEADER:
-		// #RFS-L3.0: If last log index >= nextIndex for a follower: send
-		// AppendEntries RPC with log entries starting at nextIndex
-		cm.sendAppendEntriesToAllPeers(false)
 		// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 		// of matchIndex[i] >= N, and log[N].term == currentTerm:
 		// set commitIndex = N (#5.3, #5.4)
 		cm.advanceCommitIndexIfPossible()
+		// #RFS-L3.0: If last log index >= nextIndex for a follower: send
+		// AppendEntries RPC with log entries starting at nextIndex
+		cm.sendAppendEntriesToAllPeers(false)
 		// TODO: more leader things
 	}
 
@@ -284,7 +284,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		peerLastLogIndex,
 		peerLastLogTerm,
 		entriesToSend,
-		0, // TODO: cm.volatileState.commitIndex
+		cm.volatileState.commitIndex,
 	}
 	cm.rpcSender.sendAsync(peerId, rpcAppendEntries)
 }
