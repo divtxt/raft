@@ -15,12 +15,43 @@ type LogIndex uint64
 
 // The Raft Log.
 //
-// This is a combined interface that the ConsensusModule uses to
-// manage the Raft log and the state machine.
-//
 // The log is an ordered array of 'LogEntry's with first index 1.
 // A LogEntry is a tuple of a Raft term number and a command to be applied
 // to the state machine.
+//
+// This is the interface that the ConsensusModule uses to manage the Raft log.
+//
+// Raft describes two state parameters - commitIndex and lastApplied -
+// that are used to track which log entries are committed to the log and the
+// state machine respectively. However, Raft is focussed on the log and cares
+// very little about lastApplied, other than to drive state machine commits.
+// Specifically:
+//
+// #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
+// log[lastApplied] to state machine (#5.3)
+//
+// We take advantage of this by having the implementer of this interface own
+// the lastApplied value and the above responsibility of driving state machine
+// commits. To achieve this we have this interface also be a listener for the
+// value of commitIndex.
+//
+// With this tweak, the service's state machine can be hidden behind this
+// interface and does not have to expose an interface to ConsensusModule,
+// and the implementation of lastApplied is no longer a concern of
+// ConsensusModule.
+//
+// Since lastApplied is now delegated to the state machine, we capture it's
+// details here:
+//
+// - lastIndex is the index of highest log entry applied to state machine
+// (initialized to 0, increases monotonically)
+//
+// - (#Errata-X1:) lastApplied should be as durable as the state machine
+// From https://github.com/ongardie/dissertation#updates-and-errata :
+// Although lastApplied is listed as volatile state, it should be as
+// volatile as the state machine. If the state machine is volatile,
+// lastApplied should be volatile. If the state machine is persistent,
+// lastApplied should be just as persistent.
 //
 // All errors should be indicated using panic(). This includes both invalid
 // parameters sent by the consensus module and internal errors in the Log.
