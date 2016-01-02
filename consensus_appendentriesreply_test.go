@@ -66,9 +66,19 @@ func TestCM_RpcAER_FollowerOrCandidate_PanicsForSameTermReply(t *testing.T) {
 // #5.1-p3s5: If a candidate or leader discovers that its term is out of
 // date, it immediately reverts to follower state.
 func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
-	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 	sentRpc := makeAEWithTerm(serverTerm)
+
+	// sanity check
+	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
 
 	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm + 1, false})
 	if mcm.pcm.getServerState() != FOLLOWER {
@@ -80,6 +90,16 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	if mcm.pcm.persistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
+
+	// no other changes
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+	expectedRpcs := []mockSentRpc{}
+	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
 // #RFS-L3.2: If AppendEntries fails because of log inconsistency:
