@@ -15,12 +15,12 @@ type RpcAppendEntries struct {
 	PrevLogTerm TermNo
 
 	// - log entries to store (empty for heartbeat; may send more than one ...)
-	// implied?: terms in these entries >= prevLogTerm
-	// implied?: term in each new entry >= term of previous entry
+	// TODO: implied?: terms in these entries >= prevLogTerm
+	// TODO: implied?: term in each new entry >= term of previous entry
 	Entries []LogEntry
 
 	// leader's commitIndex
-	// implied?: LeaderCommit >= PrevLogIndex
+	// TODO: implied?: LeaderCommit >= PrevLogIndex
 	LeaderCommit LogIndex
 }
 
