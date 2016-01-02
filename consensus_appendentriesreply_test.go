@@ -110,6 +110,7 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	mcm.pcm.setCommitIndex(3)
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
@@ -126,7 +127,7 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 		10,
 		6,
 		[]LogEntry{},
-		0, // TODO: tests for this?!
+		mcm.pcm.getCommitIndex(),
 	}
 
 	mcm.pcm.rpcReply("s3", sentRpc, &RpcAppendEntriesReply{serverTerm, false})
@@ -152,7 +153,7 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 		[]LogEntry{
 			{6, Command("c10")},
 		},
-		0,
+		3,
 	}
 	expectedRpcs := []mockSentRpc{
 		{"s3", expectedRpc},
@@ -166,6 +167,7 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	mcm.pcm.setCommitIndex(3)
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
@@ -182,7 +184,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 		10,
 		6,
 		[]LogEntry{},
-		0, // TODO: tests for this?!
+		mcm.pcm.getCommitIndex(),
 	}
 
 	mcm.pcm.rpcReply("s3", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
@@ -211,6 +213,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	mcm.pcm.setCommitIndex(3)
 
 	// hack & sanity check
 	mcm.pcm.leaderVolatileState.nextIndex["s2"] = 10
@@ -230,7 +233,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		[]LogEntry{
 			{6, Command("c10")},
 		},
-		0, // TODO: tests for this?!
+		mcm.pcm.getCommitIndex(),
 	}
 
 	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})

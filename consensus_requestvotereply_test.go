@@ -13,6 +13,7 @@ import (
 func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	mcm.pcm.setCommitIndex(3)
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
@@ -71,7 +72,7 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 		lastLogIndex,
 		lastLogTerm,
 		[]LogEntry{},
-		0, // TODO: tests for this?!
+		mcm.pcm.getCommitIndex(),
 	}
 	expectedRpcs := []mockSentRpc{
 		{"s2", expectedRpc},
@@ -158,6 +159,7 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 	) {
 		mcm, mrs := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		mcm.pcm.setCommitIndex(2)
 		sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 		beforeState := mcm.pcm.getServerState()
 
