@@ -75,6 +75,16 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 		t.Fatal(le)
 	}
 
+	// commitIndex tests
+	log.CommitIndexChanged(1)
+	log.CommitIndexChanged(3)
+	test_ExpectPanicAnyRecover(
+		t,
+		func() {
+			log.CommitIndexChanged(2)
+		},
+	)
+
 	// command application tests
 	if log.GetLastApplied() != 0 {
 		t.Fatal()
@@ -121,6 +131,7 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 // In-memory implementation of LogEntries - meant only for tests
 type inMemoryLog struct {
 	entries          []LogEntry
+	_commitIndex     LogIndex
 	lastAppliedIndex LogIndex
 }
 
@@ -157,6 +168,17 @@ func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
 	}
 	// append entries
 	imle.entries = append(imle.entries, entries...)
+}
+
+func (imle *inMemoryLog) CommitIndexChanged(commitIndex LogIndex) {
+	if commitIndex < imle._commitIndex {
+		panic(fmt.Sprintf(
+			"inMemoryLog: CommitIndexChanged(%d) is < current commitIndex=%d",
+			commitIndex,
+			imle._commitIndex,
+		))
+	}
+	imle._commitIndex = commitIndex
 }
 
 func (imle *inMemoryLog) GetLastApplied() LogIndex {

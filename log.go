@@ -79,7 +79,7 @@ type Log interface {
 	//
 	// It is an error if commands after the given index have already been
 	// applied to the state machine.
-	// (i.e. given index is less than lastIndexAppliedToStateMachine)
+	// (i.e. the given index is less than commitIndex)
 	//
 	// Theoretically, the Log can just delete all existing entries
 	// following the given index and then append the given new
@@ -101,6 +101,27 @@ type Log interface {
 	// A zero length slice and nil both indicate no new entries to be added
 	// after deleting.
 	SetEntriesAfterIndex(LogIndex, []LogEntry)
+
+	// Notify the Log that the commitIndex has changed to the given value.
+	//
+	// commitIndex is the index of highest log entry known to be committed
+	// (initialized to 0, increases monotonically)
+	//
+	// The implementer can apply entries up to this index in the state machine.
+	// (see #RFS-A1 mentioned above)
+	//
+	// This method should return immediately without blocking. This means
+	// that applying entries to the state machine should be asynchronous /
+	// concurrent to this function.
+	//
+	// It is an error if the value of commitIndex decreases.
+	//
+	// On startup, the initial value of commitIndex should be set either
+	// to 0 or - optionally, and if the state machine is persisted - to the
+	// persisted value of lastApplied.
+	// (If the state machine is not persisted, the second choice is irrelevant
+	// as lastApplied will also be starting at 0)
+	CommitIndexChanged(LogIndex)
 
 	// Get the index of the last entry that has been applied to
 	// the state machine.
