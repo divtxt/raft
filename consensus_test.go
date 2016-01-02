@@ -280,6 +280,7 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	mcm.pcm.setCommitIndex(6)
 
 	mrs.checkSentRpcs(t, []mockSentRpc{})
 
@@ -293,6 +294,7 @@ func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	mcm.pcm.setCommitIndex(5)
 
 	// repatch some peers as not caught up
 	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
@@ -306,7 +308,7 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 		10,
 		6,
 		[]LogEntry{},
-		0, // TODO: tests for this?!
+		5,
 	}
 	expectedRpcS2 := &RpcAppendEntries{
 		serverTerm,
@@ -315,7 +317,7 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 		[]LogEntry{
 			{6, Command("c10")},
 		},
-		0, // TODO: tests for this?!
+		5,
 	}
 	expectedRpcS5 := &RpcAppendEntries{
 		serverTerm,
@@ -326,7 +328,7 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 			{6, Command("c9")},
 			{6, Command("c10")},
 		},
-		0, // TODO: tests for this?!
+		5,
 	}
 	expectedRpcs := []mockSentRpc{
 		{"s2", expectedRpcS2},
@@ -340,6 +342,7 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	mcm.pcm.setCommitIndex(4)
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
@@ -354,7 +357,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		10,
 		6,
 		[]LogEntry{},
-		0, // TODO: test this
+		4,
 	}
 	expectedRpcs := []mockSentRpc{
 		{"s2", expectedRpc},
@@ -369,7 +372,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		9,
 		6,
 		[]LogEntry{},
-		0, // TODO: test this
+		4,
 	}
 	expectedRpcs = []mockSentRpc{
 		{"s2", expectedRpc},
@@ -385,7 +388,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		[]LogEntry{
 			{6, Command("c10")},
 		},
-		0,
+		4,
 	}
 	expectedRpcs = []mockSentRpc{
 		{"s2", expectedRpc},
@@ -405,7 +408,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 			{6, Command("c9")},
 			{6, Command("c10")},
 		},
-		0,
+		4,
 	}
 	expectedRpcs = []mockSentRpc{
 		{"s2", expectedRpc},
