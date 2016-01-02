@@ -266,23 +266,6 @@ func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
 
 // -- leader code
 
-func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
-	serverTerm := cm.persistentState.GetCurrentTerm()
-	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(cm.log)
-	rpcAppendEntries := &RpcAppendEntries{
-		serverTerm,
-		lastLogIndex,
-		lastLogTerm,
-		[]LogEntry{},
-		cm.getCommitIndex(),
-	}
-	cm.clusterInfo.ForEachPeer(
-		func(serverId ServerId) {
-			cm.rpcSender.sendAsync(serverId, rpcAppendEntries)
-		},
-	)
-}
-
 func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) {
 	cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
