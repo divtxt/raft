@@ -51,7 +51,7 @@ func setupManagedConsensusModuleR2(
 	}
 	// Bias simulated clock to avoid exact time matches
 	now = now.Add(testSleepToLetGoroutineRun)
-	mcm := &managedConsensusModule{cm, now}
+	mcm := &managedConsensusModule{cm, now, imle}
 	return mcm, mrs
 }
 
@@ -689,6 +689,30 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
 
+func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
+	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
+		mcm, _ := setup(t)
+
+		if mcm.iml._commitIndex != 0 {
+			t.Fatal()
+		}
+
+		mcm.pcm.setCommitIndex(2)
+		if mcm.iml._commitIndex != 2 {
+			t.Fatal()
+		}
+
+		mcm.pcm.setCommitIndex(9)
+		if mcm.iml._commitIndex != 9 {
+			t.Fatal()
+		}
+	}
+
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
+	f(testSetupMCM_Leader_Figure7LeaderLine)
+}
+
 func testSetupMCM_Follower_WithTerms(
 	t *testing.T,
 	terms []TermNo,
@@ -784,6 +808,7 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
 type managedConsensusModule struct {
 	pcm *passiveConsensusModule
 	now time.Time
+	iml *inMemoryLog
 }
 
 func (mcm *managedConsensusModule) tick() {
