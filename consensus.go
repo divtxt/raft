@@ -130,6 +130,7 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) {
 		))
 	}
 	cm._commitIndex = commitIndex
+	cm.log.CommitIndexChanged(commitIndex)
 }
 
 // Process the given rpc message
