@@ -44,7 +44,6 @@ func (cm *passiveConsensusModule) processRpc_AppendEntriesReply(
 	senderCurrentTerm := appendEntriesReply.Term
 	if senderCurrentTerm > serverTerm {
 		cm.becomeFollowerWithTerm(senderCurrentTerm)
-		// TODO: test for this
 		return
 	}
 
@@ -55,7 +54,6 @@ func (cm *passiveConsensusModule) processRpc_AppendEntriesReply(
 	if !appendEntriesReply.Success {
 		cm.leaderVolatileState.decrementNextIndex(from)
 		cm.sendAppendEntriesToPeer(from, false)
-		// TODO: test for this
 		return
 	}
 
