@@ -212,7 +212,6 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		if cm.electionTimeoutTracker.electionTimeoutHasOccurred(now) {
 			cm.becomeCandidateAndBeginElection(now)
 		}
-		// TODO: else/and anything else?
 	case LEADER:
 		// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 		// of matchIndex[i] >= N, and log[N].term == currentTerm:
@@ -221,7 +220,6 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		// #RFS-L3.0: If last log index >= nextIndex for a follower: send
 		// AppendEntries RPC with log entries starting at nextIndex
 		cm.sendAppendEntriesToAllPeers(false)
-		// TODO: more leader things
 	}
 }
 
@@ -255,13 +253,11 @@ func (cm *passiveConsensusModule) becomeLeader() {
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
 	cm.sendAppendEntriesToAllPeers(true)
-	// TODO: more leader things!
 }
 
 func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
 	cm.setServerState(FOLLOWER)
 	cm.persistentState.SetCurrentTerm(newTerm)
-	// TODO: more follower things!
 }
 
 // -- leader code
