@@ -78,12 +78,12 @@ func (cm *passiveConsensusModule) _processRpc_AppendEntries(
 	// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit,
 	// index of last new entry)
 	leaderCommit := appendEntries.LeaderCommit
-	if leaderCommit > cm.volatileState.commitIndex {
+	if leaderCommit > cm.getCommitIndex() {
 		indexOfLastNewEntry := log.GetIndexOfLastEntry()
 		if leaderCommit < indexOfLastNewEntry {
-			cm.volatileState.commitIndex = leaderCommit
+			cm.setCommitIndex(leaderCommit)
 		} else {
-			cm.volatileState.commitIndex = indexOfLastNewEntry
+			cm.setCommitIndex(indexOfLastNewEntry)
 		}
 	}
 

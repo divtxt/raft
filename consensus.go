@@ -30,7 +30,9 @@ type passiveConsensusModule struct {
 	// ===== the following fields meant for single-threaded access
 
 	// -- State - for all servers
-	volatileState          volatileState
+	// commitIndex is the index of highest log entry known to be committed
+	// (initialized to 0, increases monotonically)
+	_commitIndex           LogIndex
 	electionTimeoutTracker *electionTimeoutTracker
 
 	// -- State - for candidates only
@@ -77,14 +79,20 @@ func newPassiveConsensusModule(
 		clusterInfo,
 		maxEntriesPerAppendEntry,
 
-		// -- State
+		// -- State - for all servers
 		// #5.2-p1s2: When servers start up, they begin as followers
 		FOLLOWER,
 
-		// -- State
-		volatileState{},
+		// -- State - for all servers
+		// commitIndex is the index of highest log entry known to be committed
+		// (initialized to 0, increases monotonically)
+		0,
 		newElectionTimeoutTracker(electionTimeoutLow, now),
+
+		// -- State - for candidates only
 		nil,
+
+		// -- State - for leaders only
 		nil,
 	}
 
@@ -104,6 +112,24 @@ func (cm *passiveConsensusModule) getServerState() ServerState {
 func (cm *passiveConsensusModule) _setServerState(serverState ServerState) {
 	_validateServerState(serverState)
 	atomic.StoreUint32((*uint32)(&cm._unsafe_serverState), (uint32)(serverState))
+}
+
+// Get the current commitIndex value.
+func (cm *passiveConsensusModule) getCommitIndex() LogIndex {
+	return cm._commitIndex
+}
+
+// Set the current commitIndex value.
+// Checks that it is does not reduce.
+func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) {
+	if commitIndex < cm._commitIndex {
+		panic(fmt.Sprintf(
+			"setCommitIndex to %v < current commitIndex %v",
+			commitIndex,
+			cm._commitIndex,
+		))
+	}
+	cm._commitIndex = commitIndex
 }
 
 // Process the given rpc message
@@ -251,7 +277,7 @@ func (cm *passiveConsensusModule) _sendEmptyAppendEntriesToAllPeers() {
 		lastLogIndex,
 		lastLogTerm,
 		[]LogEntry{},
-		cm.volatileState.commitIndex,
+		cm.getCommitIndex(),
 	}
 	cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
@@ -294,7 +320,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		peerLastLogIndex,
 		peerLastLogTerm,
 		entriesToSend,
-		cm.volatileState.commitIndex,
+		cm.getCommitIndex(),
 	}
 	cm.rpcSender.sendAsync(peerId, rpcAppendEntries)
 }
@@ -343,17 +369,17 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
 		cm.leaderVolatileState,
 		cm.log,
 		cm.persistentState.GetCurrentTerm(),
-		cm.volatileState.commitIndex,
+		cm.getCommitIndex(),
 	)
-	if newerCommitIndex != 0 && newerCommitIndex > cm.volatileState.commitIndex {
-		cm.volatileState.commitIndex = newerCommitIndex
+	if newerCommitIndex != 0 && newerCommitIndex > cm.getCommitIndex() {
+		cm.setCommitIndex(newerCommitIndex)
 	}
 }
 
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
 // log[lastApplied] to state machine (#5.3)
 func (cm *passiveConsensusModule) advanceLastAppliedIfPossible() {
-	if cm.volatileState.commitIndex > cm.log.GetLastApplied() {
+	if cm.getCommitIndex() > cm.log.GetLastApplied() {
 		cm.log.ApplyNextCommandToStateMachine()
 	}
 }

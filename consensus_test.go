@@ -64,7 +64,7 @@ func TestCM_InitialState(t *testing.T) {
 	}
 
 	// Volatile state on all servers
-	if mcm.pcm.volatileState != (volatileState{0}) {
+	if mcm.pcm.getCommitIndex() != 0 {
 		t.Fatal()
 	}
 }
@@ -498,7 +498,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if serverTerm != 8 {
 		t.Fatal()
 	}
-	if mcm.pcm.volatileState.commitIndex != 0 {
+	if mcm.pcm.getCommitIndex() != 0 {
 		t.Fatal()
 	}
 	expectedRpcs := []mockSentRpc{}
@@ -512,7 +512,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 
 	// tick should try to advance commitIndex but nothing should happen
 	mcm.tick()
-	if mcm.pcm.volatileState.commitIndex != 0 {
+	if mcm.pcm.getCommitIndex() != 0 {
 		t.Fatal()
 	}
 	expectedRpcs = []mockSentRpc{
@@ -548,7 +548,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 
 	// tick should try to advance commitIndex but nothing should happen
 	mcm.tick()
-	if mcm.pcm.volatileState.commitIndex != 0 {
+	if mcm.pcm.getCommitIndex() != 0 {
 		t.Fatal()
 	}
 	expectedRpcs = []mockSentRpc{
@@ -591,8 +591,8 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 
 	// tick advances commitIndex
 	mcm.tick()
-	if mcm.pcm.volatileState.commitIndex != 11 {
-		t.Fatal(mcm.pcm.volatileState.commitIndex)
+	if mcm.pcm.getCommitIndex() != 11 {
+		t.Fatal()
 	}
 	expectedRpcs = []mockSentRpc{
 		{
@@ -642,7 +642,7 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		if serverTerm != 8 {
 			t.Fatal()
 		}
-		if mcm.pcm.volatileState.commitIndex != 0 {
+		if mcm.pcm.getCommitIndex() != 0 {
 			t.Fatal()
 		}
 		// TODO: log may have applied things!
@@ -652,7 +652,7 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 
 		// tick should try to advance lastApplied but nothing should happen
 		mcm.tick()
-		if mcm.pcm.volatileState.commitIndex != 0 {
+		if mcm.pcm.getCommitIndex() != 0 {
 			t.Fatal()
 		}
 		// TODO: log may have applied things!
@@ -661,11 +661,11 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		}
 
 		// manually advance commitIndex a lot
-		mcm.pcm.volatileState.commitIndex = 11
+		mcm.pcm.setCommitIndex(11)
 
 		// tick should advance lastApplied
 		mcm.tick()
-		if mcm.pcm.volatileState.commitIndex != 11 {
+		if mcm.pcm.getCommitIndex() != 11 {
 			t.Fatal()
 		}
 		// TODO: log may have applied things!
@@ -675,7 +675,7 @@ func TestCM_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 
 		// and again...
 		mcm.tick()
-		if mcm.pcm.volatileState.commitIndex != 11 {
+		if mcm.pcm.getCommitIndex() != 11 {
 			t.Fatal()
 		}
 		// TODO: log may have applied things!

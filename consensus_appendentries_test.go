@@ -167,7 +167,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			t,
 			[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
 		)
-		mcm.pcm.volatileState.commitIndex = 3
+		mcm.pcm.setCommitIndex(3)
 
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
@@ -207,7 +207,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			t.Error()
 		}
 
-		if mcm.pcm.volatileState.commitIndex != 7 {
+		if mcm.pcm.getCommitIndex() != 7 {
 			t.Error()
 		}
 
@@ -249,7 +249,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			t,
 			[]TermNo{1, 1, 1, 4},
 		)
-		mcm.pcm.volatileState.commitIndex = 3
+		mcm.pcm.setCommitIndex(3)
 
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
@@ -288,7 +288,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			t.Error()
 		}
 
-		if mcm.pcm.volatileState.commitIndex != 6 {
+		if mcm.pcm.getCommitIndex() != 6 {
 			t.Error()
 		}
 
