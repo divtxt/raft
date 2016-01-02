@@ -29,9 +29,6 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	if log.GetTermAtIndex(10) != 6 {
 		t.Fatal()
 	}
-	if log.GetLastApplied() != 0 {
-		t.Fatal()
-	}
 
 	// get entry test
 	le := log.GetLogEntryAtIndex(10)
@@ -85,20 +82,6 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 		},
 	)
 
-	// command application tests
-	if log.GetLastApplied() != 0 {
-		t.Fatal()
-	}
-	log.ApplyNextCommandToStateMachine()
-	if log.GetLastApplied() != 1 {
-		t.Fatal()
-	}
-	log.ApplyNextCommandToStateMachine()
-	log.ApplyNextCommandToStateMachine()
-	if log.GetLastApplied() != 3 {
-		t.Fatal()
-	}
-
 	// set test - no new entries with empty slice
 	logEntries = []LogEntry{}
 	log.SetEntriesAfterIndex(3, logEntries)
@@ -110,15 +93,15 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 		t.Fatal(le)
 	}
 
-	// command application tests - error to apply past end of log
+	// commitIndex test - error to go past end of log
 	test_ExpectPanicAnyRecover(
 		t,
 		func() {
-			log.ApplyNextCommandToStateMachine()
+			log.CommitIndexChanged(4)
 		},
 	)
 
-	// set test - error to modify log before applied entry
+	// set test - error to modify log before commitIndex
 	test_ExpectPanicAnyRecover(
 		t,
 		func() {
@@ -130,9 +113,8 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 
 // In-memory implementation of LogEntries - meant only for tests
 type inMemoryLog struct {
-	entries          []LogEntry
-	_commitIndex     LogIndex
-	lastAppliedIndex LogIndex
+	entries      []LogEntry
+	_commitIndex LogIndex
 }
 
 func (imle *inMemoryLog) GetIndexOfLastEntry() LogIndex {
@@ -154,9 +136,12 @@ func (imle *inMemoryLog) GetLogEntryAtIndex(li LogIndex) LogEntry {
 }
 
 func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
-	liatsm := imle.GetLastApplied()
-	if li < liatsm {
-		panic(fmt.Sprintf("inMemoryLog: setEntriesAfterIndex(%d, ...) but liatsm=%d", li, liatsm))
+	if li < imle._commitIndex {
+		panic(fmt.Sprintf(
+			"inMemoryLog: setEntriesAfterIndex(%d, ...) but commitIndex=%d",
+			li,
+			imle._commitIndex,
+		))
 	}
 	iole := imle.GetIndexOfLastEntry()
 	if iole < li {
@@ -178,18 +163,15 @@ func (imle *inMemoryLog) CommitIndexChanged(commitIndex LogIndex) {
 			imle._commitIndex,
 		))
 	}
-	imle._commitIndex = commitIndex
-}
-
-func (imle *inMemoryLog) GetLastApplied() LogIndex {
-	return imle.lastAppliedIndex
-}
-
-func (imle *inMemoryLog) ApplyNextCommandToStateMachine() {
-	if imle.lastAppliedIndex >= imle.GetIndexOfLastEntry() {
-		panic("inMemoryLog: ApplyNextCommandToStateMachine() but lai >= iole")
+	iole := imle.GetIndexOfLastEntry()
+	if commitIndex > iole {
+		panic(fmt.Sprintf(
+			"inMemoryLog: CommitIndexChanged(%d) is > iole=%d",
+			commitIndex,
+			iole,
+		))
 	}
-	imle.lastAppliedIndex++
+	imle._commitIndex = commitIndex
 }
 
 func newIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {

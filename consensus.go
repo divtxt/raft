@@ -223,10 +223,6 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		cm.sendAppendEntriesToAllPeers(false)
 		// TODO: more leader things
 	}
-
-	// #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
-	// log[lastApplied] to state machine (#5.3)
-	cm.advanceLastAppliedIfPossible()
 }
 
 func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) {
@@ -374,14 +370,6 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
 	)
 	if newerCommitIndex != 0 && newerCommitIndex > cm.getCommitIndex() {
 		cm.setCommitIndex(newerCommitIndex)
-	}
-}
-
-// #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
-// log[lastApplied] to state machine (#5.3)
-func (cm *passiveConsensusModule) advanceLastAppliedIfPossible() {
-	if cm.getCommitIndex() > cm.log.GetLastApplied() {
-		cm.log.ApplyNextCommandToStateMachine()
 	}
 }
 
