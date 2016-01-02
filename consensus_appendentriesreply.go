@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func (cm *passiveConsensusModule) _processRpc_AppendEntriesReply(
+func (cm *passiveConsensusModule) processRpc_AppendEntriesReply(
 	serverState ServerState,
 	from ServerId,
 	appendEntries *RpcAppendEntries,

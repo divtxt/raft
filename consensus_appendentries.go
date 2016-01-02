@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (cm *passiveConsensusModule) _processRpc_AppendEntries(
+func (cm *passiveConsensusModule) processRpc_AppendEntries(
 	serverState ServerState,
 	from ServerId,
 	appendEntries *RpcAppendEntries,

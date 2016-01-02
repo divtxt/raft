@@ -27,7 +27,7 @@ type TermNo uint64
 type ServerId string
 
 // Helper functions
-func _validateServerState(serverState ServerState) {
+func validateServerState(serverState ServerState) {
 	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
