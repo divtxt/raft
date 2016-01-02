@@ -103,14 +103,14 @@ func newPassiveConsensusModule(
 // Validates the server state before returning.
 func (cm *passiveConsensusModule) getServerState() ServerState {
 	serverState := ServerState(atomic.LoadUint32((*uint32)(&cm._unsafe_serverState)))
-	_validateServerState(serverState)
+	validateServerState(serverState)
 	return serverState
 }
 
 // Set the current server state.
 // Validates the server state before setting.
-func (cm *passiveConsensusModule) _setServerState(serverState ServerState) {
-	_validateServerState(serverState)
+func (cm *passiveConsensusModule) setServerState(serverState ServerState) {
+	validateServerState(serverState)
 	atomic.StoreUint32((*uint32)(&cm._unsafe_serverState), (uint32)(serverState))
 }
 
@@ -144,14 +144,14 @@ func (cm *passiveConsensusModule) rpc(
 
 	switch rpc := rpc.(type) {
 	case *RpcAppendEntries:
-		success := cm._processRpc_AppendEntries(serverState, from, rpc, now)
+		success := cm.processRpc_AppendEntries(serverState, from, rpc, now)
 		rpcReply := &RpcAppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(),
 			success,
 		}
 		return rpcReply
 	case *RpcRequestVote:
-		voteGranted := cm._processRpc_RequestVote(serverState, from, rpc, now)
+		voteGranted := cm.processRpc_RequestVote(serverState, from, rpc, now)
 		rpcReply := &RpcRequestVoteReply{
 			cm.persistentState.GetCurrentTerm(),
 			voteGranted,
@@ -173,14 +173,14 @@ func (cm *passiveConsensusModule) rpcReply(
 	case *RpcAppendEntries:
 		switch rpcReply := rpcReply.(type) {
 		case *RpcAppendEntriesReply:
-			cm._processRpc_AppendEntriesReply(serverState, from, rpc, rpcReply)
+			cm.processRpc_AppendEntriesReply(serverState, from, rpc, rpcReply)
 		default:
 			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v - expected *raft.RpcAppendEntriesReply", rpcReply, from))
 		}
 	case *RpcRequestVote:
 		switch rpcReply := rpcReply.(type) {
 		case *RpcRequestVoteReply:
-			cm._processRpc_RequestVoteReply(serverState, from, rpc, rpcReply)
+			cm.processRpc_RequestVoteReply(serverState, from, rpc, rpcReply)
 		default:
 			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v - expected *raft.RpcRequestVoteReply", rpcReply, from))
 		}
@@ -234,7 +234,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
 	cm.persistentState.SetCurrentTerm(newTerm)
 	cm.candidateVolatileState = newCandidateVolatileState(cm.clusterInfo)
-	cm._setServerState(CANDIDATE)
+	cm.setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
 	cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
@@ -251,7 +251,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 
 func (cm *passiveConsensusModule) becomeLeader() {
 	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo, cm.log.GetIndexOfLastEntry())
-	cm._setServerState(LEADER)
+	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
 	cm.sendAppendEntriesToAllPeers(true)
@@ -259,7 +259,7 @@ func (cm *passiveConsensusModule) becomeLeader() {
 }
 
 func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
-	cm._setServerState(FOLLOWER)
+	cm.setServerState(FOLLOWER)
 	cm.persistentState.SetCurrentTerm(newTerm)
 	// TODO: more follower things!
 }

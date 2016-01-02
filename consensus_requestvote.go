@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (cm *passiveConsensusModule) _processRpc_RequestVote(
+func (cm *passiveConsensusModule) processRpc_RequestVote(
 	serverState ServerState,
 	fromPeer ServerId,
 	rpcRequestVote *RpcRequestVote,
