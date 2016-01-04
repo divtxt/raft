@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -137,6 +138,14 @@ func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
 	cm, mrs := setupConsensusModuleR2(t, nil)
 	defer cm.StopAsync()
 
+	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
+}
+
+func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
+	t *testing.T,
+	cm *ConsensusModule,
+	mrs *mockRpcSender,
+) {
 	// FIXME: unsafe concurrent access
 	ett := cm.passiveConsensusModule.electionTimeoutTracker
 	time.Sleep(ett.currentElectionTimeout + testSleepJustMoreThanATick)
@@ -169,6 +178,85 @@ func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
 		t.Fatal(cm.GetStopError())
 	}
 	if cm.GetServerState() != LEADER {
+		t.Fatal()
+	}
+}
+
+func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
+	cm, mrs := setupConsensusModuleR2(t, makeLogTerms_Figure7LeaderLine())
+	defer cm.StopAsync()
+
+	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
+
+	// pre check
+	if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+		t.Fatal()
+	}
+
+	command := Command("c11x")
+	replyChan := cm.AppendCommandAsync(command)
+
+	if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+		t.Fatal()
+	}
+
+	time.Sleep(testSleepToLetGoroutineRun)
+
+	select {
+	case reply := <-replyChan:
+		if cm.IsStopped() {
+			t.Error(cm.GetStopError())
+		}
+		expectedReply := AppendCommandResult{11, nil}
+		if !reflect.DeepEqual(reply, expectedReply) {
+			t.Fatal(reply)
+		}
+		if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 11 {
+			t.Fatal()
+		}
+		le := cm.passiveConsensusModule.log.GetLogEntryAtIndex(11)
+		if !reflect.DeepEqual(le, LogEntry{8, Command("c11x")}) {
+			t.Fatal(le)
+		}
+	default:
+		t.Fatal()
+	}
+}
+
+func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
+	cm, _ := setupConsensusModuleR2(t, makeLogTerms_Figure7LeaderLine())
+	defer cm.StopAsync()
+
+	// pre check
+	if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+		t.Fatal()
+	}
+
+	command := Command("c11x")
+	replyChan := cm.AppendCommandAsync(command)
+
+	if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+		t.Fatal()
+	}
+
+	time.Sleep(testSleepToLetGoroutineRun)
+
+	select {
+	case reply := <-replyChan:
+		if cm.IsStopped() {
+			t.Error(cm.GetStopError())
+		}
+		expectedReply := AppendCommandResult{
+			0,
+			errors.New("raft: state != LEADER - cannot append command to log"),
+		}
+		if !reflect.DeepEqual(reply, expectedReply) {
+			t.Fatal(reply)
+		}
+		if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+			t.Fatal()
+		}
+	default:
 		t.Fatal()
 	}
 }

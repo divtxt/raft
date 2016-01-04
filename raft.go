@@ -38,6 +38,7 @@ type ConsensusModule struct {
 	// -- Channels
 	rpcChannel      chan rpcTuple
 	rpcReplyChannel chan rpcReplyTuple
+	appendChannel   chan appendTuple
 	ticker          *time.Ticker
 
 	// -- Control
@@ -61,6 +62,7 @@ func NewConsensusModule(
 ) *ConsensusModule {
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	rpcReplyChannel := make(chan rpcReplyTuple, RPC_CHANNEL_BUFFER_SIZE)
+	appendChannel := make(chan appendTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 
 	cm := &ConsensusModule{
@@ -75,6 +77,7 @@ func NewConsensusModule(
 		// -- Channels
 		rpcChannel,
 		rpcReplyChannel,
+		appendChannel,
 		ticker,
 
 		// -- Control
@@ -149,6 +152,42 @@ func (cm *ConsensusModule) ProcessRpcAsync(
 	return replyChan
 }
 
+// Append the given command as an entry in the log.
+//
+// This can only be done if the ConsensusModule is in LEADER state.
+//
+// The command should already have been validated by this point to ensure that
+// it will succeed when applied to the state machine.
+// (both internal contents and other context/state checks)
+//
+// This method sends the RPC message to the ConsensusModule's goroutine.
+// The reply will be sent later on the returned channel when the append is
+// processed. The reply will contain the index of the new entry or an error.
+//
+// Here, we intentionally punt on some of the leader details, specifically
+// most of:
+//
+// #RFS-L2: If command received from client: append entry to local log,
+// respond after entry applied to state machine (#5.3)
+//
+// We choose not to deal with the client directly. You must implement the
+// interaction with clients and waiting the entry to be applied to the state
+// machine. (see delegation of lastApplied to raft.Log)
+//
+// TODO: behavior when channel full?
+func (cm *ConsensusModule) AppendCommandAsync(
+	command Command,
+) <-chan AppendCommandResult {
+	replyChan := make(chan AppendCommandResult, 1)
+	cm.appendChannel <- appendTuple{command, replyChan}
+	return replyChan
+}
+
+type AppendCommandResult struct {
+	LogIndex
+	error
+}
+
 // -- protected methods
 
 // Implement rpcSender.sendAsync to bridge to RpcService.SendAsync() with
@@ -200,6 +239,21 @@ loop:
 				panic("FATAL: rpcReplyChannel closed")
 			}
 			cm.passiveConsensusModule.rpcReply(rpcReply.from, rpcReply.rpc, rpcReply.rpcReply)
+		case append, ok := <-cm.appendChannel:
+			if !ok {
+				// theoretically unreachable as we don't close the channel
+				// til shutdown
+				panic("FATAL: appendChannel closed")
+			}
+			logIndex, err := cm.passiveConsensusModule.appendCommand(append.command)
+			appendCommandResult := AppendCommandResult{logIndex, err}
+			select {
+			case append.replyChan <- appendCommandResult:
+			default:
+				// theoretically unreachable as we make a buffered channel of
+				// capacity 1 and this is the one send to it
+				panic("FATAL: replyChan is nil or wants to block")
+			}
 		case now, ok := <-cm.ticker.C:
 			if !ok {
 				// theoretically unreachable as we don't stop the timer til shutdown
@@ -222,4 +276,9 @@ type rpcReplyTuple struct {
 	from     ServerId
 	rpc      interface{}
 	rpcReply interface{}
+}
+
+type appendTuple struct {
+	command   Command
+	replyChan chan AppendCommandResult
 }

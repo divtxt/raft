@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -739,6 +740,62 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 
 func TestCM_Follower_StartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
 	testSetupMCM_Candidate_Figure7LeaderLine(t)
+}
+
+// #RFS-L2a: If command received from client: append entry to local log
+func TestCM_Leader_AppendCommand(t *testing.T) {
+	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
+
+	// pre check
+	if mcm.pcm.log.GetIndexOfLastEntry() != 10 {
+		t.Fatal()
+	}
+
+	command := Command("c11x")
+	li, err := mcm.pcm.appendCommand(command)
+
+	if li != 11 || err != nil {
+		t.Fatal()
+	}
+	if mcm.pcm.log.GetIndexOfLastEntry() != 11 {
+		t.Fatal()
+	}
+	le := mcm.pcm.log.GetLogEntryAtIndex(11)
+	if !reflect.DeepEqual(le, LogEntry{8, Command("c11x")}) {
+		t.Fatal(le)
+	}
+}
+
+// #RFS-L2a: If command received from client: append entry to local log
+func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender),
+	) {
+		mcm, _ := setup(t)
+		// serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+		// pre check
+		if mcm.pcm.log.GetIndexOfLastEntry() != 10 {
+			t.Fatal()
+		}
+
+		command := Command("c11x")
+		li, err := mcm.pcm.appendCommand(command)
+
+		if li != 0 {
+			t.Fatal()
+		}
+		if !reflect.DeepEqual(err, errors.New("raft: state != LEADER - cannot append command to log")) {
+			t.Fatal()
+		}
+
+		if mcm.pcm.log.GetIndexOfLastEntry() != 10 {
+			t.Fatal()
+		}
+	}
+
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	// f(testSetupMCM_Candidate_Figure7LeaderLine)
 }
 
 // For most tests, we'll use a passive CM where we control the progress
