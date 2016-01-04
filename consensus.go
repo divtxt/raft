@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -186,6 +187,26 @@ func (cm *passiveConsensusModule) rpcReply(
 		}
 	default:
 		panic(fmt.Sprintf("FATAL: unknown rpc type: %T from: %v", rpc, from))
+	}
+}
+
+// Append the given command as an entry in the log.
+// #RFS-L2a: If command received from client: append entry to local log
+func (cm *passiveConsensusModule) appendCommand(
+	command Command,
+) (LogIndex, error) {
+	serverState := cm.getServerState()
+	if serverState == LEADER {
+		iole := cm.log.GetIndexOfLastEntry()
+		logEntries := []LogEntry{
+			{cm.persistentState.GetCurrentTerm(), command},
+		}
+		cm.log.SetEntriesAfterIndex(iole, logEntries)
+		newIole := cm.log.GetIndexOfLastEntry()
+		// TODO: assert newIole == iole + 1 ???
+		return newIole, nil
+	} else {
+		return 0, errors.New("raft: state != LEADER - cannot append command to log")
 	}
 }
 
