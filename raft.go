@@ -36,6 +36,7 @@ type ConsensusModule struct {
 	stopped int32
 
 	// -- Channels
+	runnableChannel chan func()
 	rpcChannel      chan rpcTuple
 	rpcReplyChannel chan rpcReplyTuple
 	appendChannel   chan appendTuple
@@ -60,6 +61,7 @@ func NewConsensusModule(
 	timeSettings TimeSettings,
 	maxEntriesPerAppendEntry uint64,
 ) *ConsensusModule {
+	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	rpcReplyChannel := make(chan rpcReplyTuple, RPC_CHANNEL_BUFFER_SIZE)
 	appendChannel := make(chan appendTuple, RPC_CHANNEL_BUFFER_SIZE)
@@ -75,6 +77,7 @@ func NewConsensusModule(
 		0,
 
 		// -- Channels
+		runnableChannel,
 		rpcChannel,
 		rpcReplyChannel,
 		appendChannel,
@@ -211,6 +214,7 @@ func (cm *ConsensusModule) processor() {
 		// Mark the server as stopped
 		atomic.StoreInt32(&cm.stopped, 1)
 		// Clean up things
+		close(cm.runnableChannel)
 		close(cm.rpcChannel)
 		close(cm.rpcReplyChannel)
 		cm.ticker.Stop()
@@ -219,6 +223,13 @@ func (cm *ConsensusModule) processor() {
 loop:
 	for {
 		select {
+		case runnable, ok := <-cm.runnableChannel:
+			if !ok {
+				// theoretically unreachable as we don't close the channel
+				// til shutdown
+				panic("FATAL: runnableChannel closed")
+			}
+			runnable()
 		case rpc, ok := <-cm.rpcChannel:
 			if !ok {
 				// theoretically unreachable as we don't close the channel til shutdown
