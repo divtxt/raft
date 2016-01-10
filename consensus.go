@@ -267,7 +267,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-			cm.rpcSender.sendAsync(serverId, rpcRequestVote)
+			cm.rpcSender.sendRpcRequestVoteAsync(serverId, rpcRequestVote)
 		},
 	)
 	// Reset election timeout!
@@ -325,7 +325,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		entriesToSend,
 		cm.getCommitIndex(),
 	}
-	cm.rpcSender.sendAsync(peerId, rpcAppendEntries)
+	cm.rpcSender.sendRpcAppendEntriesAsync(peerId, rpcAppendEntries)
 }
 
 func (cm *passiveConsensusModule) getEntriesAfterLogIndex(afterLogIndex LogIndex) []LogEntry {
@@ -383,5 +383,6 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
 
 // This is an internal equivalent to RpcService without the reply setup.
 type rpcSender interface {
-	sendAsync(toServer ServerId, rpc interface{})
+	sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries)
+	sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote)
 }
