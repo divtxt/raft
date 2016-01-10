@@ -58,7 +58,7 @@ type PersistentState interface {
 //
 // See Rpc* types (in rpctypes.go) for the various RPC message and reply types.
 //
-// See ConsensusModule's ProcessRpcAsync (in raft.go) for incoming RPC.
+// See ConsensusModule's ProcessRpc...Async methods for incoming RPC.
 type RpcService interface {
 	// Send the given RPC message to the given server asynchronously.
 	//

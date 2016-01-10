@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -15,10 +14,10 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 
 		requestVote := &RpcRequestVote{7, 9, 6}
 
-		reply := mcm.rpc("s2", requestVote)
+		reply := mcm.rpc_RpcRequestVote("s2", requestVote)
 
-		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
-		if !reflect.DeepEqual(reply, expectedRpc) {
+		expectedRpc := RpcRequestVoteReply{serverTerm, false}
+		if *reply != expectedRpc {
 			t.Fatal(reply)
 		}
 
@@ -57,7 +56,7 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.rpc("s3", requestVote)
+		reply := mcm.rpc_RpcRequestVote("s3", requestVote)
 
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
@@ -66,8 +65,8 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 			t.Fatal()
 		}
 
-		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
-		if !reflect.DeepEqual(reply, expectedRpc) {
+		expectedRpc := RpcRequestVoteReply{serverTerm, false}
+		if *reply != expectedRpc {
 			t.Fatal(reply)
 		}
 
@@ -102,10 +101,10 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.rpc("s2", requestVote)
+		reply := mcm.rpc_RpcRequestVote("s2", requestVote)
 
-		expectedRpc := &RpcRequestVoteReply{serverTerm, true}
-		if !reflect.DeepEqual(reply, expectedRpc) {
+		expectedRpc := RpcRequestVoteReply{serverTerm, true}
+		if *reply != expectedRpc {
 			t.Fatal(reply)
 		}
 
@@ -140,10 +139,10 @@ func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.rpc("s2", requestVote)
+		reply := mcm.rpc_RpcRequestVote("s2", requestVote)
 
-		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
-		if !reflect.DeepEqual(reply, expectedRpc) {
+		expectedRpc := RpcRequestVoteReply{serverTerm, false}
+		if *reply != expectedRpc {
 			t.Fatal(reply)
 		}
 
@@ -251,7 +250,7 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 
 		requestVote := &RpcRequestVote{10, senderLastEntryIndex, senderLastEntryTerm}
 
-		reply := mcm.rpc("s5", requestVote)
+		reply := mcm.rpc_RpcRequestVote("s5", requestVote)
 
 		// #RFS-A2: If RPC request or response contains term T > currentTerm:
 		// set currentTerm = T, convert to follower (#5.1)
@@ -274,8 +273,8 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 			t.Fatal(actualVotedFor)
 		}
 
-		expectedRpc := &RpcRequestVoteReply{10, expectedVote}
-		if !reflect.DeepEqual(reply, expectedRpc) {
+		expectedRpc := RpcRequestVoteReply{10, expectedVote}
+		if *reply != expectedRpc {
 			t.Fatal(reply)
 		}
 
