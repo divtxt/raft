@@ -37,7 +37,6 @@ type ConsensusModule struct {
 
 	// -- Channels
 	runnableChannel chan func()
-	appendChannel   chan appendTuple
 	ticker          *time.Ticker
 
 	// -- Control
@@ -60,7 +59,6 @@ func NewConsensusModule(
 	maxEntriesPerAppendEntry uint64,
 ) *ConsensusModule {
 	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
-	appendChannel := make(chan appendTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 
 	cm := &ConsensusModule{
@@ -74,7 +72,6 @@ func NewConsensusModule(
 
 		// -- Channels
 		runnableChannel,
-		appendChannel,
 		ticker,
 
 		// -- Control
@@ -186,7 +183,17 @@ func (cm *ConsensusModule) AppendCommandAsync(
 	command Command,
 ) <-chan AppendCommandResult {
 	replyChan := make(chan AppendCommandResult, 1)
-	cm.appendChannel <- appendTuple{command, replyChan}
+	cm.runnableChannel <- func() {
+		logIndex, err := cm.passiveConsensusModule.appendCommand(command)
+		appendCommandResult := AppendCommandResult{logIndex, err}
+		select {
+		case replyChan <- appendCommandResult:
+		default:
+			// theoretically unreachable as we make a buffered channel of
+			// capacity 1 and this is the one send to it
+			panic("FATAL: replyChan is nil or wants to block")
+		}
+	}
 	return replyChan
 }
 
@@ -235,21 +242,6 @@ loop:
 				panic("FATAL: runnableChannel closed")
 			}
 			runnable()
-		case append, ok := <-cm.appendChannel:
-			if !ok {
-				// theoretically unreachable as we don't close the channel
-				// til shutdown
-				panic("FATAL: appendChannel closed")
-			}
-			logIndex, err := cm.passiveConsensusModule.appendCommand(append.command)
-			appendCommandResult := AppendCommandResult{logIndex, err}
-			select {
-			case append.replyChan <- appendCommandResult:
-			default:
-				// theoretically unreachable as we make a buffered channel of
-				// capacity 1 and this is the one send to it
-				panic("FATAL: replyChan is nil or wants to block")
-			}
 		case now, ok := <-cm.ticker.C:
 			if !ok {
 				// theoretically unreachable as we don't stop the timer til shutdown
@@ -266,9 +258,4 @@ type rpcTuple struct {
 	from      ServerId
 	rpc       interface{}
 	replyChan chan interface{}
-}
-
-type appendTuple struct {
-	command   Command
-	replyChan chan AppendCommandResult
 }
