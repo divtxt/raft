@@ -38,7 +38,6 @@ type ConsensusModule struct {
 	// -- Channels
 	runnableChannel chan func()
 	rpcChannel      chan rpcTuple
-	rpcReplyChannel chan rpcReplyTuple
 	appendChannel   chan appendTuple
 	ticker          *time.Ticker
 
@@ -63,7 +62,6 @@ func NewConsensusModule(
 ) *ConsensusModule {
 	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
 	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
-	rpcReplyChannel := make(chan rpcReplyTuple, RPC_CHANNEL_BUFFER_SIZE)
 	appendChannel := make(chan appendTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 
@@ -79,7 +77,6 @@ func NewConsensusModule(
 		// -- Channels
 		runnableChannel,
 		rpcChannel,
-		rpcReplyChannel,
 		appendChannel,
 		ticker,
 
@@ -197,9 +194,12 @@ type AppendCommandResult struct {
 // an appropriate callback function.
 func (cm *ConsensusModule) sendAsync(toServer ServerId, rpc interface{}) {
 	replyAsync := func(rpcReply interface{}) {
-		// Process the given RPC reply message from the given peer asynchronously.
+		// Process the given RPC reply message from the given peer
+		// asynchronously.
 		// TODO: behavior when channel full?
-		cm.rpcReplyChannel <- rpcReplyTuple{toServer, rpc, rpcReply}
+		cm.runnableChannel <- func() {
+			cm.passiveConsensusModule.rpcReply(toServer, rpc, rpcReply)
+		}
 	}
 	cm.rpcService.SendAsync(toServer, rpc, replyAsync)
 }
@@ -216,7 +216,6 @@ func (cm *ConsensusModule) processor() {
 		// Clean up things
 		close(cm.runnableChannel)
 		close(cm.rpcChannel)
-		close(cm.rpcReplyChannel)
 		cm.ticker.Stop()
 	}()
 
@@ -244,12 +243,6 @@ loop:
 				// capacity 1 and this is the one send to it
 				panic("FATAL: replyChan is nil or wants to block")
 			}
-		case rpcReply, ok := <-cm.rpcReplyChannel:
-			if !ok {
-				// theoretically unreachable as we don't close the channel til shutdown
-				panic("FATAL: rpcReplyChannel closed")
-			}
-			cm.passiveConsensusModule.rpcReply(rpcReply.from, rpcReply.rpc, rpcReply.rpcReply)
 		case append, ok := <-cm.appendChannel:
 			if !ok {
 				// theoretically unreachable as we don't close the channel
@@ -281,12 +274,6 @@ type rpcTuple struct {
 	from      ServerId
 	rpc       interface{}
 	replyChan chan interface{}
-}
-
-type rpcReplyTuple struct {
-	from     ServerId
-	rpc      interface{}
-	rpcReply interface{}
 }
 
 type appendTuple struct {
