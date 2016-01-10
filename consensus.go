@@ -50,7 +50,8 @@ func newPassiveConsensusModule(
 	clusterInfo *ClusterInfo,
 	electionTimeoutLow time.Duration,
 	maxEntriesPerAppendEntry uint64,
-) (*passiveConsensusModule, time.Time) {
+	now time.Time,
+) *passiveConsensusModule {
 	// Param checks
 	if persistentState == nil {
 		panic("'persistentState' cannot be nil")
@@ -70,8 +71,6 @@ func newPassiveConsensusModule(
 	if maxEntriesPerAppendEntry <= 0 {
 		panic("maxEntriesPerAppendEntry must be greater than zero")
 	}
-
-	now := time.Now()
 
 	pcm := &passiveConsensusModule{
 		// -- External components
@@ -100,7 +99,7 @@ func newPassiveConsensusModule(
 		nil,
 	}
 
-	return pcm, now
+	return pcm
 }
 
 // Get the current server state.

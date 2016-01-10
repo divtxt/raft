@@ -60,6 +60,7 @@ func NewConsensusModule(
 ) *ConsensusModule {
 	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
+	now := time.Now()
 
 	cm := &ConsensusModule{
 		nil, // temp value, to be replaced before goroutine start
@@ -79,13 +80,14 @@ func NewConsensusModule(
 		&atomic.Value{},
 	}
 
-	pcm, _ := newPassiveConsensusModule(
+	pcm := newPassiveConsensusModule(
 		persistentState,
 		log,
 		cm,
 		clusterInfo,
 		timeSettings.ElectionTimeoutLow,
 		maxEntriesPerAppendEntry,
+		now,
 	)
 
 	// we can only set the value here because it's a cyclic reference
