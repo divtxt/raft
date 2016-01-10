@@ -244,11 +244,13 @@ loop:
 				panic("FATAL: runnableChannel closed")
 			}
 			runnable()
-		case now, ok := <-cm.ticker.C:
+		case _, ok := <-cm.ticker.C:
 			if !ok {
 				// theoretically unreachable as we don't stop the timer til shutdown
 				panic("FATAL: ticker channel closed")
 			}
+			// Get a fresh now since the ticker's now could have been waiting
+			now := time.Now()
 			cm.passiveConsensusModule.tick(now)
 		case <-cm.stopSignal:
 			break loop
