@@ -37,7 +37,6 @@ type ConsensusModule struct {
 
 	// -- Channels
 	runnableChannel chan func()
-	rpcChannel      chan rpcTuple
 	appendChannel   chan appendTuple
 	ticker          *time.Ticker
 
@@ -61,7 +60,6 @@ func NewConsensusModule(
 	maxEntriesPerAppendEntry uint64,
 ) *ConsensusModule {
 	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
-	rpcChannel := make(chan rpcTuple, RPC_CHANNEL_BUFFER_SIZE)
 	appendChannel := make(chan appendTuple, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 
@@ -76,7 +74,6 @@ func NewConsensusModule(
 
 		// -- Channels
 		runnableChannel,
-		rpcChannel,
 		appendChannel,
 		ticker,
 
@@ -148,7 +145,17 @@ func (cm *ConsensusModule) ProcessRpcAsync(
 	rpc interface{},
 ) <-chan interface{} {
 	replyChan := make(chan interface{}, 1)
-	cm.rpcChannel <- rpcTuple{from, rpc, replyChan}
+	cm.runnableChannel <- func() {
+		now := time.Now()
+		rpcReply := cm.passiveConsensusModule.rpc(from, rpc, now)
+		select {
+		case replyChan <- rpcReply:
+		default:
+			// theoretically unreachable as we make a buffered channel of
+			// capacity 1 and this is the one send to it
+			panic("FATAL: replyChan is nil or wants to block")
+		}
+	}
 	return replyChan
 }
 
@@ -215,7 +222,6 @@ func (cm *ConsensusModule) processor() {
 		atomic.StoreInt32(&cm.stopped, 1)
 		// Clean up things
 		close(cm.runnableChannel)
-		close(cm.rpcChannel)
 		cm.ticker.Stop()
 	}()
 
@@ -229,20 +235,6 @@ loop:
 				panic("FATAL: runnableChannel closed")
 			}
 			runnable()
-		case rpc, ok := <-cm.rpcChannel:
-			if !ok {
-				// theoretically unreachable as we don't close the channel til shutdown
-				panic("FATAL: rpcChannel closed")
-			}
-			now := time.Now()
-			rpcReply := cm.passiveConsensusModule.rpc(rpc.from, rpc.rpc, now)
-			select {
-			case rpc.replyChan <- rpcReply:
-			default:
-				// theoretically unreachable as we make a buffered channel of
-				// capacity 1 and this is the one send to it
-				panic("FATAL: replyChan is nil or wants to block")
-			}
 		case append, ok := <-cm.appendChannel:
 			if !ok {
 				// theoretically unreachable as we don't close the channel
