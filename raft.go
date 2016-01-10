@@ -236,10 +236,10 @@ type AppendCommandResult struct {
 
 // -- protected methods
 
-// Implement rpcSender.sendAsync to bridge to RpcService.SendAsync() with
-// an appropriate callback function.
-func (cm *ConsensusModule) sendAsync(toServer ServerId, rpc interface{}) {
-	replyAsync := func(rpcReply interface{}) {
+// Implement rpcSender.sendRpcAppendEntriesAsync to bridge to
+// RpcService.SendRpcAppendEntriesAsync() with a closure callback.
+func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) {
+	replyAsync := func(rpcReply *RpcAppendEntriesReply) {
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
 		// TODO: behavior when channel full?
@@ -247,7 +247,21 @@ func (cm *ConsensusModule) sendAsync(toServer ServerId, rpc interface{}) {
 			cm.passiveConsensusModule.rpcReply(toServer, rpc, rpcReply)
 		}
 	}
-	cm.rpcService.SendAsync(toServer, rpc, replyAsync)
+	cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)
+}
+
+// Implement rpcSender.sendRpcRequestVoteAsync to bridge to
+// RpcService.SendRpcRequestVoteAsync() with a closure callback.
+func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) {
+	replyAsync := func(rpcReply *RpcRequestVoteReply) {
+		// Process the given RPC reply message from the given peer
+		// asynchronously.
+		// TODO: behavior when channel full?
+		cm.runnableChannel <- func() {
+			cm.passiveConsensusModule.rpcReply(toServer, rpc, rpcReply)
+		}
+	}
+	cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
 }
 
 func (cm *ConsensusModule) processor() {

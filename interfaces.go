@@ -59,38 +59,48 @@ type PersistentState interface {
 // See Rpc* types (in rpctypes.go) for the various RPC message and reply types.
 //
 // See ConsensusModule's ProcessRpc...Async methods for incoming RPC.
+//
+// Notes for implementers:
+//
+// - The methods should return immediately.
+//
+// - No guarantee of RPC success is expected.
+//
+// - A bad server id or unknown rpc type should be treated as an error.
+//
+// - If the RPC succeeds, the reply rpc should be sent to the replyAsync()
+// function parameter.
+//
+// - replyAsync() will process the reply asynchronously. It sends the rpc
+// reply to the ConsensusModule's goroutine and returns immediately.
+//
+// - If the RPC fails, there is no need to do anything.
+//
+// - The ConsensusModule only expects to send one RPC to a given server.
+// Since RPC failure is not reported to ConsensusModule, implementations can
+// choose how to handle extra RPCs to a server for which they already have an
+// RPC in flight i.e. cancel the first message and/or drop the second.
+//
+// - It is expected that multiple RPC messages will be sent independently to
+// different servers.
+//
+// - The RPC is time-sensitive and expected to be immediate. If any queueing
+// or retrying is implemented, it should be very limited in time and queue
+// size.
 type RpcService interface {
-	// Send the given RPC message to the given server asynchronously.
-	//
-	// Notes for implementers:
-	//
-	// - This method should return immediately.
-	//
-	// - No guarantee of RPC success is expected.
-	//
-	// - A bad server id or unknown rpc type should be treated as an error.
-	//
-	// - If the RPC succeeds, the reply rpc should be sent to the replyAsync()
-	// function parameter.
-	//
-	// - replyAsync() will process the reply asynchronously. It sends the rpc
-	// reply to the ConsensusModule's goroutine and returns immediately.
-	//
-	// - An unknown or unexpected rpc reply message will cause the
-	// ConsensusModule's goroutine to panic and stop.
-	//
-	// - If the RPC fails, there is no need to do anything.
-	//
-	// - It is expected that multiple RPC messages will be sent independently to
-	// different servers.
-	//
-	// - The ConsensusModule only expects to send one RPC to a given server.
-	// Since RPC failure is not reported to ConsensusModule, implementations can
-	// choose how to handle extra RPCs to a server for which they already have an
-	// RPC in flight i.e. cancel the first message and/or drop the second.
-	//
-	// - The RPC is time-sensitive and expected to be immediate. If any queueing
-	// or retrying is implemented, it should be very limited in time and queue
-	// size.
-	SendAsync(toServer ServerId, rpc interface{}, replyAsync func(interface{}))
+	// Send the given RpcAppendEntries message to the given server
+	// asynchronously.
+	SendRpcAppendEntriesAsync(
+		toServer ServerId,
+		rpc *RpcAppendEntries,
+		replyAsync func(*RpcAppendEntriesReply),
+	)
+
+	// Send the given RpcRequestVote message to the given server
+	// asynchronously.
+	SendRpcRequestVoteAsync(
+		toServer ServerId,
+		rpc *RpcRequestVote,
+		replyAsync func(*RpcRequestVoteReply),
+	)
 }
