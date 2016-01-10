@@ -67,6 +67,9 @@ func newPassiveConsensusModule(
 	if electionTimeoutLow.Nanoseconds() <= 0 {
 		panic("electionTimeoutLow must be greater than zero")
 	}
+	if maxEntriesPerAppendEntry <= 0 {
+		panic("maxEntriesPerAppendEntry must be greater than zero")
+	}
 
 	now := time.Now()
 
