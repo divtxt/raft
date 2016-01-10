@@ -93,39 +93,18 @@ func TestConsensusModule_StartStateAndStop(t *testing.T) {
 	}
 }
 
-func TestConsensusModule_UnknownRpcTypeStopsCM(t *testing.T) {
-	cm := setupConsensusModule(t, nil)
-
-	if cm.IsStopped() {
-		t.Error()
-	}
-
-	cm.ProcessRpcAsync("s2", &struct{ int }{42})
-	time.Sleep(testSleepToLetGoroutineRun)
-
-	if !cm.IsStopped() {
-		cm.StopAsync()
-		t.Fatal()
-	}
-
-	e := cm.GetStopError()
-	if e != "FATAL: unknown rpc type: *struct { int } from: s2" {
-		t.Error(e)
-	}
-}
-
-func TestConsensusModule_ProcessRpcAsync(t *testing.T) {
+func TestConsensusModule_ProcessRpcRequestVoteAsync(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 	defer cm.StopAsync()
 
-	replyChan := cm.ProcessRpcAsync("s2", &RpcRequestVote{testCurrentTerm - 1, 0, 0})
+	replyChan := cm.ProcessRpcRequestVoteAsync("s2", &RpcRequestVote{testCurrentTerm - 1, 0, 0})
 	time.Sleep(testSleepToLetGoroutineRun)
 
 	select {
 	case reply := <-replyChan:
 		serverTerm := cm.passiveConsensusModule.persistentState.GetCurrentTerm()
-		expectedRpc := &RpcRequestVoteReply{serverTerm, false}
-		if !reflect.DeepEqual(reply, expectedRpc) {
+		expectedRpc := RpcRequestVoteReply{serverTerm, false}
+		if *reply != expectedRpc {
 			t.Fatal(reply)
 		}
 	default:

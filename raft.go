@@ -1,7 +1,8 @@
 // Package raft is an implementation of the Raft consensus protocol.
 //
 // Call NewConsensusModule with appropriate parameters to start an instance.
-// Incoming RPC calls can then be sent to it using the ProcessRpcAsync method.
+// Incoming RPC calls can then be sent to it using the ProcessRpc...Async
+// methods.
 //
 // You will have to provide implementations of the following interfaces:
 //
@@ -127,26 +128,55 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 	return cm.passiveConsensusModule.getServerState()
 }
 
-// Process the given RPC message from the given peer asynchronously.
+// Process the given RpcAppendEntries message from the given peer
+// asynchronously.
 //
 // This method sends the RPC message to the ConsensusModule's goroutine.
 // The RPC reply will be sent later on the returned channel.
-// An unknown RPC message will cause the consensus module's goroutine to panic
-// and stop.
-//
-// See Rpc* types (in rpctypes.go) for the various RPC message and reply types.
 //
 // See RpcSender (in interfaces.go) for outgoing RPC.
 //
 // TODO: behavior when channel full?
-func (cm *ConsensusModule) ProcessRpcAsync(
+func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 	from ServerId,
-	rpc interface{},
-) <-chan interface{} {
-	replyChan := make(chan interface{}, 1)
+	rpc *RpcAppendEntries,
+) <-chan *RpcAppendEntriesReply {
+	replyChan := make(chan *RpcAppendEntriesReply, 1)
 	cm.runnableChannel <- func() {
 		now := time.Now()
-		rpcReply := cm.passiveConsensusModule.rpc(from, rpc, now)
+
+		rpcReply := cm.passiveConsensusModule.rpc_RpcAppendEntries(from, rpc, now)
+
+		select {
+		case replyChan <- rpcReply:
+		default:
+			// theoretically unreachable as we make a buffered channel of
+			// capacity 1 and this is the one send to it
+			panic("FATAL: replyChan is nil or wants to block")
+		}
+	}
+	return replyChan
+}
+
+// Process the given RpcRequestVote message from the given peer
+// asynchronously.
+//
+// This method sends the RPC message to the ConsensusModule's goroutine.
+// The RPC reply will be sent later on the returned channel.
+//
+// See RpcSender (in interfaces.go) for outgoing RPC.
+//
+// TODO: behavior when channel full?
+func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
+	from ServerId,
+	rpc *RpcRequestVote,
+) <-chan *RpcRequestVoteReply {
+	replyChan := make(chan *RpcRequestVoteReply, 1)
+	cm.runnableChannel <- func() {
+		now := time.Now()
+
+		rpcReply := cm.passiveConsensusModule.rpc_RpcRequestVote(from, rpc, now)
+
 		select {
 		case replyChan <- rpcReply:
 		default:

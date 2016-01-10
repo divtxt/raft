@@ -136,33 +136,37 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) {
 	cm.log.CommitIndexChanged(commitIndex)
 }
 
-// Process the given rpc message
+// Process the given RpcAppendEntries message
 // #RFS-F1: Respond to RPCs from candidates and leaders
-func (cm *passiveConsensusModule) rpc(
+func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	from ServerId,
-	rpc interface{},
+	rpc *RpcAppendEntries,
 	now time.Time,
-) interface{} {
+) *RpcAppendEntriesReply {
 	serverState := cm.getServerState()
 
-	switch rpc := rpc.(type) {
-	case *RpcAppendEntries:
-		success := cm.processRpc_AppendEntries(serverState, from, rpc, now)
-		rpcReply := &RpcAppendEntriesReply{
-			cm.persistentState.GetCurrentTerm(),
-			success,
-		}
-		return rpcReply
-	case *RpcRequestVote:
-		voteGranted := cm.processRpc_RequestVote(serverState, from, rpc, now)
-		rpcReply := &RpcRequestVoteReply{
-			cm.persistentState.GetCurrentTerm(),
-			voteGranted,
-		}
-		return rpcReply
-	default:
-		panic(fmt.Sprintf("FATAL: unknown rpc type: %T from: %v", rpc, from))
+	success := cm.processRpc_AppendEntries(serverState, from, rpc, now)
+	rpcReply := &RpcAppendEntriesReply{
+		cm.persistentState.GetCurrentTerm(),
+		success,
 	}
+	return rpcReply
+}
+
+// Process the given RpcRequestVote message
+// #RFS-F1: Respond to RPCs from candidates and leaders
+func (cm *passiveConsensusModule) rpc_RpcRequestVote(
+	from ServerId,
+	rpc *RpcRequestVote,
+	now time.Time,
+) *RpcRequestVoteReply {
+	serverState := cm.getServerState()
+	voteGranted := cm.processRpc_RequestVote(serverState, from, rpc, now)
+	rpcReply := &RpcRequestVoteReply{
+		cm.persistentState.GetCurrentTerm(),
+		voteGranted,
+	}
+	return rpcReply
 }
 
 func (cm *passiveConsensusModule) rpcReply(
