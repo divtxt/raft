@@ -547,10 +547,15 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 	mrs.checkSentRpcs(t, expectedRpcs)
 
-	// let's make a new log entry
-	// TODO: drive this via a command?
-	logEntries := []LogEntry{{serverTerm, Command("c11")}, {serverTerm, Command("c12")}}
-	mcm.pcm.log.SetEntriesAfterIndex(10, logEntries)
+	// let's make some new log entries
+	li, err := mcm.pcm.appendCommand(Command("c11"))
+	if li != 11 || err != nil {
+		t.Fatal()
+	}
+	li, err = mcm.pcm.appendCommand(Command("c12"))
+	if li != 12 || err != nil {
+		t.Fatal()
+	}
 
 	// tick should try to advance commitIndex but nothing should happen
 	mcm.tick()
