@@ -30,8 +30,8 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 		t.Fatal()
 	}
 
-	// get entry test
-	le := log.GetLogEntryAtIndex(10)
+	// get entries test
+	le := testHelper_GetLogEntryAtIndex(log, 10)
 	if le.TermNo != 6 {
 		t.Fatal(le.TermNo)
 	}
@@ -56,7 +56,7 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	if log.GetIndexOfLastEntry() != 12 {
 		t.Fatal()
 	}
-	le = log.GetLogEntryAtIndex(12)
+	le = testHelper_GetLogEntryAtIndex(log, 12)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c12")}) {
 		t.Fatal(le)
 	}
@@ -67,7 +67,7 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	if log.GetIndexOfLastEntry() != 13 {
 		t.Fatal()
 	}
-	le = log.GetLogEntryAtIndex(12)
+	le = testHelper_GetLogEntryAtIndex(log, 12)
 	if !reflect.DeepEqual(le, LogEntry{9, Command("c12")}) {
 		t.Fatal(le)
 	}
@@ -88,7 +88,7 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	if log.GetIndexOfLastEntry() != 3 {
 		t.Fatal()
 	}
-	le = log.GetLogEntryAtIndex(3)
+	le = testHelper_GetLogEntryAtIndex(log, 3)
 	if !reflect.DeepEqual(le, LogEntry{1, Command("c3")}) {
 		t.Fatal(le)
 	}
@@ -130,10 +130,6 @@ func (imle *inMemoryLog) GetTermAtIndex(li LogIndex) TermNo {
 		panic(fmt.Sprintf("GetTermAtIndex(): li=%v > iole=%v", li, len(imle.entries)))
 	}
 	return imle.entries[li-1].TermNo
-}
-
-func (imle *inMemoryLog) GetLogEntryAtIndex(li LogIndex) LogEntry {
-	return imle.entries[li-1]
 }
 
 func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
@@ -183,7 +179,7 @@ func (imle *inMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) []LogEntry
 	nextIndexToGet := afterLogIndex + 1
 
 	for i < numEntriesToGet {
-		logEntries[i] = imle.GetLogEntryAtIndex(nextIndexToGet)
+		logEntries[i] = imle.entries[nextIndexToGet-1]
 		i++
 		nextIndexToGet++
 	}
@@ -311,4 +307,13 @@ func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
 		},
 		"afterLogIndex=11 is > iole=10",
 	)
+}
+
+// Helper
+func testHelper_GetLogEntryAtIndex(log Log, li LogIndex) LogEntry {
+	if li == 0 {
+		panic("oops!")
+	}
+	entries := log.GetEntriesAfterIndex(li - 1)
+	return entries[0]
 }

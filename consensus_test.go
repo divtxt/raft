@@ -755,7 +755,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	if mcm.pcm.log.GetIndexOfLastEntry() != 11 {
 		t.Fatal()
 	}
-	le := mcm.pcm.log.GetLogEntryAtIndex(11)
+	le := testHelper_GetLogEntryAtIndex(mcm.pcm.log, 11)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c11x")}) {
 		t.Fatal(le)
 	}

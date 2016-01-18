@@ -63,16 +63,13 @@ type Log interface {
 	// This should be 0 for the Log of a new server.
 	GetIndexOfLastEntry() LogIndex
 
-	// Get the LogEntry at the given index.
+	// Get the term of the entry at the given index.
+	//
+	// It is an error if the given index is beyond the end of the log.
+	// (i.e. the given index is greater than indexOfLastEntry)
+	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
-	GetLogEntryAtIndex(LogIndex) LogEntry
-
-	// Get the term of the entry at the given index.
-	// Equivalent to GetLogEntryAtIndex(...).TermNo but this call allows
-	// the Log implementation to not fetch the Command if that's a useful
-	// optimization.
-	// An index of 0 is invalid for this call.
 	GetTermAtIndex(LogIndex) TermNo
 
 	// Get multiple entries after the given index.
@@ -83,6 +80,9 @@ type Log interface {
 	//
 	// It is an error if the given index is beyond the end of the log.
 	// (i.e. the given index is greater than indexOfLastEntry)
+	//
+	// If there are entries after the given index, the call must return at
+	// least one entry.
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
