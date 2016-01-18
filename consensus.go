@@ -20,8 +20,7 @@ type passiveConsensusModule struct {
 	rpcSender       rpcSender
 
 	// -- Config
-	clusterInfo              *ClusterInfo
-	maxEntriesPerAppendEntry uint64
+	clusterInfo *ClusterInfo
 
 	// ===== the following fields may be accessed concurrently
 
@@ -49,7 +48,6 @@ func newPassiveConsensusModule(
 	rpcSender rpcSender,
 	clusterInfo *ClusterInfo,
 	electionTimeoutLow time.Duration,
-	maxEntriesPerAppendEntry uint64,
 	now time.Time,
 ) *passiveConsensusModule {
 	// Param checks
@@ -68,9 +66,6 @@ func newPassiveConsensusModule(
 	if electionTimeoutLow.Nanoseconds() <= 0 {
 		panic("electionTimeoutLow must be greater than zero")
 	}
-	if maxEntriesPerAppendEntry <= 0 {
-		panic("maxEntriesPerAppendEntry must be greater than zero")
-	}
 
 	pcm := &passiveConsensusModule{
 		// -- External components
@@ -80,7 +75,6 @@ func newPassiveConsensusModule(
 
 		// -- Config
 		clusterInfo,
-		maxEntriesPerAppendEntry,
 
 		// -- State - for all servers
 		// #5.2-p1s2: When servers start up, they begin as followers
@@ -315,7 +309,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 	if empty {
 		entriesToSend = []LogEntry{}
 	} else {
-		entriesToSend = cm.getEntriesAfterLogIndex(peerLastLogIndex)
+		entriesToSend = cm.log.GetEntriesAfterIndex(peerLastLogIndex)
 	}
 	//
 	rpcAppendEntries := &RpcAppendEntries{
@@ -326,41 +320,6 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		cm.getCommitIndex(),
 	}
 	cm.rpcSender.sendRpcAppendEntriesAsync(peerId, rpcAppendEntries)
-}
-
-func (cm *passiveConsensusModule) getEntriesAfterLogIndex(afterLogIndex LogIndex) []LogEntry {
-	indexOfLastEntry := cm.log.GetIndexOfLastEntry()
-
-	if indexOfLastEntry < afterLogIndex {
-		panic(fmt.Sprintf(
-			"indexOfLastEntry=%v is < afterLogIndex=%v",
-			afterLogIndex,
-			indexOfLastEntry,
-		))
-	}
-
-	var numEntriesToGet uint64 = uint64(indexOfLastEntry - afterLogIndex)
-
-	// Short-circuit allocation for common case
-	if numEntriesToGet == 0 {
-		return []LogEntry{}
-	}
-
-	if numEntriesToGet > cm.maxEntriesPerAppendEntry {
-		numEntriesToGet = cm.maxEntriesPerAppendEntry
-	}
-
-	logEntries := make([]LogEntry, numEntriesToGet)
-	var i uint64 = 0
-	nextIndexToGet := afterLogIndex + 1
-
-	for i < numEntriesToGet {
-		logEntries[i] = cm.log.GetLogEntryAtIndex(nextIndexToGet)
-		i++
-		nextIndexToGet++
-	}
-
-	return logEntries
 }
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority

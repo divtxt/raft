@@ -18,11 +18,11 @@ func setupConsensusModuleR2(
 	logTerms []TermNo,
 ) (*ConsensusModule, *mockRpcSender) {
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
-	imle := newIMLEWithDummyCommands(logTerms)
+	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	mrs := newMockRpcSender()
 	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}
 	ci := NewClusterInfo(testAllServerIds, testThisServerId)
-	cm := NewConsensusModule(ps, imle, mrs, ci, ts, testMaxEntriesPerAppendEntry)
+	cm := NewConsensusModule(ps, imle, mrs, ci, ts)
 	if cm == nil {
 		t.Fatal()
 	}

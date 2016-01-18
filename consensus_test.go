@@ -36,7 +36,7 @@ func setupManagedConsensusModuleR2(
 	logTerms []TermNo,
 ) (*managedConsensusModule, *mockRpcSender) {
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
-	imle := newIMLEWithDummyCommands(logTerms)
+	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	mrs := newMockRpcSender()
 	ci := NewClusterInfo(testAllServerIds, testThisServerId)
 	now := time.Now()
@@ -46,7 +46,6 @@ func setupManagedConsensusModuleR2(
 		mrs,
 		ci,
 		testElectionTimeoutLow,
-		testMaxEntriesPerAppendEntry,
 		now,
 	)
 	if cm == nil {
@@ -406,6 +405,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
+/*
 func TestCM_getEntriesAfterLogIndex(t *testing.T) {
 	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
 
@@ -478,6 +478,7 @@ func TestCM_getEntriesAfterLogIndex(t *testing.T) {
 		"indexOfLastEntry=11 is < afterLogIndex=10",
 	)
 }
+*/
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
 // of matchIndex[i] >= N, and log[N].term == currentTerm:

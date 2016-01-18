@@ -89,7 +89,7 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 
 	// Figure 8, case (a)
 	terms := []TermNo{1, 2} // leader line for the case
-	imle := newIMLEWithDummyCommands(terms)
+	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
 	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
 
 	// With matchIndex stuck at 0, there is no solution for any currentTerm
@@ -130,7 +130,7 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 
 	// Figure 8, case (c)
 	terms := []TermNo{1, 2, 4} // leader line for the case
-	imle := newIMLEWithDummyCommands(terms)
+	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
 	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
 
 	// With matchIndex stuck at 0, there is no solution for any currentTerm
@@ -211,7 +211,7 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 
 	// Figure 8, case (e) extended with extra term 4 entry at index 4
 	terms := []TermNo{1, 2, 4, 4} // leader line for the case
-	imle := newIMLEWithDummyCommands(terms)
+	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
 	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
 
 	// match peers
