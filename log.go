@@ -69,11 +69,24 @@ type Log interface {
 	GetLogEntryAtIndex(LogIndex) LogEntry
 
 	// Get the term of the entry at the given index.
-	// Equivalent to getLogEntryAtIndex(...).TermNo but this call allows
+	// Equivalent to GetLogEntryAtIndex(...).TermNo but this call allows
 	// the Log implementation to not fetch the Command if that's a useful
 	// optimization.
 	// An index of 0 is invalid for this call.
 	GetTermAtIndex(LogIndex) TermNo
+
+	// Get multiple entries after the given index.
+	//
+	// We make the Log responsible for choosing how many entries to send. The
+	// returned entries will be sent as is in an AppendEntries RPC to a follower.
+	// The Log can implement any policy - the simplest: "return just one entry".
+	//
+	// It is an error if the given index is beyond the end of the log.
+	// (i.e. the given index is greater than indexOfLastEntry)
+	//
+	// An index of 0 is invalid for this call.
+	// There should be no entries for the Log of a new server.
+	GetEntriesAfterIndex(LogIndex) []LogEntry
 
 	// Set the entries after the given index.
 	//

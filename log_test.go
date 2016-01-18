@@ -113,8 +113,9 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 
 // In-memory implementation of LogEntries - meant only for tests
 type inMemoryLog struct {
-	entries      []LogEntry
-	_commitIndex LogIndex
+	entries                  []LogEntry
+	_commitIndex             LogIndex
+	maxEntriesPerAppendEntry uint64
 }
 
 func (imle *inMemoryLog) GetIndexOfLastEntry() LogIndex {
@@ -155,6 +156,41 @@ func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
 	imle.entries = append(imle.entries, entries...)
 }
 
+func (imle *inMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) []LogEntry {
+	iole := imle.GetIndexOfLastEntry()
+
+	if iole < afterLogIndex {
+		panic(fmt.Sprintf(
+			"afterLogIndex=%v is > iole=%v",
+			afterLogIndex,
+			iole,
+		))
+	}
+
+	var numEntriesToGet uint64 = uint64(iole - afterLogIndex)
+
+	// Short-circuit allocation for common case
+	if numEntriesToGet == 0 {
+		return []LogEntry{}
+	}
+
+	if numEntriesToGet > imle.maxEntriesPerAppendEntry {
+		numEntriesToGet = imle.maxEntriesPerAppendEntry
+	}
+
+	logEntries := make([]LogEntry, numEntriesToGet)
+	var i uint64 = 0
+	nextIndexToGet := afterLogIndex + 1
+
+	for i < numEntriesToGet {
+		logEntries[i] = imle.GetLogEntryAtIndex(nextIndexToGet)
+		i++
+		nextIndexToGet++
+	}
+
+	return logEntries
+}
+
 func (imle *inMemoryLog) CommitIndexChanged(commitIndex LogIndex) {
 	if commitIndex < imle._commitIndex {
 		panic(fmt.Sprintf(
@@ -174,13 +210,22 @@ func (imle *inMemoryLog) CommitIndexChanged(commitIndex LogIndex) {
 	imle._commitIndex = commitIndex
 }
 
-func newIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {
-	imle := new(inMemoryLog)
+func newIMLEWithDummyCommands(
+	logTerms []TermNo,
+	maxEntriesPerAppendEntry uint64,
+) *inMemoryLog {
+	if maxEntriesPerAppendEntry <= 0 {
+		panic("maxEntriesPerAppendEntry must be greater than zero")
+	}
 	entries := []LogEntry{}
 	for i, term := range logTerms {
 		entries = append(entries, LogEntry{term, Command("c" + strconv.Itoa(i+1))})
 	}
-	imle.entries = entries
+	imle := &inMemoryLog{
+		entries,
+		0,
+		maxEntriesPerAppendEntry,
+	}
 	return imle
 }
 
@@ -188,6 +233,82 @@ func newIMLEWithDummyCommands(logTerms []TermNo) *inMemoryLog {
 func TestInMemoryLogEntries(t *testing.T) {
 	// Log with 10 entries with terms as shown in Figure 7, leader line
 	terms := makeLogTerms_Figure7LeaderLine()
-	imle := newIMLEWithDummyCommands(terms)
+	imle := newIMLEWithDummyCommands(terms, 3)
 	PartialTest_Log_BlackboxTest(t, imle)
+}
+
+// Tests for inMemoryLog's GetEntriesAfterIndex implementation
+func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
+	// Log with 10 entries with terms as shown in Figure 7, leader line
+	terms := makeLogTerms_Figure7LeaderLine()
+	imle := newIMLEWithDummyCommands(terms, 3)
+
+	// none
+	actualEntries := imle.GetEntriesAfterIndex(10)
+	expectedEntries := []LogEntry{}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// one
+	actualEntries = imle.GetEntriesAfterIndex(9)
+	expectedEntries = []LogEntry{
+		{6, Command("c10")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// multiple
+	actualEntries = imle.GetEntriesAfterIndex(7)
+	expectedEntries = []LogEntry{
+		{6, Command("c8")},
+		{6, Command("c9")},
+		{6, Command("c10")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// max
+	actualEntries = imle.GetEntriesAfterIndex(2)
+	expectedEntries = []LogEntry{
+		{1, Command("c3")},
+		{4, Command("c4")},
+		{4, Command("c5")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// index of 0
+	actualEntries = imle.GetEntriesAfterIndex(0)
+	expectedEntries = []LogEntry{
+		{1, Command("c1")},
+		{1, Command("c2")},
+		{1, Command("c3")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// max alternate value
+	imle.maxEntriesPerAppendEntry = 2
+	actualEntries = imle.GetEntriesAfterIndex(2)
+	expectedEntries = []LogEntry{
+		{1, Command("c3")},
+		{4, Command("c4")},
+	}
+	if !reflect.DeepEqual(actualEntries, expectedEntries) {
+		t.Fatal(actualEntries)
+	}
+
+	// index more than last log entry
+	test_ExpectPanic(
+		t,
+		func() {
+			imle.GetEntriesAfterIndex(11)
+		},
+		"afterLogIndex=11 is > iole=10",
+	)
 }

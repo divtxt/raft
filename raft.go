@@ -57,7 +57,6 @@ func NewConsensusModule(
 	rpcService RpcService,
 	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
-	maxEntriesPerAppendEntry uint64,
 ) *ConsensusModule {
 	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
@@ -87,7 +86,6 @@ func NewConsensusModule(
 		cm,
 		clusterInfo,
 		timeSettings.ElectionTimeoutLow,
-		maxEntriesPerAppendEntry,
 		now,
 	)
 
