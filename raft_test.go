@@ -193,7 +193,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 11 {
 			t.Fatal()
 		}
-		le := cm.passiveConsensusModule.log.GetLogEntryAtIndex(11)
+		le := testHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.log, 11)
 		if !reflect.DeepEqual(le, LogEntry{8, Command("c11x")}) {
 			t.Fatal(le)
 		}
