@@ -14,7 +14,11 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 		sentRpc := makeAEWithTerm(serverTerm - 1)
 		beforeState := mcm.pcm.getServerState()
 
-		mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
+		mcm.pcm.rpcReply_RpcAppendEntriesReply(
+			"s2",
+			sentRpc,
+			&RpcAppendEntriesReply{serverTerm, true},
+		)
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
@@ -49,7 +53,11 @@ func TestCM_RpcAER_FollowerOrCandidate_PanicsForSameTermReply(t *testing.T) {
 		test_ExpectPanic(
 			t,
 			func() {
-				mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
+				mcm.pcm.rpcReply_RpcAppendEntriesReply(
+					"s2",
+					sentRpc,
+					&RpcAppendEntriesReply{serverTerm, true},
+				)
 			},
 			fmt.Sprintf("FATAL: non-leader got AppendEntriesReply from: s2 with term: %v", serverTerm),
 		)
@@ -80,7 +88,11 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 		t.Fatal()
 	}
 
-	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm + 1, false})
+	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+		"s2",
+		sentRpc,
+		&RpcAppendEntriesReply{serverTerm + 1, false},
+	)
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
@@ -130,7 +142,11 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 		mcm.pcm.getCommitIndex(),
 	}
 
-	mcm.pcm.rpcReply("s3", sentRpc, &RpcAppendEntriesReply{serverTerm, false})
+	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+		"s3",
+		sentRpc,
+		&RpcAppendEntriesReply{serverTerm, false},
+	)
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -187,7 +203,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 		mcm.pcm.getCommitIndex(),
 	}
 
-	mcm.pcm.rpcReply("s3", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
+	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+		"s3",
+		sentRpc,
+		&RpcAppendEntriesReply{serverTerm, true},
+	)
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -236,7 +256,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		mcm.pcm.getCommitIndex(),
 	}
 
-	mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{serverTerm, true})
+	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+		"s2",
+		sentRpc,
+		&RpcAppendEntriesReply{serverTerm, true},
+	)
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}

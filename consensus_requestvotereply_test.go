@@ -17,23 +17,39 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply_RpcRequestVoteReply(
+		"s2",
+		sentRpc,
+		&RpcRequestVoteReply{serverTerm, true},
+	)
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, false})
+	mcm.pcm.rpcReply_RpcRequestVoteReply(
+		"s3",
+		sentRpc,
+		&RpcRequestVoteReply{serverTerm, false},
+	)
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s4 grants vote - should become leader
-	mcm.pcm.rpcReply("s4", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply_RpcRequestVoteReply(
+		"s4",
+		sentRpc,
+		&RpcRequestVoteReply{serverTerm, true},
+	)
 	testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 
 	// s5 grants vote - should stay leader
-	mcm.pcm.rpcReply("s5", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply_RpcRequestVoteReply(
+		"s5",
+		sentRpc,
+		&RpcRequestVoteReply{serverTerm, true},
+	)
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -96,13 +112,21 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply_RpcRequestVoteReply(
+		"s2",
+		sentRpc,
+		&RpcRequestVoteReply{serverTerm, true},
+	)
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, false})
+	mcm.pcm.rpcReply_RpcRequestVoteReply(
+		"s3",
+		sentRpc,
+		&RpcRequestVoteReply{serverTerm, false},
+	)
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
@@ -120,21 +144,33 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 		beforeState := mcm.pcm.getServerState()
 
 		// s2 grants vote - ignore
-		mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+		mcm.pcm.rpcReply_RpcRequestVoteReply(
+			"s2",
+			sentRpc,
+			&RpcRequestVoteReply{serverTerm, true},
+		)
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
 		mrs.checkSentRpcs(t, []mockSentRpc{})
 
 		// s3 denies vote - ignore
-		mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, false})
+		mcm.pcm.rpcReply_RpcRequestVoteReply(
+			"s3",
+			sentRpc,
+			&RpcRequestVoteReply{serverTerm, false},
+		)
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
 		mrs.checkSentRpcs(t, []mockSentRpc{})
 
 		// s4 grants vote - ignore
-		mcm.pcm.rpcReply("s4", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+		mcm.pcm.rpcReply_RpcRequestVoteReply(
+			"s4",
+			sentRpc,
+			&RpcRequestVoteReply{serverTerm, true},
+		)
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
@@ -164,13 +200,17 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 		beforeState := mcm.pcm.getServerState()
 
 		// s2 grants vote - should stay as candidate
-		mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+		mcm.pcm.rpcReply_RpcRequestVoteReply(
+			"s2",
+			sentRpc,
+			&RpcRequestVoteReply{serverTerm, true},
+		)
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
 
 		// s3 grants vote for previous term election - ignore and stay as candidate
-		mcm.pcm.rpcReply(
+		mcm.pcm.rpcReply_RpcRequestVoteReply(
 			"s3",
 			&RpcRequestVote{serverTerm - 1, 0, 0},
 			&RpcRequestVoteReply{serverTerm - 1, true},
@@ -181,7 +221,11 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 
 		if sendMajorityVote {
 			// s3 grants vote for this election - become leader only if candidate
-			mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+			mcm.pcm.rpcReply_RpcRequestVoteReply(
+				"s3",
+				sentRpc,
+				&RpcRequestVoteReply{serverTerm, true},
+			)
 			if beforeState == CANDIDATE {
 				testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 			} else {
@@ -193,7 +237,11 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 
 		// s4 denies vote for this election indicating a newer term - increase term
 		// and become follower
-		mcm.pcm.rpcReply("s4", sentRpc, &RpcRequestVoteReply{serverTerm + 1, false})
+		mcm.pcm.rpcReply_RpcRequestVoteReply(
+			"s4",
+			sentRpc,
+			&RpcRequestVoteReply{serverTerm + 1, false},
+		)
 		if mcm.pcm.getServerState() != FOLLOWER {
 			t.Fatal()
 		}

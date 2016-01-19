@@ -242,7 +242,7 @@ func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *Rpc
 		// asynchronously.
 		// TODO: behavior when channel full?
 		cm.runnableChannel <- func() {
-			cm.passiveConsensusModule.rpcReply(toServer, rpc, rpcReply)
+			cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
 		}
 	}
 	cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)
@@ -256,7 +256,7 @@ func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRe
 		// asynchronously.
 		// TODO: behavior when channel full?
 		cm.runnableChannel <- func() {
-			cm.passiveConsensusModule.rpcReply(toServer, rpc, rpcReply)
+			cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
 		}
 	}
 	cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
