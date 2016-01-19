@@ -194,7 +194,9 @@ func (cm *passiveConsensusModule) appendCommand(
 		}
 		cm.log.SetEntriesAfterIndex(iole, logEntries)
 		newIole := cm.log.GetIndexOfLastEntry()
-		// TODO: assert newIole == iole + 1 ???
+		if newIole != iole+1 {
+			panic(fmt.Sprintf("newIole=%v != %v + 1", newIole, iole))
+		}
 		return newIole, nil
 	} else {
 		return 0, errors.New("raft: state != LEADER - cannot append command to log")
