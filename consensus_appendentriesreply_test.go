@@ -229,6 +229,9 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 
 // #RFS-L3.1: If successful: update nextIndex and matchIndex for
 // follower (#5.3)
+// #RFS-L4: If there exists an N such that N > commitIndex, a majority
+// of matchIndex[i] >= N, and log[N].term == currentTerm:
+// set commitIndex = N (#5.3, #5.4)
 // Note: test based on Figure 7; server is leader line; peer is case (a)
 func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
@@ -275,7 +278,64 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
-	// no new follow-on AppendEntries expected
+
+	// let's make some new log entries
+	li, err := mcm.pcm.appendCommand(Command("c11"))
+	if li != 11 || err != nil {
+		t.Fatal()
+	}
+	li, err = mcm.pcm.appendCommand(Command("c12"))
+	if li != 12 || err != nil {
+		t.Fatal()
+	}
+	// we currently do not expect appendCommand() to send AppendEntries
 	expectedRpcs := []mockSentRpc{}
 	mrs.checkSentRpcs(t, expectedRpcs)
+
+	// rpcs should go out on tick
+	expectedRpc := &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+		{8, Command("c11")},
+		{8, Command("c12")},
+	}, 3}
+	expectedRpcs = []mockSentRpc{
+		{"s2", expectedRpc},
+		{"s3", expectedRpc},
+		{"s4", expectedRpc},
+		{"s5", expectedRpc},
+	}
+	mcm.tick()
+	mrs.checkSentRpcs(t, expectedRpcs)
+
+	// one reply - cannot advance commitIndex
+	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+		"s2",
+		expectedRpc,
+		&RpcAppendEntriesReply{serverTerm, true},
+	)
+	if ci := mcm.pcm.getCommitIndex(); ci != 3 {
+		t.Fatal(ci)
+	}
+
+	// another reply - can advance commitIndex with majority
+	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+		"s4",
+		expectedRpc,
+		&RpcAppendEntriesReply{serverTerm, true},
+	)
+	if ci := mcm.pcm.getCommitIndex(); ci != 11 {
+		t.Fatal(ci)
+	}
+
+	// other checks
+	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
+	expectedNextIndex = map[ServerId]LogIndex{"s2": 13, "s3": 11, "s4": 13, "s5": 11}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.nextIndex, expectedNextIndex) {
+		t.Fatal(mcm.pcm.leaderVolatileState.nextIndex)
+	}
+	expectedMatchIndex = map[ServerId]LogIndex{"s2": 12, "s3": 0, "s4": 12, "s5": 0}
+	if !reflect.DeepEqual(mcm.pcm.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal(mcm.pcm.leaderVolatileState.matchIndex)
+	}
 }
