@@ -144,7 +144,8 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	cm *ConsensusModule,
 	mrs *mockRpcSender,
 ) {
-	// FIXME: unsafe concurrent access
+	// FIXME: multiple unsafe concurrent accesses
+
 	ett := cm.passiveConsensusModule.electionTimeoutTracker
 	time.Sleep(ett.currentElectionTimeout + testSleepJustMoreThanATick)
 
@@ -177,6 +178,43 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	}
 	if cm.GetServerState() != LEADER {
 		t.Fatal()
+	}
+
+	// leader setup
+	expectedRpc2 := &RpcAppendEntries{
+		serverTerm,
+		lastLogIndex,
+		lastLogTerm,
+		[]LogEntry{},
+		cm.passiveConsensusModule.getCommitIndex(),
+	}
+	expectedRpcs2 := []mockSentRpc{
+		{"s2", expectedRpc2},
+		{"s3", expectedRpc2},
+		{"s4", expectedRpc2},
+		{"s5", expectedRpc2},
+	}
+	mrs.checkSentRpcs(t, expectedRpcs2)
+
+	// reply handling
+	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	if !reflect.DeepEqual(cm.passiveConsensusModule.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+
+	if mrs.sendReplies(&RpcAppendEntriesReply{serverTerm, true}) != 4 {
+		t.Fatal()
+	}
+	time.Sleep(testSleepToLetGoroutineRun)
+
+	expectedMatchIndex = map[ServerId]LogIndex{
+		"s2": lastLogIndex,
+		"s3": lastLogIndex,
+		"s4": lastLogIndex,
+		"s5": lastLogIndex,
+	}
+	if !reflect.DeepEqual(cm.passiveConsensusModule.leaderVolatileState.matchIndex, expectedMatchIndex) {
+		t.Fatal(cm.passiveConsensusModule.leaderVolatileState.matchIndex)
 	}
 }
 
