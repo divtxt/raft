@@ -116,35 +116,6 @@ func testCM_setupMCMAndExpectPanicFor(
 	)
 }
 
-func TestCM_RpcReply_UnknownRpcTypePanics(t *testing.T) {
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
-			mcm.pcm.rpcReply("s2", &struct{ int }{42}, &struct{ int }{42})
-		},
-		"FATAL: unknown rpc type: *struct { int } from: s2",
-	)
-}
-
-func TestCM_RpcReply_UnknownRpcReplyTypePanics(t *testing.T) {
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
-			sentRpc := &RpcRequestVote{1, 0, 0}
-			mcm.pcm.rpcReply("s2", sentRpc, &RpcAppendEntriesReply{1, false})
-		},
-		"FATAL: mismatched rpcReply type: *raft.RpcAppendEntriesReply from: s2 - expected *raft.RpcRequestVoteReply",
-	)
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
-			sentRpc := &RpcAppendEntries{1, 0, 0, nil, 0}
-			mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{1, false})
-		},
-		"FATAL: mismatched rpcReply type: *raft.RpcRequestVoteReply from: s2 - expected *raft.RpcAppendEntriesReply",
-	)
-}
-
 func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 	testCM_setupMCMAndExpectPanicFor(
 		t,
@@ -678,8 +649,8 @@ func testSetupMCM_Leader_WithTerms(
 	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
-	mcm.pcm.rpcReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
-	mcm.pcm.rpcReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply_RpcRequestVoteReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	mcm.pcm.rpcReply_RpcRequestVoteReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}

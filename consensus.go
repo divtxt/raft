@@ -163,31 +163,22 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 	return rpcReply
 }
 
-func (cm *passiveConsensusModule) rpcReply(
+func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	from ServerId,
-	rpc interface{},
-	rpcReply interface{},
+	rpc *RpcAppendEntries,
+	rpcReply *RpcAppendEntriesReply,
 ) {
 	serverState := cm.getServerState()
+	cm.processRpc_AppendEntriesReply(serverState, from, rpc, rpcReply)
+}
 
-	switch rpc := rpc.(type) {
-	case *RpcAppendEntries:
-		switch rpcReply := rpcReply.(type) {
-		case *RpcAppendEntriesReply:
-			cm.processRpc_AppendEntriesReply(serverState, from, rpc, rpcReply)
-		default:
-			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v - expected *raft.RpcAppendEntriesReply", rpcReply, from))
-		}
-	case *RpcRequestVote:
-		switch rpcReply := rpcReply.(type) {
-		case *RpcRequestVoteReply:
-			cm.processRpc_RequestVoteReply(serverState, from, rpc, rpcReply)
-		default:
-			panic(fmt.Sprintf("FATAL: mismatched rpcReply type: %T from: %v - expected *raft.RpcRequestVoteReply", rpcReply, from))
-		}
-	default:
-		panic(fmt.Sprintf("FATAL: unknown rpc type: %T from: %v", rpc, from))
-	}
+func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
+	from ServerId,
+	rpc *RpcRequestVote,
+	rpcReply *RpcRequestVoteReply,
+) {
+	serverState := cm.getServerState()
+	cm.processRpc_RequestVoteReply(serverState, from, rpc, rpcReply)
 }
 
 // Append the given command as an entry in the log.
