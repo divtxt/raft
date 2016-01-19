@@ -93,6 +93,25 @@ func TestConsensusModule_StartStateAndStop(t *testing.T) {
 	}
 }
 
+func TestConsensusModule_ProcessRpcAppendEntriesAsync(t *testing.T) {
+	cm := setupConsensusModule(t, nil)
+	defer cm.StopAsync()
+	var serverTerm TermNo = testCurrentTerm
+
+	replyChan := cm.ProcessRpcAppendEntriesAsync("s2", makeAEWithTerm(serverTerm-1))
+	time.Sleep(testSleepToLetGoroutineRun)
+
+	select {
+	case reply := <-replyChan:
+		expectedRpc := RpcAppendEntriesReply{serverTerm, false}
+		if *reply != expectedRpc {
+			t.Fatal(reply)
+		}
+	default:
+		t.Fatal()
+	}
+}
+
 func TestConsensusModule_ProcessRpcRequestVoteAsync(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 	defer cm.StopAsync()
