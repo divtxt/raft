@@ -593,6 +593,13 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		},
 	}
 	mrs.checkSentRpcs(t, expectedRpcs)
+
+	// replies never came back -> tick cannot advance commitIndex
+	mcm.tick()
+	if mcm.pcm.getCommitIndex() != 11 {
+		t.Fatal(mcm.pcm.getCommitIndex())
+	}
+	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
 func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
