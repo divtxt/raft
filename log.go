@@ -53,15 +53,14 @@ type LogIndex uint64
 // lastApplied should be volatile. If the state machine is persistent,
 // lastApplied should be just as persistent.
 //
-// All errors should be indicated using panic(). This includes both invalid
-// parameters sent by the consensus module and internal errors in the Log.
-// Note that such a panic will shutdown the consensus module.
+// The consensus module needs all methods to succeed and any error will
+// shutdown the consensus module.
 //
 type Log interface {
 	// Get the index of the last entry in the log.
 	// An index of 0 indicates no entries present.
 	// This should be 0 for the Log of a new server.
-	GetIndexOfLastEntry() LogIndex
+	GetIndexOfLastEntry() (LogIndex, error)
 
 	// Get the term of the entry at the given index.
 	//
@@ -70,7 +69,7 @@ type Log interface {
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
-	GetTermAtIndex(LogIndex) TermNo
+	GetTermAtIndex(LogIndex) (TermNo, error)
 
 	// Get multiple entries after the given index.
 	//
@@ -86,7 +85,7 @@ type Log interface {
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
-	GetEntriesAfterIndex(LogIndex) []LogEntry
+	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 
 	// Set the entries after the given index.
 	//
@@ -113,7 +112,7 @@ type Log interface {
 	//
 	// A zero length slice and nil both indicate no new entries to be added
 	// after deleting.
-	SetEntriesAfterIndex(LogIndex, []LogEntry)
+	SetEntriesAfterIndex(LogIndex, []LogEntry) error
 
 	// Notify the Log that the commitIndex has changed to the given value.
 	//
@@ -137,5 +136,5 @@ type Log interface {
 	// persisted value of lastApplied.
 	// (If the state machine is not persisted, the second choice is irrelevant
 	// as lastApplied will also be starting at 0)
-	CommitIndexChanged(LogIndex)
+	CommitIndexChanged(LogIndex) error
 }

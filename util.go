@@ -2,10 +2,16 @@ package raft
 
 // Helper function
 func GetIndexAndTermOfLastEntry(log Log) (LogIndex, TermNo) {
-	lastLogIndex := log.GetIndexOfLastEntry()
+	lastLogIndex, err := log.GetIndexOfLastEntry()
+	if err != nil {
+		panic(err)
+	}
 	var lastLogTerm TermNo = 0
 	if lastLogIndex > 0 {
-		lastLogTerm = log.GetTermAtIndex(lastLogIndex)
+		lastLogTerm, err = log.GetTermAtIndex(lastLogIndex)
+		if err != nil {
+			panic(err)
+		}
 	}
 	return lastLogIndex, lastLogTerm
 }

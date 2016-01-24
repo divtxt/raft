@@ -2,6 +2,7 @@ package raft
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -23,10 +24,18 @@ func testCommandEquals(c Command, s string) bool {
 // No commands should have been applied yet.
 func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	// Initial data tests
-	if log.GetIndexOfLastEntry() != 10 {
+	iole, err := log.GetIndexOfLastEntry()
+	if err != nil {
 		t.Fatal()
 	}
-	if log.GetTermAtIndex(10) != 6 {
+	if iole != 10 {
+		t.Fatal()
+	}
+	term, err := log.GetTermAtIndex(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if term != 6 {
 		t.Fatal()
 	}
 
@@ -43,17 +52,22 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 
 	// set test - invalid index
 	logEntries = []LogEntry{{8, Command("c12")}}
-	test_ExpectPanicAnyRecover(
-		t,
-		func() {
-			log.SetEntriesAfterIndex(11, logEntries)
-		},
-	)
+	err = log.SetEntriesAfterIndex(11, logEntries)
+	if err == nil {
+		t.Fatal()
+	}
 
 	// set test - no replacing
 	logEntries = []LogEntry{{7, Command("c11")}, {8, Command("c12")}}
-	log.SetEntriesAfterIndex(10, logEntries)
-	if log.GetIndexOfLastEntry() != 12 {
+	err = log.SetEntriesAfterIndex(10, logEntries)
+	if err != nil {
+		t.Fatal()
+	}
+	iole, err = log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 12 {
 		t.Fatal()
 	}
 	le = testHelper_GetLogEntryAtIndex(log, 12)
@@ -63,8 +77,15 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 
 	// set test - partial replacing
 	logEntries = []LogEntry{{7, Command("c11")}, {9, Command("c12")}, {9, Command("c13'")}}
-	log.SetEntriesAfterIndex(10, logEntries)
-	if log.GetIndexOfLastEntry() != 13 {
+	err = log.SetEntriesAfterIndex(10, logEntries)
+	if err != nil {
+		t.Fatal()
+	}
+	iole, err = log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 13 {
 		t.Fatal()
 	}
 	le = testHelper_GetLogEntryAtIndex(log, 12)
@@ -73,19 +94,30 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	}
 
 	// commitIndex tests
-	log.CommitIndexChanged(1)
-	log.CommitIndexChanged(3)
-	test_ExpectPanicAnyRecover(
-		t,
-		func() {
-			log.CommitIndexChanged(2)
-		},
-	)
+	err = log.CommitIndexChanged(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = log.CommitIndexChanged(3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = log.CommitIndexChanged(2)
+	if err == nil {
+		t.Fatal()
+	}
 
 	// set test - no new entries with empty slice
 	logEntries = []LogEntry{}
-	log.SetEntriesAfterIndex(3, logEntries)
-	if log.GetIndexOfLastEntry() != 3 {
+	err = log.SetEntriesAfterIndex(3, logEntries)
+	if err != nil {
+		t.Fatal()
+	}
+	iole, err = log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 3 {
 		t.Fatal()
 	}
 	le = testHelper_GetLogEntryAtIndex(log, 3)
@@ -94,21 +126,16 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	}
 
 	// commitIndex test - error to go past end of log
-	test_ExpectPanicAnyRecover(
-		t,
-		func() {
-			log.CommitIndexChanged(4)
-		},
-	)
+	err = log.CommitIndexChanged(4)
+	if err == nil {
+		t.Fatal()
+	}
 
 	// set test - error to modify log before commitIndex
-	test_ExpectPanicAnyRecover(
-		t,
-		func() {
-			logEntries = []LogEntry{}
-			log.SetEntriesAfterIndex(2, logEntries)
-		},
-	)
+	err = log.SetEntriesAfterIndex(2, []LogEntry{})
+	if err == nil {
+		t.Fatal()
+	}
 }
 
 // In-memory implementation of LogEntries - meant only for tests
@@ -118,31 +145,39 @@ type inMemoryLog struct {
 	maxEntriesPerAppendEntry uint64
 }
 
-func (imle *inMemoryLog) GetIndexOfLastEntry() LogIndex {
-	return LogIndex(len(imle.entries))
+func (imle *inMemoryLog) GetIndexOfLastEntry() (LogIndex, error) {
+	return LogIndex(len(imle.entries)), nil
 }
 
-func (imle *inMemoryLog) GetTermAtIndex(li LogIndex) TermNo {
+func (imle *inMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 	if li == 0 {
-		panic("GetTermAtIndex(): li=0")
+		return 0, errors.New("GetTermAtIndex(): li=0")
 	}
 	if li > LogIndex(len(imle.entries)) {
-		panic(fmt.Sprintf("GetTermAtIndex(): li=%v > iole=%v", li, len(imle.entries)))
+		return 0, fmt.Errorf(
+			"GetTermAtIndex(): li=%v > iole=%v", li, len(imle.entries),
+		)
 	}
-	return imle.entries[li-1].TermNo
+	return imle.entries[li-1].TermNo, nil
 }
 
-func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
+func (imle *inMemoryLog) SetEntriesAfterIndex(
+	li LogIndex,
+	entries []LogEntry,
+) error {
 	if li < imle._commitIndex {
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"inMemoryLog: setEntriesAfterIndex(%d, ...) but commitIndex=%d",
 			li,
 			imle._commitIndex,
-		))
+		)
 	}
-	iole := imle.GetIndexOfLastEntry()
+	iole, err := imle.GetIndexOfLastEntry()
+	if err != nil {
+		return err
+	}
 	if iole < li {
-		panic(fmt.Sprintf("inMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", li, iole))
+		return fmt.Errorf("inMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", li, iole)
 	}
 	// delete entries after index
 	if iole > li {
@@ -150,24 +185,30 @@ func (imle *inMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) {
 	}
 	// append entries
 	imle.entries = append(imle.entries, entries...)
+	return nil
 }
 
-func (imle *inMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) []LogEntry {
-	iole := imle.GetIndexOfLastEntry()
+func (imle *inMemoryLog) GetEntriesAfterIndex(
+	afterLogIndex LogIndex,
+) ([]LogEntry, error) {
+	iole, err := imle.GetIndexOfLastEntry()
+	if err != nil {
+		panic(err)
+	}
 
 	if iole < afterLogIndex {
-		panic(fmt.Sprintf(
+		return nil, fmt.Errorf(
 			"afterLogIndex=%v is > iole=%v",
 			afterLogIndex,
 			iole,
-		))
+		)
 	}
 
 	var numEntriesToGet uint64 = uint64(iole - afterLogIndex)
 
 	// Short-circuit allocation for common case
 	if numEntriesToGet == 0 {
-		return []LogEntry{}
+		return []LogEntry{}, nil
 	}
 
 	if numEntriesToGet > imle.maxEntriesPerAppendEntry {
@@ -184,26 +225,30 @@ func (imle *inMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) []LogEntry
 		nextIndexToGet++
 	}
 
-	return logEntries
+	return logEntries, nil
 }
 
-func (imle *inMemoryLog) CommitIndexChanged(commitIndex LogIndex) {
+func (imle *inMemoryLog) CommitIndexChanged(commitIndex LogIndex) error {
 	if commitIndex < imle._commitIndex {
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"inMemoryLog: CommitIndexChanged(%d) is < current commitIndex=%d",
 			commitIndex,
 			imle._commitIndex,
-		))
+		)
 	}
-	iole := imle.GetIndexOfLastEntry()
+	iole, err := imle.GetIndexOfLastEntry()
+	if err != nil {
+		return err
+	}
 	if commitIndex > iole {
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"inMemoryLog: CommitIndexChanged(%d) is > iole=%d",
 			commitIndex,
 			iole,
-		))
+		)
 	}
 	imle._commitIndex = commitIndex
+	return nil
 }
 
 func newIMLEWithDummyCommands(
@@ -240,14 +285,20 @@ func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
 	imle := newIMLEWithDummyCommands(terms, 3)
 
 	// none
-	actualEntries := imle.GetEntriesAfterIndex(10)
+	actualEntries, err := imle.GetEntriesAfterIndex(10)
+	if err != nil {
+		t.Fatal()
+	}
 	expectedEntries := []LogEntry{}
 	if !reflect.DeepEqual(actualEntries, expectedEntries) {
 		t.Fatal(actualEntries)
 	}
 
 	// one
-	actualEntries = imle.GetEntriesAfterIndex(9)
+	actualEntries, err = imle.GetEntriesAfterIndex(9)
+	if err != nil {
+		t.Fatal()
+	}
 	expectedEntries = []LogEntry{
 		{6, Command("c10")},
 	}
@@ -256,7 +307,10 @@ func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// multiple
-	actualEntries = imle.GetEntriesAfterIndex(7)
+	actualEntries, err = imle.GetEntriesAfterIndex(7)
+	if err != nil {
+		t.Fatal()
+	}
 	expectedEntries = []LogEntry{
 		{6, Command("c8")},
 		{6, Command("c9")},
@@ -267,7 +321,10 @@ func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// max
-	actualEntries = imle.GetEntriesAfterIndex(2)
+	actualEntries, err = imle.GetEntriesAfterIndex(2)
+	if err != nil {
+		t.Fatal()
+	}
 	expectedEntries = []LogEntry{
 		{1, Command("c3")},
 		{4, Command("c4")},
@@ -278,7 +335,10 @@ func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// index of 0
-	actualEntries = imle.GetEntriesAfterIndex(0)
+	actualEntries, err = imle.GetEntriesAfterIndex(0)
+	if err != nil {
+		t.Fatal()
+	}
 	expectedEntries = []LogEntry{
 		{1, Command("c1")},
 		{1, Command("c2")},
@@ -290,7 +350,10 @@ func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
 
 	// max alternate value
 	imle.maxEntriesPerAppendEntry = 2
-	actualEntries = imle.GetEntriesAfterIndex(2)
+	actualEntries, err = imle.GetEntriesAfterIndex(2)
+	if err != nil {
+		t.Fatal()
+	}
 	expectedEntries = []LogEntry{
 		{1, Command("c3")},
 		{4, Command("c4")},
@@ -300,13 +363,10 @@ func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// index more than last log entry
-	test_ExpectPanic(
-		t,
-		func() {
-			imle.GetEntriesAfterIndex(11)
-		},
-		"afterLogIndex=11 is > iole=10",
-	)
+	actualEntries, err = imle.GetEntriesAfterIndex(11)
+	if err.Error() != "afterLogIndex=11 is > iole=10" {
+		t.Fatal(err)
+	}
 }
 
 // Helper
@@ -314,6 +374,9 @@ func testHelper_GetLogEntryAtIndex(log Log, li LogIndex) LogEntry {
 	if li == 0 {
 		panic("oops!")
 	}
-	entries := log.GetEntriesAfterIndex(li - 1)
+	entries, err := log.GetEntriesAfterIndex(li - 1)
+	if err != nil {
+		panic(err)
+	}
 	return entries[0]
 }

@@ -65,7 +65,11 @@ func (cm *passiveConsensusModule) processRpc_AppendEntries(
 
 	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose
 	// term matches prevLogTerm (#5.3)
-	if log.GetIndexOfLastEntry() < prevLogIndex {
+	iole, err := log.GetIndexOfLastEntry()
+	if err != nil {
+		panic(err)
+	}
+	if iole < prevLogIndex {
 		return false
 	}
 
@@ -73,13 +77,20 @@ func (cm *passiveConsensusModule) processRpc_AppendEntries(
 	// but different terms), delete the existing entry and all that
 	// follow it (#5.3)
 	// 4. Append any new entries not already in the log
-	log.SetEntriesAfterIndex(prevLogIndex, appendEntries.Entries)
+	err = log.SetEntriesAfterIndex(prevLogIndex, appendEntries.Entries)
+	if err != nil {
+		panic(err)
+	}
 
 	// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit,
 	// index of last new entry)
 	leaderCommit := appendEntries.LeaderCommit
 	if leaderCommit > cm.getCommitIndex() {
-		indexOfLastNewEntry := log.GetIndexOfLastEntry()
+		var indexOfLastNewEntry LogIndex
+		indexOfLastNewEntry, err = log.GetIndexOfLastEntry()
+		if err != nil {
+			panic(err)
+		}
 		if leaderCommit < indexOfLastNewEntry {
 			cm.setCommitIndex(leaderCommit)
 		} else {

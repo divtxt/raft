@@ -691,7 +691,10 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	}
 
 	// pretend peers caught up!
-	lastLogIndex := mcm.pcm.log.GetIndexOfLastEntry()
+	lastLogIndex, err := mcm.pcm.log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
 	mcm.pcm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
 			mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex(serverId, lastLogIndex)
@@ -720,7 +723,11 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
 
 	// pre check
-	if mcm.pcm.log.GetIndexOfLastEntry() != 10 {
+	iole, err := mcm.pcm.log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 10 {
 		t.Fatal()
 	}
 
@@ -730,7 +737,11 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	if li != 11 || err != nil {
 		t.Fatal()
 	}
-	if mcm.pcm.log.GetIndexOfLastEntry() != 11 {
+	iole, err = mcm.pcm.log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 11 {
 		t.Fatal()
 	}
 	le := testHelper_GetLogEntryAtIndex(mcm.pcm.log, 11)
@@ -748,7 +759,11 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		// serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 		// pre check
-		if mcm.pcm.log.GetIndexOfLastEntry() != 10 {
+		iole, err := mcm.pcm.log.GetIndexOfLastEntry()
+		if err != nil {
+			t.Fatal()
+		}
+		if iole != 10 {
 			t.Fatal()
 		}
 
@@ -762,7 +777,11 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		if mcm.pcm.log.GetIndexOfLastEntry() != 10 {
+		iole, err = mcm.pcm.log.GetIndexOfLastEntry()
+		if err != nil {
+			t.Fatal()
+		}
+		if iole != 10 {
 			t.Fatal()
 		}
 	}
