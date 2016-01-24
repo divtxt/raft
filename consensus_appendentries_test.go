@@ -195,7 +195,11 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			t.Fatal(reply)
 		}
 
-		if iole := mcm.pcm.log.GetIndexOfLastEntry(); iole != 8 {
+		iole, err := mcm.pcm.log.GetIndexOfLastEntry()
+		if err != nil {
+			t.Fatal()
+		}
+		if iole != 8 {
 			t.Fatal(iole)
 		}
 		addedLogEntry := testHelper_GetLogEntryAtIndex(mcm.pcm.log, 6)
@@ -276,7 +280,11 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			t.Fatal(reply)
 		}
 
-		if iole := mcm.pcm.log.GetIndexOfLastEntry(); iole != 6 {
+		iole, err := mcm.pcm.log.GetIndexOfLastEntry()
+		if err != nil {
+			t.Fatal()
+		}
+		if iole != 6 {
 			t.Fatal(iole)
 		}
 		addedLogEntry := testHelper_GetLogEntryAtIndex(mcm.pcm.log, 6)

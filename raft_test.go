@@ -225,14 +225,22 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
 
 	// pre check
-	if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+	iole, err := cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 10 {
 		t.Fatal()
 	}
 
 	command := Command("c11x")
 	replyChan := cm.AppendCommandAsync(command)
 
-	if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+	iole, err = cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 10 {
 		t.Fatal()
 	}
 
@@ -247,7 +255,11 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		if !reflect.DeepEqual(reply, expectedReply) {
 			t.Fatal(reply)
 		}
-		if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 11 {
+		iole, err = cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+		if err != nil {
+			t.Fatal()
+		}
+		if iole != 11 {
 			t.Fatal()
 		}
 		le := testHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.log, 11)
@@ -264,14 +276,22 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 	defer cm.StopAsync()
 
 	// pre check
-	if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+	iole, err := cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 10 {
 		t.Fatal()
 	}
 
 	command := Command("c11x")
 	replyChan := cm.AppendCommandAsync(command)
 
-	if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+	iole, err = cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 10 {
 		t.Fatal()
 	}
 
@@ -289,7 +309,11 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		if !reflect.DeepEqual(reply, expectedReply) {
 			t.Fatal(reply)
 		}
-		if cm.passiveConsensusModule.log.GetIndexOfLastEntry() != 10 {
+		iole, err := cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+		if err != nil {
+			t.Fatal()
+		}
+		if iole != 10 {
 			t.Fatal()
 		}
 	default:

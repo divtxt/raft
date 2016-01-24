@@ -127,7 +127,10 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) {
 		))
 	}
 	cm._commitIndex = commitIndex
-	cm.log.CommitIndexChanged(commitIndex)
+	err := cm.log.CommitIndexChanged(commitIndex)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Process the given RpcAppendEntries message
@@ -188,12 +191,22 @@ func (cm *passiveConsensusModule) appendCommand(
 ) (LogIndex, error) {
 	serverState := cm.getServerState()
 	if serverState == LEADER {
-		iole := cm.log.GetIndexOfLastEntry()
+		iole, err := cm.log.GetIndexOfLastEntry()
+		if err != nil {
+			panic(err)
+		}
 		logEntries := []LogEntry{
 			{cm.persistentState.GetCurrentTerm(), command},
 		}
-		cm.log.SetEntriesAfterIndex(iole, logEntries)
-		newIole := cm.log.GetIndexOfLastEntry()
+		err = cm.log.SetEntriesAfterIndex(iole, logEntries)
+		if err != nil {
+			panic(err)
+		}
+		var newIole LogIndex
+		newIole, err = cm.log.GetIndexOfLastEntry()
+		if err != nil {
+			panic(err)
+		}
 		if newIole != iole+1 {
 			panic(fmt.Sprintf("newIole=%v != %v + 1", newIole, iole))
 		}
@@ -262,7 +275,11 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 }
 
 func (cm *passiveConsensusModule) becomeLeader() {
-	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo, cm.log.GetIndexOfLastEntry())
+	iole, err := cm.log.GetIndexOfLastEntry()
+	if err != nil {
+		panic(err)
+	}
+	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo, iole)
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
@@ -295,14 +312,22 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 	if peerLastLogIndex == 0 {
 		peerLastLogTerm = 0
 	} else {
-		peerLastLogTerm = cm.log.GetTermAtIndex(peerLastLogIndex)
+		var err error
+		peerLastLogTerm, err = cm.log.GetTermAtIndex(peerLastLogIndex)
+		if err != nil {
+			panic(err)
+		}
 	}
 	//
 	var entriesToSend []LogEntry
 	if empty {
 		entriesToSend = []LogEntry{}
 	} else {
-		entriesToSend = cm.log.GetEntriesAfterIndex(peerLastLogIndex)
+		var err error
+		entriesToSend, err = cm.log.GetEntriesAfterIndex(peerLastLogIndex)
+		if err != nil {
+			panic(err)
+		}
 	}
 	//
 	rpcAppendEntries := &RpcAppendEntries{

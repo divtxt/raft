@@ -80,13 +80,19 @@ func findNewerCommitIndex(
 	currentTerm TermNo,
 	commitIndex LogIndex,
 ) LogIndex {
-	indexOfLastEntry := log.GetIndexOfLastEntry()
+	indexOfLastEntry, err := log.GetIndexOfLastEntry()
+	if err != nil {
+		panic(err)
+	}
 	requiredMatches := ci.QuorumSizeForCluster()
 	// cover all N > commitIndex
 	// stop when we pass the end of the log
 	for N := commitIndex + 1; N <= indexOfLastEntry; N++ {
 		// check log[N].term
-		termAtN := log.GetTermAtIndex(N)
+		termAtN, err := log.GetTermAtIndex(N)
+		if err != nil {
+			panic(err)
+		}
 		if termAtN > currentTerm {
 			// term has gone too high for log[N].term == currentTerm
 			// no point trying further
