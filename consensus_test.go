@@ -15,7 +15,7 @@ const (
 	// Start as follower at term 7 so that leader will be at term 8
 	testCurrentTerm = 7
 
-	testTickerDuration     = 15 * time.Millisecond
+	testTickerDuration     = 30 * time.Millisecond
 	testElectionTimeoutLow = 150 * time.Millisecond
 
 	testSleepToLetGoroutineRun = 3 * time.Millisecond
