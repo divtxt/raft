@@ -133,57 +133,6 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) {
 	}
 }
 
-// Process the given RpcAppendEntries message
-// #RFS-F1: Respond to RPCs from candidates and leaders
-func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
-	from ServerId,
-	rpc *RpcAppendEntries,
-	now time.Time,
-) *RpcAppendEntriesReply {
-	serverState := cm.getServerState()
-
-	success := cm.processRpc_AppendEntries(serverState, from, rpc, now)
-	rpcReply := &RpcAppendEntriesReply{
-		cm.persistentState.GetCurrentTerm(),
-		success,
-	}
-	return rpcReply
-}
-
-// Process the given RpcRequestVote message
-// #RFS-F1: Respond to RPCs from candidates and leaders
-func (cm *passiveConsensusModule) rpc_RpcRequestVote(
-	from ServerId,
-	rpc *RpcRequestVote,
-	now time.Time,
-) *RpcRequestVoteReply {
-	serverState := cm.getServerState()
-	voteGranted := cm.processRpc_RequestVote(serverState, from, rpc, now)
-	rpcReply := &RpcRequestVoteReply{
-		cm.persistentState.GetCurrentTerm(),
-		voteGranted,
-	}
-	return rpcReply
-}
-
-func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
-	from ServerId,
-	rpc *RpcAppendEntries,
-	rpcReply *RpcAppendEntriesReply,
-) {
-	serverState := cm.getServerState()
-	cm.processRpc_AppendEntriesReply(serverState, from, rpc, rpcReply)
-}
-
-func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
-	from ServerId,
-	rpc *RpcRequestVote,
-	rpcReply *RpcRequestVoteReply,
-) {
-	serverState := cm.getServerState()
-	cm.processRpc_RequestVoteReply(serverState, from, rpc, rpcReply)
-}
-
 // Append the given command as an entry in the log.
 // #RFS-L2a: If command received from client: append entry to local log
 func (cm *passiveConsensusModule) appendCommand(
