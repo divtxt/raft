@@ -12,6 +12,9 @@ type ClusterInfo struct {
 
 	// Excludes thisServerId
 	peerServerIds []ServerId
+
+	//
+	quorumSizeForCluster uint
 }
 
 // Allocate and initialize a NewClusterInfo with the given ServerIds.
@@ -37,7 +40,8 @@ func NewClusterInfo(
 	}
 
 	allServerIdsMap := make(map[ServerId]bool)
-	peerServerIds := make([]ServerId, 0, len(allServerIds)-1)
+	clusterSize := len(allServerIds)
+	peerServerIds := make([]ServerId, 0, clusterSize-1)
 	for _, serverId := range allServerIds {
 		if len(serverId) == 0 {
 			panic("allServerIds contains empty string")
@@ -55,9 +59,12 @@ func NewClusterInfo(
 		panic(fmt.Sprintf("allServerIds does not contain thisServerId: %v", thisServerId))
 	}
 
+	quorumSizeForCluster := QuorumSizeForClusterSize((uint)(clusterSize))
+
 	ci := &ClusterInfo{
 		thisServerId,
 		peerServerIds,
+		quorumSizeForCluster,
 	}
 
 	return ci
@@ -82,9 +89,7 @@ func (ci *ClusterInfo) ForEachPeer(f func(serverId ServerId)) {
 //
 // Same as QuorumSizeForClusterSize with the cluster size of this ClusterInfo.
 func (ci *ClusterInfo) QuorumSizeForCluster() uint {
-	var clusterSize uint
-	clusterSize = (uint)(len(ci.peerServerIds) + 1)
-	return QuorumSizeForClusterSize(clusterSize)
+	return ci.quorumSizeForCluster
 }
 
 // Get the quorum size for a cluster of given size.
