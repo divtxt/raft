@@ -3,12 +3,12 @@
 
 package raft
 
-func (cm *passiveConsensusModule) processRpc_RequestVoteReply(
-	serverState ServerState,
+func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 	fromPeer ServerId,
 	rpcRequestVote *RpcRequestVote,
 	rpcRequestVoteReply *RpcRequestVoteReply,
 ) {
+	serverState := cm.getServerState()
 	serverTerm := cm.persistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc

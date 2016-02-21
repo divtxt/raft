@@ -9,12 +9,21 @@ import (
 	"time"
 )
 
-func (cm *passiveConsensusModule) processRpc_AppendEntries(
-	serverState ServerState,
+// Process the given RpcAppendEntries message
+// #RFS-F1: Respond to RPCs from candidates and leaders
+func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	from ServerId,
 	appendEntries *RpcAppendEntries,
 	now time.Time,
-) bool {
+) *RpcAppendEntriesReply {
+	makeReply := func(success bool) *RpcAppendEntriesReply {
+		return &RpcAppendEntriesReply{
+			cm.persistentState.GetCurrentTerm(), // refetch in case it has changed!
+			success,
+		}
+	}
+
+	serverState := cm.getServerState()
 
 	switch serverState {
 	case FOLLOWER:
@@ -32,7 +41,7 @@ func (cm *passiveConsensusModule) processRpc_AppendEntries(
 
 	// 1. Reply false if term < currentTerm (#5.1)
 	if leaderCurrentTerm < serverTerm {
-		return false
+		return makeReply(false)
 	}
 
 	// Extra: raft violation - two leaders with same term
@@ -70,7 +79,7 @@ func (cm *passiveConsensusModule) processRpc_AppendEntries(
 		panic(err)
 	}
 	if iole < prevLogIndex {
-		return false
+		return makeReply(false)
 	}
 
 	// 3. If an existing entry conflicts with a new one (same index
@@ -98,5 +107,5 @@ func (cm *passiveConsensusModule) processRpc_AppendEntries(
 		}
 	}
 
-	return true
+	return makeReply(true)
 }

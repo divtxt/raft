@@ -7,12 +7,12 @@ import (
 	"fmt"
 )
 
-func (cm *passiveConsensusModule) processRpc_AppendEntriesReply(
-	serverState ServerState,
+func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	from ServerId,
 	appendEntries *RpcAppendEntries,
 	appendEntriesReply *RpcAppendEntriesReply,
 ) {
+	serverState := cm.getServerState()
 	serverTerm := cm.persistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc
