@@ -53,6 +53,27 @@ func TestNewClusterInfo_Validation(t *testing.T) {
 	}
 }
 
+func TestClusterInfo_Assorted(t *testing.T) {
+	ci := NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s1")
+
+	if ci.GetThisServerId() != "s1" {
+		t.Fatal()
+	}
+
+	if ci.QuorumSizeForCluster() != 2 {
+		t.Fatal()
+	}
+}
+
+func TestClusterInfo_ForEach(t *testing.T) {
+	ci := NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s1")
+
+	seenIds := make([]ServerId, 0, 3)
+	ci.ForEachPeer(func(serverId ServerId) {
+		seenIds = append(seenIds, serverId)
+	})
+}
+
 func TestQuorumSizeForClusterSize(t *testing.T) {
 	clusterSizes := []uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	expectedQrms := []uint{1, 2, 2, 3, 3, 4, 4, 5, 5, 6}
