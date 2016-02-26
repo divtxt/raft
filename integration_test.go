@@ -18,7 +18,10 @@ func setupConsensusModuleR3(
 	ps := newIMPSWithCurrentTerm(0)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	ts := TimeSettings{testTickerDuration, electionTimeoutLow}
-	ci := NewClusterInfo(testClusterServerIds, thisServerId)
+	ci, err := NewClusterInfo(testClusterServerIds, thisServerId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cm := NewConsensusModule(ps, imle, imrsc, ci, ts)
 	if cm == nil {
 		t.Fatal()

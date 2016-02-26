@@ -38,7 +38,10 @@ func setupManagedConsensusModuleR2(
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	mrs := newMockRpcSender()
-	ci := NewClusterInfo(testAllServerIds, testThisServerId)
+	ci, err := NewClusterInfo(testAllServerIds, testThisServerId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	now := time.Now()
 	cm := newPassiveConsensusModule(
 		ps,

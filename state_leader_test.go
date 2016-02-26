@@ -6,7 +6,10 @@ import (
 )
 
 func TestLeaderVolatileState(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s3")
+	ci, err := NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s3")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	lvs := newLeaderVolatileState(ci, 42)
 
@@ -85,7 +88,10 @@ func TestLeaderVolatileState(t *testing.T) {
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
 func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	ci, err := NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Figure 8, case (a)
 	terms := []TermNo{1, 2} // leader line for the case
@@ -126,7 +132,10 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 }
 
 func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	ci, err := NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Figure 8, case (c)
 	terms := []TermNo{1, 2, 4} // leader line for the case
@@ -207,7 +216,10 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 }
 
 func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	ci, err := NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Figure 8, case (e) extended with extra term 4 entry at index 4
 	terms := []TermNo{1, 2, 4, 4} // leader line for the case
