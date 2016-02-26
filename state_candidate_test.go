@@ -5,7 +5,10 @@ import (
 )
 
 func TestCandidateVolatileState(t *testing.T) {
-	ci := NewClusterInfo(testAllServerIds, testThisServerId)
+	ci, err := NewClusterInfo(testAllServerIds, testThisServerId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cvs := newCandidateVolatileState(ci)
 
 	// Initial state
@@ -46,7 +49,10 @@ func TestCandidateVolatileState(t *testing.T) {
 }
 
 func TestCandidateVolatileState_3nodes(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"peer1", "peer2", "peer3"}, "peer1")
+	ci, err := NewClusterInfo([]ServerId{"peer1", "peer2", "peer3"}, "peer1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	cvs := newCandidateVolatileState(ci)
 	if cvs.receivedVotes != 1 || cvs.requiredVotes != 2 {
 		t.Fatal()
@@ -60,7 +66,10 @@ func TestCandidateVolatileState_3nodes(t *testing.T) {
 }
 
 func TestCandidateVolatileState_VoteFromNonMemberPanics(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"peer1", "peer2", "peer3"}, "peer1")
+	ci, err := NewClusterInfo([]ServerId{"peer1", "peer2", "peer3"}, "peer1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	cvs := newCandidateVolatileState(ci)
 	defer func() {
 		if r := recover(); r != "candidateVolatileState.addVoteFrom(): unknown peer: peer4" {

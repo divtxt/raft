@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -28,15 +29,15 @@ type ClusterInfo struct {
 func NewClusterInfo(
 	allServerIds []ServerId,
 	thisServerId ServerId,
-) *ClusterInfo {
+) (*ClusterInfo, error) {
 	if allServerIds == nil {
-		panic("allServerIds is nil")
+		return nil, errors.New("allServerIds is nil")
 	}
 	if len(allServerIds) < 2 {
-		panic("allServerIds must have at least 2 elements")
+		return nil, errors.New("allServerIds must have at least 2 elements")
 	}
 	if len(thisServerId) == 0 {
-		panic("thisServerId is empty string")
+		return nil, errors.New("thisServerId is empty string")
 	}
 
 	allServerIdsMap := make(map[ServerId]bool)
@@ -44,10 +45,10 @@ func NewClusterInfo(
 	peerServerIds := make([]ServerId, 0, clusterSize-1)
 	for _, serverId := range allServerIds {
 		if len(serverId) == 0 {
-			panic("allServerIds contains empty string")
+			return nil, errors.New("allServerIds contains empty string")
 		}
 		if _, ok := allServerIdsMap[serverId]; ok {
-			panic(fmt.Sprintf("allServerIds contains duplicate value: %v", serverId))
+			return nil, fmt.Errorf("allServerIds contains duplicate value: %v", serverId)
 		}
 		allServerIdsMap[serverId] = true
 		if serverId != thisServerId {
@@ -56,7 +57,7 @@ func NewClusterInfo(
 	}
 
 	if _, ok := allServerIdsMap[thisServerId]; !ok {
-		panic(fmt.Sprintf("allServerIds does not contain thisServerId: %v", thisServerId))
+		return nil, fmt.Errorf("allServerIds does not contain thisServerId: %v", thisServerId)
 	}
 
 	quorumSizeForCluster := QuorumSizeForClusterSize((uint)(clusterSize))
@@ -67,7 +68,7 @@ func NewClusterInfo(
 		quorumSizeForCluster,
 	}
 
-	return ci
+	return ci, nil
 }
 
 // Get the ServerId of "this" server.
