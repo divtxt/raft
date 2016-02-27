@@ -262,7 +262,10 @@ func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRe
 		// asynchronously.
 		// TODO: behavior when channel full?
 		cm.runnableChannel <- func() {
-			cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
+			err := cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
