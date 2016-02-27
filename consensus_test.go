@@ -692,8 +692,14 @@ func testSetupMCM_Leader_WithTerms(
 	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
-	mcm.pcm.rpcReply_RpcRequestVoteReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
-	mcm.pcm.rpcReply_RpcRequestVoteReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	err := mcm.pcm.rpcReply_RpcRequestVoteReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.rpcReply_RpcRequestVoteReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
