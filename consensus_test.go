@@ -818,7 +818,11 @@ func (mcm *managedConsensusModule) rpc_RpcRequestVote(
 	from ServerId,
 	rpc *RpcRequestVote,
 ) *RpcRequestVoteReply {
-	return mcm.pcm.rpc_RpcRequestVote(from, rpc, mcm.now)
+	v, err := mcm.pcm.rpc_RpcRequestVote(from, rpc, mcm.now)
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
 func (mcm *managedConsensusModule) tickTilElectionTimeout() {

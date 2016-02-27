@@ -176,7 +176,10 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 	cm.runnableChannel <- func() {
 		now := time.Now()
 
-		rpcReply := cm.passiveConsensusModule.rpc_RpcRequestVote(from, rpc, now)
+		rpcReply, err := cm.passiveConsensusModule.rpc_RpcRequestVote(from, rpc, now)
+		if err != nil {
+			panic(err)
+		}
 
 		select {
 		case replyChan <- rpcReply:

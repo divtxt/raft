@@ -30,14 +30,14 @@ func newCandidateVolatileState(clusterInfo *ClusterInfo) *candidateVolatileState
 
 // Add a granted vote.
 // Returns true if quorum has been achieved
-func (cvs *candidateVolatileState) addVoteFrom(peerId ServerId) bool {
+func (cvs *candidateVolatileState) addVoteFrom(peerId ServerId) (bool, error) {
 	voted, ok := cvs.votedPeers[peerId]
 	if !ok {
-		panic(fmt.Sprintf("candidateVolatileState.addVoteFrom(): unknown peer: %v", peerId))
+		return false, fmt.Errorf("candidateVolatileState.addVoteFrom(): unknown peer: %v", peerId)
 	}
 	if !voted {
 		cvs.votedPeers[peerId] = true
 		cvs.receivedVotes++
 	}
-	return cvs.receivedVotes >= cvs.requiredVotes
+	return cvs.receivedVotes >= cvs.requiredVotes, nil
 }
