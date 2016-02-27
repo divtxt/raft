@@ -212,7 +212,10 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
 	cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
-	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(cm.log)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.log)
+	if err != nil {
+		panic(err)
+	}
 	cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}

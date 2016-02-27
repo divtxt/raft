@@ -53,7 +53,10 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 	// #5.4.1-p3s1: Raft determines which of two logs is more up-to-date by
 	// comparing the index and term of the last entries in the logs.
 	var senderIsAtLeastAsUpToDate bool = false
-	lastEntryIndex, lastEntryTerm := GetIndexAndTermOfLastEntry(cm.log)
+	lastEntryIndex, lastEntryTerm, err := GetIndexAndTermOfLastEntry(cm.log)
+	if err != nil {
+		return nil, err
+	}
 	senderLastEntryIndex := rpcRequestVote.LastLogIndex
 	senderLastEntryTerm := rpcRequestVote.LastLogTerm
 	if senderLastEntryTerm != lastEntryTerm {
