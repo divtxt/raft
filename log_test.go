@@ -193,7 +193,7 @@ func (imle *inMemoryLog) GetEntriesAfterIndex(
 ) ([]LogEntry, error) {
 	iole, err := imle.GetIndexOfLastEntry()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if iole < afterLogIndex {

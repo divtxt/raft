@@ -12,7 +12,7 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 	fromPeer ServerId,
 	rpcRequestVote *RpcRequestVote,
 	now time.Time,
-) *RpcRequestVoteReply {
+) (*RpcRequestVoteReply, error) {
 	makeReply := func(voteGranted bool) *RpcRequestVoteReply {
 		return &RpcRequestVoteReply{
 			cm.persistentState.GetCurrentTerm(), // refetch in case it has changed!
@@ -36,7 +36,7 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 
 	// 1. Reply false if term < currentTerm (#5.1)
 	if senderCurrentTerm < serverTerm {
-		return makeReply(false)
+		return makeReply(false), nil
 	}
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
@@ -79,8 +79,8 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 		}
 		// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
 		cm.electionTimeoutTracker.touch(now)
-		return makeReply(true)
+		return makeReply(true), nil
 	}
 
-	return makeReply(false)
+	return makeReply(false), nil
 }
