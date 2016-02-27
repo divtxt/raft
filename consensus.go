@@ -256,7 +256,11 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 ) {
 	serverTerm := cm.persistentState.GetCurrentTerm()
 	//
-	peerLastLogIndex := cm.leaderVolatileState.getNextIndex(peerId) - 1
+	peerNextIndex, err := cm.leaderVolatileState.getNextIndex(peerId)
+	if err != nil {
+		panic(err)
+	}
+	peerLastLogIndex := peerNextIndex - 1
 	var peerLastLogTerm TermNo
 	if peerLastLogIndex == 0 {
 		peerLastLogTerm = 0
@@ -293,13 +297,16 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
 func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
-	newerCommitIndex := findNewerCommitIndex(
+	newerCommitIndex, err := findNewerCommitIndex(
 		cm.clusterInfo,
 		cm.leaderVolatileState,
 		cm.log,
 		cm.persistentState.GetCurrentTerm(),
 		cm.getCommitIndex(),
 	)
+	if err != nil {
+		panic(err)
+	}
 	if newerCommitIndex != 0 && newerCommitIndex > cm.getCommitIndex() {
 		cm.setCommitIndex(newerCommitIndex)
 	}
