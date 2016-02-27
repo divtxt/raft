@@ -260,8 +260,14 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	mcm.pcm.setCommitIndex(5)
 
 	// repatch some peers as not caught up
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 7)
+	err := mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 7)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// tick should trigger check & appropriate sends
 	mcm.tick()
@@ -328,7 +334,10 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// empty send
-	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	err := mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
 	mcm.pcm.sendAppendEntriesToPeer("s2", true)
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
@@ -359,8 +368,14 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// send multiple
-	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
-	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	err = mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
 	mcm.pcm.sendAppendEntriesToPeer("s2", false)
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
@@ -473,10 +488,22 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// match peers for cases (a), (b), (c) & (d)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 4)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s4", 10)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 10)
+	err := mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s4", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// tick should try to advance commitIndex but nothing should happen
 	mcm.tick()
@@ -559,8 +586,14 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// 2 peers - for cases (a) & (b) - catch up
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 11)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 11)
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 11)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 11)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// tick advances commitIndex
 	mcm.tick()
@@ -700,7 +733,10 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	}
 	mcm.pcm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
-			mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex(serverId, lastLogIndex)
+			err := mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex(serverId, lastLogIndex)
+			if err != nil {
+				t.Fatal(err)
+			}
 		},
 	)
 

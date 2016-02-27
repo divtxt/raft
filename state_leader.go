@@ -39,33 +39,35 @@ func newLeaderVolatileState(clusterInfo *ClusterInfo, indexOfLastEntry LogIndex)
 }
 
 // Get nextIndex for the given peer
-func (lvs *leaderVolatileState) getNextIndex(peerId ServerId) LogIndex {
+func (lvs *leaderVolatileState) getNextIndex(peerId ServerId) (LogIndex, error) {
 	nextIndex, ok := lvs.nextIndex[peerId]
 	if !ok {
-		panic(fmt.Sprintf("leaderVolatileState.getNextIndex(): unknown peer: %v", peerId))
+		return 0, fmt.Errorf("leaderVolatileState.getNextIndex(): unknown peer: %v", peerId)
 	}
-	return nextIndex
+	return nextIndex, nil
 }
 
 // Decrement nextIndex for the given peer
-func (lvs *leaderVolatileState) decrementNextIndex(peerId ServerId) {
+func (lvs *leaderVolatileState) decrementNextIndex(peerId ServerId) error {
 	nextIndex, ok := lvs.nextIndex[peerId]
 	if !ok {
-		panic(fmt.Sprintf("leaderVolatileState.decrementNextIndex(): unknown peer: %v", peerId))
+		return fmt.Errorf("leaderVolatileState.decrementNextIndex(): unknown peer: %v", peerId)
 	}
 	if nextIndex <= 1 {
-		panic(fmt.Sprintf("leaderVolatileState.decrementNextIndex(): nextIndex <=1 for peer: %v", peerId))
+		return fmt.Errorf("leaderVolatileState.decrementNextIndex(): nextIndex <=1 for peer: %v", peerId)
 	}
 	lvs.nextIndex[peerId] = nextIndex - 1
+	return nil
 }
 
 // Set matchIndex for the given peer and update nextIndex to matchIndex+1
-func (lvs *leaderVolatileState) setMatchIndexAndNextIndex(peerId ServerId, matchIndex LogIndex) {
+func (lvs *leaderVolatileState) setMatchIndexAndNextIndex(peerId ServerId, matchIndex LogIndex) error {
 	if _, ok := lvs.nextIndex[peerId]; !ok {
-		panic(fmt.Sprintf("leaderVolatileState.setNextIndexAndMatchIndex(): unknown peer: %v", peerId))
+		return fmt.Errorf("leaderVolatileState.setNextIndexAndMatchIndex(): unknown peer: %v", peerId)
 	}
 	lvs.nextIndex[peerId] = matchIndex + 1
 	lvs.matchIndex[peerId] = matchIndex
+	return nil
 }
 
 // Helper method to find potential new commitIndex.
@@ -79,10 +81,10 @@ func findNewerCommitIndex(
 	log Log,
 	currentTerm TermNo,
 	commitIndex LogIndex,
-) LogIndex {
+) (LogIndex, error) {
 	indexOfLastEntry, err := log.GetIndexOfLastEntry()
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	requiredMatches := ci.QuorumSizeForCluster()
 	// cover all N > commitIndex
@@ -91,12 +93,12 @@ func findNewerCommitIndex(
 		// check log[N].term
 		termAtN, err := log.GetTermAtIndex(N)
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		if termAtN > currentTerm {
 			// term has gone too high for log[N].term == currentTerm
 			// no point trying further
-			return 0
+			return 0, nil
 		}
 		if termAtN < currentTerm {
 			continue
@@ -109,9 +111,9 @@ func findNewerCommitIndex(
 			}
 		}
 		if foundMatches >= requiredMatches {
-			return N
+			return N, nil
 		}
 	}
 
-	return 0
+	return 0, nil
 }

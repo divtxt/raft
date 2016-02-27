@@ -52,7 +52,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	// #5.3-p8s6: After a rejection, the leader decrements nextIndex and
 	// retries the AppendEntries RPC.
 	if !appendEntriesReply.Success {
-		cm.leaderVolatileState.decrementNextIndex(from)
+		err := cm.leaderVolatileState.decrementNextIndex(from)
+		if err != nil {
+			panic(err)
+		}
 		cm.sendAppendEntriesToPeer(from, false)
 		return
 	}
@@ -60,7 +63,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	// #RFS-L3.1: If successful: update nextIndex and matchIndex for
 	// follower (#5.3)
 	newMatchIndex := appendEntries.PrevLogIndex + LogIndex(len(appendEntries.Entries))
-	cm.leaderVolatileState.setMatchIndexAndNextIndex(from, newMatchIndex)
+	err := cm.leaderVolatileState.setMatchIndexAndNextIndex(from, newMatchIndex)
+	if err != nil {
+		panic(err)
+	}
 
 	// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 	// of matchIndex[i] >= N, and log[N].term == currentTerm:

@@ -27,44 +27,51 @@ func TestLeaderVolatileState(t *testing.T) {
 	}
 
 	// getNextIndex
-	if lvs.getNextIndex("s2") != 43 {
+	idx, err := lvs.getNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx != 43 {
 		t.Fatal()
 	}
-	test_ExpectPanic(
-		t,
-		func() {
-			lvs.getNextIndex("s5")
-		},
-		"leaderVolatileState.getNextIndex(): unknown peer: s5",
-	)
+
+	idx, err = lvs.getNextIndex("s5")
+	if err.Error() != "leaderVolatileState.getNextIndex(): unknown peer: s5" {
+		t.Fatal(err)
+	}
 
 	// decrementNextIndex
-	lvs.decrementNextIndex("s2")
-	test_ExpectPanic(
-		t,
-		func() {
-			lvs.decrementNextIndex("s3")
-		},
-		"leaderVolatileState.decrementNextIndex(): unknown peer: s3",
-	)
+	err = lvs.decrementNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.decrementNextIndex("s3")
+	if err.Error() != "leaderVolatileState.decrementNextIndex(): unknown peer: s3" {
+		t.Fatal(err)
+	}
 	expectedNextIndex = map[ServerId]LogIndex{"s1": 43, "s2": 42}
 	if !reflect.DeepEqual(lvs.nextIndex, expectedNextIndex) {
 		t.Fatal(lvs.nextIndex)
 	}
-	if lvs.getNextIndex("s2") != 42 {
+	idx, err = lvs.getNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx != 42 {
 		t.Fatal()
 	}
+
 	lvs.nextIndex["s1"] = 1
-	test_ExpectPanic(
-		t,
-		func() {
-			lvs.decrementNextIndex("s1")
-		},
-		"leaderVolatileState.decrementNextIndex(): nextIndex <=1 for peer: s1",
-	)
+	err = lvs.decrementNextIndex("s1")
+	if err.Error() != "leaderVolatileState.decrementNextIndex(): nextIndex <=1 for peer: s1" {
+		t.Fatal(err)
+	}
 
 	// setMatchIndexAndNextIndex
-	lvs.setMatchIndexAndNextIndex("s2", 24)
+	err = lvs.setMatchIndexAndNextIndex("s2", 24)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedNextIndex = map[ServerId]LogIndex{"s1": 1, "s2": 25}
 	if !reflect.DeepEqual(lvs.nextIndex, expectedNextIndex) {
 		t.Fatal(lvs.nextIndex)
@@ -73,7 +80,10 @@ func TestLeaderVolatileState(t *testing.T) {
 	if !reflect.DeepEqual(lvs.matchIndex, expectedMatchIndex) {
 		t.Fatal(lvs.matchIndex)
 	}
-	lvs.setMatchIndexAndNextIndex("s2", 0)
+	err = lvs.setMatchIndexAndNextIndex("s2", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedNextIndex = map[ServerId]LogIndex{"s1": 1, "s2": 1}
 	if !reflect.DeepEqual(lvs.nextIndex, expectedNextIndex) {
 		t.Fatal(lvs.nextIndex)
@@ -98,35 +108,55 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
 	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
 
+	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
+		nci, err := findNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return nci
+	}
+
 	// With matchIndex stuck at 0, there is no solution for any currentTerm
-	if findNewerCommitIndex(ci, lvs, imle, 1, 0) != 0 {
+	if _findNewerCommitIndex(1, 0) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 2, 0) != 0 {
+	if _findNewerCommitIndex(2, 0) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 3, 0) != 0 {
+	if _findNewerCommitIndex(3, 0) != 0 {
 		t.Fatal()
 	}
 
 	// match peers for Figure 8, case (a)
-	lvs.setMatchIndexAndNextIndex("s2", 2)
-	lvs.setMatchIndexAndNextIndex("s3", 1)
-	lvs.setMatchIndexAndNextIndex("s4", 1)
-	lvs.setMatchIndexAndNextIndex("s5", 1)
+	err = lvs.setMatchIndexAndNextIndex("s2", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s3", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s4", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s5", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// While we cannot be at currentTerm=1, it has a solution
-	if findNewerCommitIndex(ci, lvs, imle, 1, 0) != 1 {
+	if _findNewerCommitIndex(1, 0) != 1 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 1, 1) != 0 {
+	if _findNewerCommitIndex(1, 1) != 0 {
 		t.Fatal()
 	}
 	// No solution for currentTerm >= 2
-	if findNewerCommitIndex(ci, lvs, imle, 2, 0) != 0 {
+	if _findNewerCommitIndex(2, 0) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 3, 0) != 0 {
+	if _findNewerCommitIndex(3, 0) != 0 {
 		t.Fatal()
 	}
 }
@@ -142,75 +172,107 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
 	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
 
+	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
+		nci, err := findNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return nci
+	}
+
 	// With matchIndex stuck at 0, there is no solution for any currentTerm
-	if findNewerCommitIndex(ci, lvs, imle, 1, 0) != 0 {
+	if _findNewerCommitIndex(1, 0) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 2, 0) != 0 {
+	if _findNewerCommitIndex(2, 0) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 3, 0) != 0 {
+	if _findNewerCommitIndex(3, 0) != 0 {
 		t.Fatal()
 	}
 
 	// match peers for Figure 8, case (c)
-	lvs.setMatchIndexAndNextIndex("s2", 2)
-	lvs.setMatchIndexAndNextIndex("s3", 2)
-	lvs.setMatchIndexAndNextIndex("s4", 1)
-	lvs.setMatchIndexAndNextIndex("s5", 1)
+	err = lvs.setMatchIndexAndNextIndex("s2", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s3", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s4", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s5", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// While we cannot be at currentTerm=1, it has solutions
-	if findNewerCommitIndex(ci, lvs, imle, 1, 0) != 1 {
+	if _findNewerCommitIndex(1, 0) != 1 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 1, 1) != 0 {
+	if _findNewerCommitIndex(1, 1) != 0 {
 		t.Fatal()
 	}
 	// While we cannot be at currentTerm=2, it has solutions
-	if findNewerCommitIndex(ci, lvs, imle, 2, 0) != 2 {
+	if _findNewerCommitIndex(2, 0) != 2 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 2, 1) != 2 {
+	if _findNewerCommitIndex(2, 1) != 2 {
 		t.Fatal()
 	}
 	// While we cannot be at currentTerm=3, it has no solution
-	if findNewerCommitIndex(ci, lvs, imle, 3, 0) != 0 {
+	if _findNewerCommitIndex(3, 0) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 3, 1) != 0 {
+	if _findNewerCommitIndex(3, 1) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 3, 2) != 0 {
+	if _findNewerCommitIndex(3, 2) != 0 {
 		t.Fatal()
 	}
 	// No solution for currentTerm >= 4
-	if findNewerCommitIndex(ci, lvs, imle, 4, 0) != 0 {
+	if _findNewerCommitIndex(4, 0) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 4, 1) != 0 {
+	if _findNewerCommitIndex(4, 1) != 0 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 4, 2) != 0 {
+	if _findNewerCommitIndex(4, 2) != 0 {
 		t.Fatal()
 	}
 
 	// match peers for Figure 8, case (e)
-	lvs.setMatchIndexAndNextIndex("s2", 3)
-	lvs.setMatchIndexAndNextIndex("s3", 3)
-	lvs.setMatchIndexAndNextIndex("s4", 1)
-	lvs.setMatchIndexAndNextIndex("s5", 1)
+	err = lvs.setMatchIndexAndNextIndex("s2", 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s3", 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s4", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s5", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Now currentTerm = 4 has a solution
-	if findNewerCommitIndex(ci, lvs, imle, 4, 0) != 3 {
+	if _findNewerCommitIndex(4, 0) != 3 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 4, 1) != 3 {
+	if _findNewerCommitIndex(4, 1) != 3 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 4, 2) != 3 {
+	if _findNewerCommitIndex(4, 2) != 3 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 4, 3) != 0 {
+	if _findNewerCommitIndex(4, 3) != 0 {
 		t.Fatal()
 	}
 }
@@ -226,25 +288,45 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
 	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
 
+	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
+		nci, err := findNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return nci
+	}
+
 	// match peers
-	lvs.setMatchIndexAndNextIndex("s2", 4)
-	lvs.setMatchIndexAndNextIndex("s3", 4)
-	lvs.setMatchIndexAndNextIndex("s4", 1)
-	lvs.setMatchIndexAndNextIndex("s5", 1)
+	err = lvs.setMatchIndexAndNextIndex("s2", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s3", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s4", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lvs.setMatchIndexAndNextIndex("s5", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// currentTerm = 4 has a solution
 	// the test here captures the fact that first match is returned
-	if findNewerCommitIndex(ci, lvs, imle, 4, 0) != 3 {
+	if _findNewerCommitIndex(4, 0) != 3 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 4, 1) != 3 {
+	if _findNewerCommitIndex(4, 1) != 3 {
 		t.Fatal()
 	}
-	if findNewerCommitIndex(ci, lvs, imle, 4, 2) != 3 {
+	if _findNewerCommitIndex(4, 2) != 3 {
 		t.Fatal()
 	}
 	// the next match is returned only after we cross the previous match
-	if findNewerCommitIndex(ci, lvs, imle, 4, 3) != 4 {
+	if _findNewerCommitIndex(4, 3) != 4 {
 		t.Fatal()
 	}
 
