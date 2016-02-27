@@ -810,7 +810,7 @@ func (mcm *managedConsensusModule) tick() {
 func (mcm *managedConsensusModule) rpc_RpcAppendEntries(
 	from ServerId,
 	rpc *RpcAppendEntries,
-) *RpcAppendEntriesReply {
+) (*RpcAppendEntriesReply, error) {
 	return mcm.pcm.rpc_RpcAppendEntries(from, rpc, mcm.now)
 }
 
