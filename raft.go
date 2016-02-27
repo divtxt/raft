@@ -143,7 +143,10 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 	cm.runnableChannel <- func() {
 		now := time.Now()
 
-		rpcReply := cm.passiveConsensusModule.rpc_RpcAppendEntries(from, rpc, now)
+		rpcReply, err := cm.passiveConsensusModule.rpc_RpcAppendEntries(from, rpc, now)
+		if err != nil {
+			panic(err)
+		}
 
 		select {
 		case replyChan <- rpcReply:
