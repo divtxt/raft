@@ -171,7 +171,10 @@ func testSetupMCM_FollowerThatVotedForS2_Figure7LeaderLine(
 		t.Fatal()
 	}
 	// pretend server voted
-	mcm.pcm.persistentState.SetVotedFor("s2")
+	err := mcm.pcm.persistentState.SetVotedFor("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return mcm, mrs
 }
@@ -305,7 +308,10 @@ func testSetupMCM_FollowerTerm8_Figure7LeaderLine(t *testing.T) (*managedConsens
 		t.Fatal(serverTerm)
 	}
 	// pretend server was pushed to term 8
-	mcm.pcm.persistentState.SetCurrentTerm(8)
+	err := mcm.pcm.persistentState.SetCurrentTerm(8)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return mcm, mrs
 }
