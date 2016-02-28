@@ -43,7 +43,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 				return err
 			}
 			if haveQuorum {
-				cm.becomeLeader()
+				err = cm.becomeLeader()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	case LEADER:
