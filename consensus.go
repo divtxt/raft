@@ -192,7 +192,10 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		// start a new election by incrementing its term and initiating
 		// another round of RequestVote RPCs.
 		if cm.electionTimeoutTracker.electionTimeoutHasOccurred(now) {
-			cm.becomeCandidateAndBeginElection(now)
+			err := cm.becomeCandidateAndBeginElection(now)
+			if err != nil {
+				panic(err)
+			}
 		}
 	case LEADER:
 		// #RFS-L4: If there exists an N such that N > commitIndex, a majority
@@ -211,7 +214,7 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 	}
 }
 
-func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) {
+func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) error {
 	// #RFS-C1: On conversion to candidate, start election:
 	// Increment currentTerm; Vote for self; Send RequestVote RPCs
 	// to all other servers; Reset election timer
@@ -220,22 +223,22 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
 	err := cm.persistentState.SetCurrentTerm(newTerm)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	cm.candidateVolatileState, err = newCandidateVolatileState(cm.clusterInfo)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	cm.setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
 	err = cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
 	if err != nil {
-		panic(err)
+		return err
 	}
 	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.log)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	err = cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
@@ -245,10 +248,11 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 		},
 	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	// Reset election timeout!
 	cm.electionTimeoutTracker.chooseNewRandomElectionTimeoutAndTouch(now)
+	return nil
 }
 
 func (cm *passiveConsensusModule) becomeLeader() error {
