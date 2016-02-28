@@ -755,14 +755,18 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	if err != nil {
 		t.Fatal()
 	}
-	mcm.pcm.clusterInfo.ForEachPeer(
-		func(serverId ServerId) {
+	err = mcm.pcm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) error {
 			err := mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex(serverId, lastLogIndex)
 			if err != nil {
-				t.Fatal(err)
+				return err
 			}
+			return nil
 		},
 	)
+	if err != nil {
+		t.Fatal()
+	}
 
 	// after check
 	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}

@@ -1,6 +1,8 @@
 package raft
 
 import (
+	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -72,9 +74,28 @@ func TestClusterInfo_ForEach(t *testing.T) {
 	}
 
 	seenIds := make([]ServerId, 0, 3)
-	ci.ForEachPeer(func(serverId ServerId) {
+	err = ci.ForEachPeer(func(serverId ServerId) error {
 		seenIds = append(seenIds, serverId)
+		return nil
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(seenIds, []ServerId{"s2", "s3"}) {
+		t.Fatal(seenIds)
+	}
+
+	seenIds = make([]ServerId, 0, 3)
+	err = ci.ForEachPeer(func(serverId ServerId) error {
+		seenIds = append(seenIds, serverId)
+		return errors.New("foo!")
+	})
+	if err.Error() != "foo!" {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(seenIds, []ServerId{"s2"}) {
+		t.Fatal(seenIds)
+	}
 }
 
 func TestQuorumSizeForClusterSize(t *testing.T) {
