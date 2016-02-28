@@ -70,7 +70,10 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as
 	// large as the candidate’s current term, then the candidate recognizes
 	// the leader as legitimate and returns to follower state.
-	cm.becomeFollowerWithTerm(leaderCurrentTerm)
+	err := cm.becomeFollowerWithTerm(leaderCurrentTerm)
+	if err != nil {
+		return nil, err
+	}
 
 	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose
 	// term matches prevLogTerm (#5.3)

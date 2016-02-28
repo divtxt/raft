@@ -24,7 +24,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 	// date, it immediately reverts to follower state.
 	senderCurrentTerm := rpcRequestVoteReply.Term
 	if senderCurrentTerm > serverTerm {
-		cm.becomeFollowerWithTerm(senderCurrentTerm)
+		err := cm.becomeFollowerWithTerm(senderCurrentTerm)
+		if err != nil {
+			return err
+		}
 	}
 
 	switch serverState {
