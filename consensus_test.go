@@ -261,11 +261,14 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.setCommitIndex(6)
+	err := mcm.pcm.setCommitIndex(6)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	mrs.checkSentRpcs(t, []mockSentRpc{})
 
-	err := mcm.tick()
+	err = mcm.tick()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,10 +281,13 @@ func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.setCommitIndex(5)
+	err := mcm.pcm.setCommitIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// repatch some peers as not caught up
-	err := mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +341,10 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.setCommitIndex(4)
+	err := mcm.pcm.setCommitIndex(4)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
@@ -344,7 +353,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	}
 
 	// nothing to send
-	err := mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -694,12 +703,18 @@ func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
 			t.Fatal()
 		}
 
-		mcm.pcm.setCommitIndex(2)
+		err := mcm.pcm.setCommitIndex(2)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.iml._commitIndex != 2 {
 			t.Fatal()
 		}
 
-		mcm.pcm.setCommitIndex(9)
+		err = mcm.pcm.setCommitIndex(9)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.iml._commitIndex != 9 {
 			t.Fatal()
 		}
