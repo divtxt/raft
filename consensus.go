@@ -251,22 +251,23 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	cm.electionTimeoutTracker.chooseNewRandomElectionTimeoutAndTouch(now)
 }
 
-func (cm *passiveConsensusModule) becomeLeader() {
+func (cm *passiveConsensusModule) becomeLeader() error {
 	iole, err := cm.log.GetIndexOfLastEntry()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	cm.leaderVolatileState, err = newLeaderVolatileState(cm.clusterInfo, iole)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
 	err = cm.sendAppendEntriesToAllPeers(true)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
