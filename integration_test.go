@@ -22,7 +22,10 @@ func setupConsensusModuleR3(
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm := NewConsensusModule(ps, imle, imrsc, ci, ts)
+	cm, err := NewConsensusModule(ps, imle, imrsc, ci, ts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if cm == nil {
 		t.Fatal()
 	}

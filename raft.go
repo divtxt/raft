@@ -57,7 +57,7 @@ func NewConsensusModule(
 	rpcService RpcService,
 	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
-) *ConsensusModule {
+) (*ConsensusModule, error) {
 	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 	now := time.Now()
@@ -89,7 +89,7 @@ func NewConsensusModule(
 		now,
 	)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// we can only set the value here because it's a cyclic reference
@@ -98,7 +98,7 @@ func NewConsensusModule(
 	// Start the go routine
 	go cm.processor()
 
-	return cm
+	return cm, nil
 }
 
 // Check if the ConsensusModule is stopped.
