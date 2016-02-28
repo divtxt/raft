@@ -12,7 +12,9 @@ type candidateVolatileState struct {
 }
 
 // New instance set up for a fresh election
-func newCandidateVolatileState(clusterInfo *ClusterInfo) *candidateVolatileState {
+func newCandidateVolatileState(
+	clusterInfo *ClusterInfo,
+) (*candidateVolatileState, error) {
 	cvs := &candidateVolatileState{}
 
 	cvs.receivedVotes = 1 // assumes we always vote for ourself
@@ -26,10 +28,10 @@ func newCandidateVolatileState(clusterInfo *ClusterInfo) *candidateVolatileState
 		},
 	)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return cvs
+	return cvs, nil
 }
 
 // Add a granted vote.

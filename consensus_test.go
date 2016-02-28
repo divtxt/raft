@@ -220,7 +220,10 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 		t.Fatal()
 	}
 	// candidate state is fresh
-	expectedCvs := newCandidateVolatileState(mcm.pcm.clusterInfo)
+	expectedCvs, err := newCandidateVolatileState(mcm.pcm.clusterInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !reflect.DeepEqual(mcm.pcm.candidateVolatileState, expectedCvs) {
 		t.Fatal()
 	}
