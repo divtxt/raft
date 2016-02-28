@@ -266,7 +266,10 @@ func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
 func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) {
 	cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) {
-			cm.sendAppendEntriesToPeer(serverId, empty)
+			err := cm.sendAppendEntriesToPeer(serverId, empty)
+			if err != nil {
+				panic(err)
+			}
 		},
 	)
 }
@@ -274,12 +277,12 @@ func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) {
 func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 	peerId ServerId,
 	empty bool,
-) {
+) error {
 	serverTerm := cm.persistentState.GetCurrentTerm()
 	//
 	peerNextIndex, err := cm.leaderVolatileState.getNextIndex(peerId)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	peerLastLogIndex := peerNextIndex - 1
 	var peerLastLogTerm TermNo
@@ -289,7 +292,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		var err error
 		peerLastLogTerm, err = cm.log.GetTermAtIndex(peerLastLogIndex)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 	//
@@ -300,7 +303,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		var err error
 		entriesToSend, err = cm.log.GetEntriesAfterIndex(peerLastLogIndex)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 	//
@@ -312,6 +315,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		cm.getCommitIndex(),
 	}
 	cm.rpcSender.sendRpcAppendEntriesAsync(peerId, rpcAppendEntries)
+	return nil
 }
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority

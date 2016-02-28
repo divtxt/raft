@@ -326,7 +326,10 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	}
 
 	// nothing to send
-	mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err := mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc := &RpcAppendEntries{
 		serverTerm,
 		10,
@@ -340,11 +343,14 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// empty send
-	err := mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	err = mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
 	if err != nil {
 		t.Fatal(err)
 	}
-	mcm.pcm.sendAppendEntriesToPeer("s2", true)
+	err = mcm.pcm.sendAppendEntriesToPeer("s2", true)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
 		9,
@@ -358,7 +364,10 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// send one
-	mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
 		9,
@@ -382,7 +391,10 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
 		7,

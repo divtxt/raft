@@ -56,7 +56,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 		if err != nil {
 			return err
 		}
-		cm.sendAppendEntriesToPeer(from, false)
+		err = cm.sendAppendEntriesToPeer(from, false)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -71,7 +74,7 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 	// of matchIndex[i] >= N, and log[N].term == currentTerm:
 	// set commitIndex = N (#5.3, #5.4)
-	err := cm.advanceCommitIndexIfPossible()
+	err = cm.advanceCommitIndexIfPossible()
 	if err != nil {
 		return err
 	}
