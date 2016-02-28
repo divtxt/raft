@@ -148,22 +148,22 @@ func (cm *passiveConsensusModule) appendCommand(
 	if serverState == LEADER {
 		iole, err := cm.log.GetIndexOfLastEntry()
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		logEntries := []LogEntry{
 			{cm.persistentState.GetCurrentTerm(), command},
 		}
 		err = cm.log.SetEntriesAfterIndex(iole, logEntries)
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		var newIole LogIndex
 		newIole, err = cm.log.GetIndexOfLastEntry()
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		if newIole != iole+1 {
-			panic(fmt.Sprintf("newIole=%v != %v + 1", newIole, iole))
+			return 0, fmt.Errorf("newIole=%v != %v + 1", newIole, iole)
 		}
 		return newIole, nil
 	} else {
