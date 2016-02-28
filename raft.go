@@ -80,7 +80,7 @@ func NewConsensusModule(
 		&atomic.Value{},
 	}
 
-	pcm := newPassiveConsensusModule(
+	pcm, err := newPassiveConsensusModule(
 		persistentState,
 		log,
 		cm,
@@ -88,6 +88,9 @@ func NewConsensusModule(
 		timeSettings.ElectionTimeoutLow,
 		now,
 	)
+	if err != nil {
+		panic(err)
+	}
 
 	// we can only set the value here because it's a cyclic reference
 	cm.passiveConsensusModule = pcm

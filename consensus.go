@@ -49,22 +49,22 @@ func newPassiveConsensusModule(
 	clusterInfo *ClusterInfo,
 	electionTimeoutLow time.Duration,
 	now time.Time,
-) *passiveConsensusModule {
+) (*passiveConsensusModule, error) {
 	// Param checks
 	if persistentState == nil {
-		panic("'persistentState' cannot be nil")
+		return nil, errors.New("'persistentState' cannot be nil")
 	}
 	if log == nil {
-		panic("'log' cannot be nil")
+		return nil, errors.New("'log' cannot be nil")
 	}
 	if rpcSender == nil {
-		panic("'rpcSender' cannot be nil")
+		return nil, errors.New("'rpcSender' cannot be nil")
 	}
 	if clusterInfo == nil {
-		panic("clusterInfo cannot be nil")
+		return nil, errors.New("clusterInfo cannot be nil")
 	}
 	if electionTimeoutLow.Nanoseconds() <= 0 {
-		panic("electionTimeoutLow must be greater than zero")
+		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
 
 	pcm := &passiveConsensusModule{
@@ -93,7 +93,7 @@ func newPassiveConsensusModule(
 		nil,
 	}
 
-	return pcm
+	return pcm, nil
 }
 
 // Get the current server state.

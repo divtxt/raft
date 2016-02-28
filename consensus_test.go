@@ -43,7 +43,7 @@ func setupManagedConsensusModuleR2(
 		t.Fatal(err)
 	}
 	now := time.Now()
-	cm := newPassiveConsensusModule(
+	cm, err := newPassiveConsensusModule(
 		ps,
 		imle,
 		mrs,
@@ -51,6 +51,9 @@ func setupManagedConsensusModuleR2(
 		testElectionTimeoutLow,
 		now,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if cm == nil {
 		t.Fatal()
 	}
