@@ -248,7 +248,10 @@ func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *Rpc
 		// asynchronously.
 		// TODO: behavior when channel full?
 		cm.runnableChannel <- func() {
-			cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
+			err := cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)

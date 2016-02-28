@@ -11,13 +11,13 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	from ServerId,
 	appendEntries *RpcAppendEntries,
 	appendEntriesReply *RpcAppendEntriesReply,
-) {
+) error {
 	serverState := cm.getServerState()
 	serverTerm := cm.persistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc
 	if appendEntries.Term != serverTerm {
-		return
+		return nil
 	}
 
 	switch serverState {
@@ -26,11 +26,11 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 		fallthrough
 	case CANDIDATE:
 		// Extra: raft violation - only leader should get AppendEntriesReply
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"FATAL: non-leader got AppendEntriesReply from: %v with term: %v",
 			from,
 			serverTerm,
-		))
+		)
 	case LEADER:
 		// Pass through to main logic below
 	}
@@ -44,7 +44,7 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	senderCurrentTerm := appendEntriesReply.Term
 	if senderCurrentTerm > serverTerm {
 		cm.becomeFollowerWithTerm(senderCurrentTerm)
-		return
+		return nil
 	}
 
 	// #RFS-L3.2: If AppendEntries fails because of log inconsistency:
@@ -54,10 +54,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	if !appendEntriesReply.Success {
 		err := cm.leaderVolatileState.decrementNextIndex(from)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		cm.sendAppendEntriesToPeer(from, false)
-		return
+		return nil
 	}
 
 	// #RFS-L3.1: If successful: update nextIndex and matchIndex for
@@ -65,11 +65,13 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	newMatchIndex := appendEntries.PrevLogIndex + LogIndex(len(appendEntries.Entries))
 	err := cm.leaderVolatileState.setMatchIndexAndNextIndex(from, newMatchIndex)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 	// of matchIndex[i] >= N, and log[N].term == currentTerm:
 	// set commitIndex = N (#5.3, #5.4)
 	cm.advanceCommitIndexIfPossible()
+
+	return nil
 }
