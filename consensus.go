@@ -198,7 +198,10 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 		// of matchIndex[i] >= N, and log[N].term == currentTerm:
 		// set commitIndex = N (#5.3, #5.4)
-		cm.advanceCommitIndexIfPossible()
+		err := cm.advanceCommitIndexIfPossible()
+		if err != nil {
+			panic(err)
+		}
 		// #RFS-L3.0: If last log index >= nextIndex for a follower: send
 		// AppendEntries RPC with log entries starting at nextIndex
 		cm.sendAppendEntriesToAllPeers(false)
@@ -314,7 +317,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
-func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
+func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() error {
 	newerCommitIndex, err := findNewerCommitIndex(
 		cm.clusterInfo,
 		cm.leaderVolatileState,
@@ -323,11 +326,12 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
 		cm.getCommitIndex(),
 	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if newerCommitIndex != 0 && newerCommitIndex > cm.getCommitIndex() {
 		cm.setCommitIndex(newerCommitIndex)
 	}
+	return nil
 }
 
 // -- rpc bridging things
