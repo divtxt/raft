@@ -109,12 +109,13 @@ func (cm *passiveConsensusModule) getServerState() ServerState {
 
 // Set the current server state.
 // Validates the server state before setting.
-func (cm *passiveConsensusModule) setServerState(serverState ServerState) {
+func (cm *passiveConsensusModule) setServerState(serverState ServerState) error {
 	err := validateServerState(serverState)
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 	atomic.StoreUint32((*uint32)(&cm._unsafe_serverState), (uint32)(serverState))
+	return nil
 }
 
 // Get the current commitIndex value.
@@ -230,7 +231,10 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	if err != nil {
 		return err
 	}
-	cm.setServerState(CANDIDATE)
+	err = cm.setServerState(CANDIDATE)
+	if err != nil {
+		return err
+	}
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
 	err = cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
@@ -265,7 +269,10 @@ func (cm *passiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
-	cm.setServerState(LEADER)
+	err = cm.setServerState(LEADER)
+	if err != nil {
+		return err
+	}
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
 	err = cm.sendAppendEntriesToAllPeers(true)
@@ -276,8 +283,11 @@ func (cm *passiveConsensusModule) becomeLeader() error {
 }
 
 func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
-	cm.setServerState(FOLLOWER)
-	err := cm.persistentState.SetCurrentTerm(newTerm)
+	err := cm.setServerState(FOLLOWER)
+	if err != nil {
+		return err
+	}
+	err = cm.persistentState.SetCurrentTerm(newTerm)
 	if err != nil {
 		return err
 	}
