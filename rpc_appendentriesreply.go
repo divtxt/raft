@@ -71,7 +71,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 	// of matchIndex[i] >= N, and log[N].term == currentTerm:
 	// set commitIndex = N (#5.3, #5.4)
-	cm.advanceCommitIndexIfPossible()
+	err := cm.advanceCommitIndexIfPossible()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
