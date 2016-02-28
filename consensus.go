@@ -269,12 +269,13 @@ func (cm *passiveConsensusModule) becomeLeader() {
 	}
 }
 
-func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
+func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 	cm.setServerState(FOLLOWER)
 	err := cm.persistentState.SetCurrentTerm(newTerm)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 // -- leader code

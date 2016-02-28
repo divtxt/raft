@@ -46,7 +46,10 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 	// #5.1-p3s5: If a candidate or leader discovers that its term is out of
 	// date, it immediately reverts to follower state.
 	if senderCurrentTerm > serverTerm {
-		cm.becomeFollowerWithTerm(senderCurrentTerm)
+		err := cm.becomeFollowerWithTerm(senderCurrentTerm)
+		if err != nil {
+			return nil, err
+		}
 		serverTerm = cm.persistentState.GetCurrentTerm()
 	}
 

@@ -43,7 +43,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	// date, it immediately reverts to follower state.
 	senderCurrentTerm := appendEntriesReply.Term
 	if senderCurrentTerm > serverTerm {
-		cm.becomeFollowerWithTerm(senderCurrentTerm)
+		err := cm.becomeFollowerWithTerm(senderCurrentTerm)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
