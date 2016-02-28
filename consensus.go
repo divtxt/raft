@@ -172,7 +172,7 @@ func (cm *passiveConsensusModule) appendCommand(
 }
 
 // Iterate
-func (cm *passiveConsensusModule) tick(now time.Time) {
+func (cm *passiveConsensusModule) tick(now time.Time) error {
 	serverState := cm.getServerState()
 	switch serverState {
 	case FOLLOWER:
@@ -194,7 +194,7 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		if cm.electionTimeoutTracker.electionTimeoutHasOccurred(now) {
 			err := cm.becomeCandidateAndBeginElection(now)
 			if err != nil {
-				panic(err)
+				return err
 			}
 		}
 	case LEADER:
@@ -203,15 +203,16 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		// set commitIndex = N (#5.3, #5.4)
 		err := cm.advanceCommitIndexIfPossible()
 		if err != nil {
-			panic(err)
+			return err
 		}
 		// #RFS-L3.0: If last log index >= nextIndex for a follower: send
 		// AppendEntries RPC with log entries starting at nextIndex
 		err = cm.sendAppendEntriesToAllPeers(false)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }
 
 func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) error {

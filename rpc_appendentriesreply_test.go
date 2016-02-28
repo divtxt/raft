@@ -319,7 +319,10 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		{"s4", expectedRpc},
 		{"s5", expectedRpc},
 	}
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// one reply - cannot advance commitIndex

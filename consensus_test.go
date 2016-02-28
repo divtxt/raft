@@ -138,7 +138,10 @@ func TestCM_BadServerStatePanicsTick(t *testing.T) {
 		func(mcm *managedConsensusModule) {
 			mcm.pcm._unsafe_serverState = 42
 
-			mcm.tick()
+			err := mcm.tick()
+			if err != nil {
+				t.Fatal(err)
+			}
 		},
 		"FATAL: unknown ServerState: 42",
 	)
@@ -184,7 +187,10 @@ func testCM_Follower_StartsElectionOnElectionTimeout(
 	}
 
 	// Test that a tick before election timeout causes no state change.
-	mcm.tick()
+	err := mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.persistentState.GetCurrentTerm() != testCurrentTerm {
 		t.Fatal()
 	}
@@ -203,7 +209,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 ) {
 	timeout1 := mcm.pcm.electionTimeoutTracker.currentElectionTimeout
 	// Test that election timeout causes a new election
-	mcm.tickTilElectionTimeout()
+	mcm.tickTilElectionTimeout(t)
 	if mcm.pcm.persistentState.GetCurrentTerm() != expectedNewTerm {
 		t.Fatal(expectedNewTerm, mcm.pcm.persistentState.GetCurrentTerm())
 	}
@@ -256,7 +262,10 @@ func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 
 	mrs.checkSentRpcs(t, []mockSentRpc{})
 
-	mcm.tick()
+	err := mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 }
@@ -279,7 +288,10 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	}
 
 	// tick should trigger check & appropriate sends
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	expectedRpcEmpty := &RpcAppendEntries{
 		serverTerm,
@@ -527,7 +539,10 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 
 	// tick should try to advance commitIndex but nothing should happen
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getCommitIndex() != 0 {
 		t.Fatal()
 	}
@@ -568,7 +583,10 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 
 	// tick should try to advance commitIndex but nothing should happen
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getCommitIndex() != 0 {
 		t.Fatal()
 	}
@@ -617,7 +635,10 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 
 	// tick advances commitIndex
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getCommitIndex() != 11 {
 		t.Fatal()
 	}
@@ -652,7 +673,10 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// replies never came back -> tick cannot advance commitIndex
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getCommitIndex() != 11 {
 		t.Fatal(mcm.pcm.getCommitIndex())
 	}
@@ -869,9 +893,13 @@ type managedConsensusModule struct {
 	iml *inMemoryLog
 }
 
-func (mcm *managedConsensusModule) tick() {
-	mcm.pcm.tick(mcm.now)
+func (mcm *managedConsensusModule) tick() error {
+	err := mcm.pcm.tick(mcm.now)
+	if err != nil {
+		return err
+	}
 	mcm.now = mcm.now.Add(testTickerDuration)
+	return nil
 }
 
 func (mcm *managedConsensusModule) rpc_RpcAppendEntries(
@@ -892,18 +920,24 @@ func (mcm *managedConsensusModule) rpc_RpcRequestVote(
 	return v
 }
 
-func (mcm *managedConsensusModule) tickTilElectionTimeout() {
+func (mcm *managedConsensusModule) tickTilElectionTimeout(t *testing.T) {
 	electionTimeoutTime := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 	for {
-		mcm.tick()
+		err := mcm.tick()
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.now.After(electionTimeoutTime) {
 			break
 		}
 	}
 	if mcm.pcm.electionTimeoutTracker.electionTimeoutTime != electionTimeoutTime {
-		panic("electionTimeoutTime changed!")
+		t.Fatal("electionTimeoutTime changed!")
 	}
 	// Because tick() increments "now" after calling tick(),
 	// we need one more to actually run with a post-timeout "now".
-	mcm.tick()
+	err := mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
