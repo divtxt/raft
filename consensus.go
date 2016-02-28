@@ -222,7 +222,10 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	if err != nil {
 		panic(err)
 	}
-	cm.candidateVolatileState = newCandidateVolatileState(cm.clusterInfo)
+	cm.candidateVolatileState, err = newCandidateVolatileState(cm.clusterInfo)
+	if err != nil {
+		panic(err)
+	}
 	cm.setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
