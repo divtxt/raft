@@ -253,7 +253,10 @@ func (cm *passiveConsensusModule) becomeLeader() {
 	if err != nil {
 		panic(err)
 	}
-	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo, iole)
+	cm.leaderVolatileState, err = newLeaderVolatileState(cm.clusterInfo, iole)
+	if err != nil {
+		panic(err)
+	}
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
