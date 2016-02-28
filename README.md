@@ -1,4 +1,4 @@
-# Raft consensus protocol
+# A Raft Consensus Implementation in Go
 
 [![Build Status](https://travis-ci.org/divtxt/raft-consensus.svg?branch=master)](https://travis-ci.org/divtxt/raft-consensus)
 
@@ -18,9 +18,14 @@ See [lockd](https://github.com/divtxt/lockd) for a example of how to use this mo
 
 Basics:
 
+- [x] Rename repo from `raft-consensus` to `raft`
 - [ ] Change error handling from `panic()` to returning `error`.
+- [ ] Fix TODOs
+- [ ] Code review & cleanup
+- [ ] Simplify/shorten names
 - [ ] Expose raft details e.g. leader, term
 - [ ] Add metrics & logging
+- [ ] Assembling AppendEntries RPC should not block
 - [ ] Isolated server should not increment term (similar to #6p8)
 
 Misc/Maybe:
@@ -30,6 +35,7 @@ Misc/Maybe:
 - [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
 - [ ] Servers check that they agree on cluster info
 - [ ] Election timeout based on ping times to bias selection of lower latency leader
+- [ ] Make in-memory Log & PersistentState implementations public?
 
 Later:
 
@@ -37,4 +43,3 @@ Later:
 - [ ] Documentation
 - [ ] Live cluster membership changes
 - [ ] Read-only nodes (replication)
-
