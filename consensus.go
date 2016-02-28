@@ -125,19 +125,20 @@ func (cm *passiveConsensusModule) getCommitIndex() LogIndex {
 
 // Set the current commitIndex value.
 // Checks that it is does not reduce.
-func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) {
+func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 	if commitIndex < cm._commitIndex {
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"setCommitIndex to %v < current commitIndex %v",
 			commitIndex,
 			cm._commitIndex,
-		))
+		)
 	}
 	cm._commitIndex = commitIndex
 	err := cm.log.CommitIndexChanged(commitIndex)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 // Append the given command as an entry in the log.
@@ -367,7 +368,10 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() error {
 		return err
 	}
 	if newerCommitIndex != 0 && newerCommitIndex > cm.getCommitIndex() {
-		cm.setCommitIndex(newerCommitIndex)
+		err = cm.setCommitIndex(newerCommitIndex)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

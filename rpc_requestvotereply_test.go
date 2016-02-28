@@ -13,11 +13,14 @@ import (
 func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.setCommitIndex(3)
+	err := mcm.pcm.setCommitIndex(3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
-	err := mcm.pcm.rpcReply_RpcRequestVoteReply(
+	err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 		"s2",
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
@@ -225,12 +228,15 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 	) {
 		mcm, mrs := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-		mcm.pcm.setCommitIndex(2)
+		err := mcm.pcm.setCommitIndex(2)
+		if err != nil {
+			t.Fatal(err)
+		}
 		sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 		beforeState := mcm.pcm.getServerState()
 
 		// s2 grants vote - should stay as candidate
-		err := mcm.pcm.rpcReply_RpcRequestVoteReply(
+		err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 			"s2",
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, true},

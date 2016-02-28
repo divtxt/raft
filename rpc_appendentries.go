@@ -104,9 +104,15 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 			return nil, err
 		}
 		if leaderCommit < indexOfLastNewEntry {
-			cm.setCommitIndex(leaderCommit)
+			err = cm.setCommitIndex(leaderCommit)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			cm.setCommitIndex(indexOfLastNewEntry)
+			err = cm.setCommitIndex(indexOfLastNewEntry)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

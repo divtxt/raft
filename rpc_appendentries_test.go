@@ -176,7 +176,10 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			t,
 			[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
 		)
-		mcm.pcm.setCommitIndex(3)
+		err := mcm.pcm.setCommitIndex(3)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
@@ -270,7 +273,10 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			t,
 			[]TermNo{1, 1, 1, 4},
 		)
-		mcm.pcm.setCommitIndex(3)
+		err := mcm.pcm.setCommitIndex(3)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
