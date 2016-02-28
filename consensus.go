@@ -204,7 +204,10 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		}
 		// #RFS-L3.0: If last log index >= nextIndex for a follower: send
 		// AppendEntries RPC with log entries starting at nextIndex
-		cm.sendAppendEntriesToAllPeers(false)
+		err = cm.sendAppendEntriesToAllPeers(false)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -231,12 +234,16 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	if err != nil {
 		panic(err)
 	}
-	cm.clusterInfo.ForEachPeer(
-		func(serverId ServerId) {
+	err = cm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) error {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
 			cm.rpcSender.sendRpcRequestVoteAsync(serverId, rpcRequestVote)
+			return nil
 		},
 	)
+	if err != nil {
+		panic(err)
+	}
 	// Reset election timeout!
 	cm.electionTimeoutTracker.chooseNewRandomElectionTimeoutAndTouch(now)
 }
@@ -250,7 +257,10 @@ func (cm *passiveConsensusModule) becomeLeader() {
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
-	cm.sendAppendEntriesToAllPeers(true)
+	err = cm.sendAppendEntriesToAllPeers(true)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
@@ -263,13 +273,14 @@ func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
 
 // -- leader code
 
-func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) {
-	cm.clusterInfo.ForEachPeer(
-		func(serverId ServerId) {
+func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error {
+	return cm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) error {
 			err := cm.sendAppendEntriesToPeer(serverId, empty)
 			if err != nil {
-				panic(err)
+				return err
 			}
+			return nil
 		},
 	)
 }

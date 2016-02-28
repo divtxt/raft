@@ -19,11 +19,15 @@ func newCandidateVolatileState(clusterInfo *ClusterInfo) *candidateVolatileState
 	cvs.requiredVotes = clusterInfo.QuorumSizeForCluster()
 	cvs.votedPeers = make(map[ServerId]bool)
 
-	clusterInfo.ForEachPeer(
-		func(peerId ServerId) {
+	err := clusterInfo.ForEachPeer(
+		func(peerId ServerId) error {
 			cvs.votedPeers[peerId] = false
+			return nil
 		},
 	)
+	if err != nil {
+		panic(err)
+	}
 
 	return cvs
 }

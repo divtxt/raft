@@ -80,10 +80,14 @@ func (ci *ClusterInfo) GetThisServerId() ServerId {
 // function with it's ServerId.
 //
 // "Peer" servers here means all servers except for "this" server.
-func (ci *ClusterInfo) ForEachPeer(f func(serverId ServerId)) {
+func (ci *ClusterInfo) ForEachPeer(f func(serverId ServerId) error) error {
 	for _, serverId := range ci.peerServerIds {
-		f(serverId)
+		err := f(serverId)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // Get the quorum size for this ClusterInfo.
