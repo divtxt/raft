@@ -14,11 +14,14 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 		sentRpc := makeAEWithTerm(serverTerm - 1)
 		beforeState := mcm.pcm.getServerState()
 
-		mcm.pcm.rpcReply_RpcAppendEntriesReply(
+		err := mcm.pcm.rpcReply_RpcAppendEntriesReply(
 			"s2",
 			sentRpc,
 			&RpcAppendEntriesReply{serverTerm, true},
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
@@ -50,17 +53,18 @@ func TestCM_RpcAER_FollowerOrCandidate_PanicsForSameTermReply(t *testing.T) {
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		sentRpc := makeAEWithTerm(serverTerm)
 
-		test_ExpectPanic(
-			t,
-			func() {
-				mcm.pcm.rpcReply_RpcAppendEntriesReply(
-					"s2",
-					sentRpc,
-					&RpcAppendEntriesReply{serverTerm, true},
-				)
-			},
-			fmt.Sprintf("FATAL: non-leader got AppendEntriesReply from: s2 with term: %v", serverTerm),
+		err := mcm.pcm.rpcReply_RpcAppendEntriesReply(
+			"s2",
+			sentRpc,
+			&RpcAppendEntriesReply{serverTerm, true},
 		)
+		expectedErr := fmt.Sprintf(
+			"FATAL: non-leader got AppendEntriesReply from: s2 with term: %v",
+			serverTerm,
+		)
+		if err.Error() != expectedErr {
+			t.Fatal(err)
+		}
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
@@ -88,11 +92,14 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 		t.Fatal()
 	}
 
-	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+	err := mcm.pcm.rpcReply_RpcAppendEntriesReply(
 		"s2",
 		sentRpc,
 		&RpcAppendEntriesReply{serverTerm + 1, false},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
@@ -142,11 +149,14 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 		mcm.pcm.getCommitIndex(),
 	}
 
-	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+	err := mcm.pcm.rpcReply_RpcAppendEntriesReply(
 		"s3",
 		sentRpc,
 		&RpcAppendEntriesReply{serverTerm, false},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -203,11 +213,14 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 		mcm.pcm.getCommitIndex(),
 	}
 
-	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+	err := mcm.pcm.rpcReply_RpcAppendEntriesReply(
 		"s3",
 		sentRpc,
 		&RpcAppendEntriesReply{serverTerm, true},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -259,11 +272,14 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		mcm.pcm.getCommitIndex(),
 	}
 
-	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+	err := mcm.pcm.rpcReply_RpcAppendEntriesReply(
 		"s2",
 		sentRpc,
 		&RpcAppendEntriesReply{serverTerm, true},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -307,21 +323,27 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// one reply - cannot advance commitIndex
-	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+	err = mcm.pcm.rpcReply_RpcAppendEntriesReply(
 		"s2",
 		expectedRpc,
 		&RpcAppendEntriesReply{serverTerm, true},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if ci := mcm.pcm.getCommitIndex(); ci != 3 {
 		t.Fatal(ci)
 	}
 
 	// another reply - can advance commitIndex with majority
-	mcm.pcm.rpcReply_RpcAppendEntriesReply(
+	err = mcm.pcm.rpcReply_RpcAppendEntriesReply(
 		"s4",
 		expectedRpc,
 		&RpcAppendEntriesReply{serverTerm, true},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if ci := mcm.pcm.getCommitIndex(); ci != 11 {
 		t.Fatal(ci)
 	}
