@@ -11,7 +11,10 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lvs := newLeaderVolatileState(ci, 42)
+	lvs, err := newLeaderVolatileState(ci, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Initial state
 	// #5.3-p8s4: When a leader first comes to power, it initializes
@@ -106,7 +109,10 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 	// Figure 8, case (a)
 	terms := []TermNo{1, 2} // leader line for the case
 	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
-	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
+	lvs, err := newLeaderVolatileState(ci, LogIndex(len(terms)))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
 		nci, err := findNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
@@ -170,7 +176,10 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	// Figure 8, case (c)
 	terms := []TermNo{1, 2, 4} // leader line for the case
 	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
-	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
+	lvs, err := newLeaderVolatileState(ci, LogIndex(len(terms)))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
 		nci, err := findNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
@@ -286,7 +295,10 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	// Figure 8, case (e) extended with extra term 4 entry at index 4
 	terms := []TermNo{1, 2, 4, 4} // leader line for the case
 	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
-	lvs := newLeaderVolatileState(ci, LogIndex(len(terms)))
+	lvs, err := newLeaderVolatileState(ci, LogIndex(len(terms)))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
 		nci, err := findNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)

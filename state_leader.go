@@ -18,7 +18,9 @@ type leaderVolatileState struct {
 }
 
 // New instance set up for a fresh leader
-func newLeaderVolatileState(clusterInfo *ClusterInfo, indexOfLastEntry LogIndex) *leaderVolatileState {
+func newLeaderVolatileState(
+	clusterInfo *ClusterInfo, indexOfLastEntry LogIndex,
+) (*leaderVolatileState, error) {
 	lvs := &leaderVolatileState{
 		make(map[ServerId]LogIndex),
 		make(map[ServerId]LogIndex),
@@ -37,10 +39,10 @@ func newLeaderVolatileState(clusterInfo *ClusterInfo, indexOfLastEntry LogIndex)
 		},
 	)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return lvs
+	return lvs, nil
 }
 
 // Get nextIndex for the given peer
