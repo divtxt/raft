@@ -308,7 +308,10 @@ loop:
 			}
 			// Get a fresh now since the ticker's now could have been waiting
 			now := time.Now()
-			cm.passiveConsensusModule.tick(now)
+			err := cm.passiveConsensusModule.tick(now)
+			if err != nil {
+				panic(err)
+			}
 		case <-cm.stopSignal:
 			break loop
 		}
