@@ -23,7 +23,7 @@ type PersistentState interface {
 
 	// Set the latest term this server has seen.
 	//
-	// The following are errors and should panic without changing the current
+	// The following should return an error without changing the current
 	// values:
 	//
 	//  - trying to set a value of 0
@@ -34,11 +34,11 @@ type PersistentState interface {
 	//
 	// This call should be synchronous i.e. not return until the values
 	// have been written to persistent storage.
-	SetCurrentTerm(currentTerm TermNo)
+	SetCurrentTerm(currentTerm TermNo) error
 
 	// Set the voted for value for the current term.
 	//
-	// The following are errors and should panic without changing the current
+	// The following should return an error without changing the current
 	// values:
 	//
 	//  - trying to set the value when currentTerm is 0
@@ -47,7 +47,7 @@ type PersistentState interface {
 	//
 	// This call should be synchronous i.e. not return until the values
 	// have been written to persistent storage.
-	SetVotedFor(votedFor ServerId)
+	SetVotedFor(votedFor ServerId) error
 }
 
 // Asynchronous RPC service.

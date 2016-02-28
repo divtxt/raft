@@ -78,7 +78,10 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 	votedFor := cm.persistentState.GetVotedFor()
 	if (votedFor == "" || votedFor == fromPeer) && senderIsAtLeastAsUpToDate {
 		if votedFor == "" {
-			cm.persistentState.SetVotedFor(fromPeer)
+			err = cm.persistentState.SetVotedFor(fromPeer)
+			if err != nil {
+				return nil, err
+			}
 		}
 		// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
 		cm.electionTimeoutTracker.touch(now)

@@ -212,12 +212,18 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
-	cm.persistentState.SetCurrentTerm(newTerm)
+	err := cm.persistentState.SetCurrentTerm(newTerm)
+	if err != nil {
+		panic(err)
+	}
 	cm.candidateVolatileState = newCandidateVolatileState(cm.clusterInfo)
 	cm.setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
-	cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
+	err = cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
+	if err != nil {
+		panic(err)
+	}
 	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.log)
 	if err != nil {
 		panic(err)
@@ -246,7 +252,10 @@ func (cm *passiveConsensusModule) becomeLeader() {
 
 func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
 	cm.setServerState(FOLLOWER)
-	cm.persistentState.SetCurrentTerm(newTerm)
+	err := cm.persistentState.SetCurrentTerm(newTerm)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // -- leader code
