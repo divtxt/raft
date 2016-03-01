@@ -22,6 +22,7 @@
 package raft
 
 import (
+	"errors"
 	"sync/atomic"
 	"time"
 )
@@ -37,7 +38,7 @@ type ConsensusModule struct {
 	stopped int32
 
 	// -- Channels
-	runnableChannel chan func()
+	runnableChannel chan func() error
 	ticker          *time.Ticker
 
 	// -- Control
@@ -58,7 +59,7 @@ func NewConsensusModule(
 	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
 ) (*ConsensusModule, error) {
-	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
+	runnableChannel := make(chan func() error, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 	now := time.Now()
 
@@ -143,20 +144,21 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 	rpc *RpcAppendEntries,
 ) <-chan *RpcAppendEntriesReply {
 	replyChan := make(chan *RpcAppendEntriesReply, 1)
-	cm.runnableChannel <- func() {
+	cm.runnableChannel <- func() error {
 		now := time.Now()
 
 		rpcReply, err := cm.passiveConsensusModule.rpc_RpcAppendEntries(from, rpc, now)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		select {
 		case replyChan <- rpcReply:
+			return nil
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
-			panic("FATAL: replyChan is nil or wants to block")
+			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
 	return replyChan
@@ -176,20 +178,21 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 	rpc *RpcRequestVote,
 ) <-chan *RpcRequestVoteReply {
 	replyChan := make(chan *RpcRequestVoteReply, 1)
-	cm.runnableChannel <- func() {
+	cm.runnableChannel <- func() error {
 		now := time.Now()
 
 		rpcReply, err := cm.passiveConsensusModule.rpc_RpcRequestVote(from, rpc, now)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		select {
 		case replyChan <- rpcReply:
+			return nil
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
-			panic("FATAL: replyChan is nil or wants to block")
+			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
 	return replyChan
@@ -222,15 +225,16 @@ func (cm *ConsensusModule) AppendCommandAsync(
 	command Command,
 ) <-chan AppendCommandResult {
 	replyChan := make(chan AppendCommandResult, 1)
-	cm.runnableChannel <- func() {
+	cm.runnableChannel <- func() error {
 		logIndex, err := cm.passiveConsensusModule.appendCommand(command)
 		appendCommandResult := AppendCommandResult{logIndex, err}
 		select {
 		case replyChan <- appendCommandResult:
+			return nil
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
-			panic("FATAL: replyChan is nil or wants to block")
+			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
 	return replyChan
@@ -250,11 +254,12 @@ func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *Rpc
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
 		// TODO: behavior when channel full?
-		cm.runnableChannel <- func() {
+		cm.runnableChannel <- func() error {
 			err := cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
 			if err != nil {
-				panic(err)
+				return err
 			}
+			return nil
 		}
 	}
 	cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)
@@ -267,11 +272,12 @@ func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRe
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
 		// TODO: behavior when channel full?
-		cm.runnableChannel <- func() {
+		cm.runnableChannel <- func() error {
 			err := cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
 			if err != nil {
-				panic(err)
+				return err
 			}
+			return nil
 		}
 	}
 	cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
@@ -300,7 +306,10 @@ loop:
 				// til shutdown
 				panic("FATAL: runnableChannel closed")
 			}
-			runnable()
+			err := runnable()
+			if err != nil {
+				panic(err)
+			}
 		case _, ok := <-cm.ticker.C:
 			if !ok {
 				// theoretically unreachable as we don't stop the timer til shutdown
