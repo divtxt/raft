@@ -1,9 +1,5 @@
 package raft
 
-import (
-	"fmt"
-)
-
 // Raft server states.
 type ServerState uint32
 
@@ -25,11 +21,3 @@ type TermNo uint64
 // In practice, since this is used here for RPC, a network/service specifier
 // is probably the most useful e.g. "<host>:<port>".
 type ServerId string
-
-// Helper functions
-func validateServerState(serverState ServerState) error {
-	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
-		return fmt.Errorf("FATAL: unknown ServerState: %v", serverState)
-	}
-	return nil
-}
