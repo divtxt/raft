@@ -107,25 +107,11 @@ func test_ExpectPanicAnyRecover(t *testing.T, f func()) {
 	t.Fatal("Expected panic")
 }
 
-func testCM_setupMCMAndExpectPanicFor(
-	t *testing.T,
-	f func(*managedConsensusModule),
-	expectedRecover interface{},
-) {
+func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 	test_ExpectPanic(
 		t,
 		func() {
-			f(mcm)
-		},
-		expectedRecover,
-	)
-}
-
-func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
 			err := mcm.pcm.setServerState(42)
 			if err != nil {
 				panic(err.Error())
@@ -133,32 +119,7 @@ func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 		},
 		"FATAL: unknown ServerState: 42",
 	)
-}
 
-func TestCM_BadServerStatePanicsTick(t *testing.T) {
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
-			mcm.pcm._unsafe_serverState = 42
-
-			err := mcm.tick()
-			if err != nil {
-				t.Fatal(err)
-			}
-		},
-		"FATAL: unknown ServerState: 42",
-	)
-}
-
-func TestCM_GetServerState_BadServerStatePanics(t *testing.T) {
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
-			mcm.pcm._unsafe_serverState = 42
-			mcm.pcm.getServerState()
-		},
-		"FATAL: unknown ServerState: 42",
-	)
 }
 
 // #RFS-F2: If election timeout elapses without receiving

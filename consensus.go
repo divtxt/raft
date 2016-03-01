@@ -99,20 +99,14 @@ func newPassiveConsensusModule(
 // Get the current server state.
 // Validates the server state before returning.
 func (cm *passiveConsensusModule) getServerState() ServerState {
-	serverState := ServerState(atomic.LoadUint32((*uint32)(&cm._unsafe_serverState)))
-	err := validateServerState(serverState)
-	if err != nil {
-		panic(err.Error())
-	}
-	return serverState
+	return ServerState(atomic.LoadUint32((*uint32)(&cm._unsafe_serverState)))
 }
 
 // Set the current server state.
 // Validates the server state before setting.
 func (cm *passiveConsensusModule) setServerState(serverState ServerState) error {
-	err := validateServerState(serverState)
-	if err != nil {
-		return err
+	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
+		return fmt.Errorf("FATAL: unknown ServerState: %v", serverState)
 	}
 	atomic.StoreUint32((*uint32)(&cm._unsafe_serverState), (uint32)(serverState))
 	return nil
