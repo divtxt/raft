@@ -15,9 +15,9 @@
 // - Concurrency: a ConsensusModule will only ever call the methods of these
 // interfaces from it's single goroutine.
 //
-// - Errors: all errors should be indicated using panic(). This includes both
+// - Errors: all errors should be checked and returned. This includes both
 // invalid parameters sent by the consensus module and internal errors in the
-// implementation. Note that such a panic will shutdown the ConsensusModule.
+// implementation. Note that any error will shutdown the ConsensusModule.
 //
 package raft
 
@@ -118,11 +118,14 @@ func (cm *ConsensusModule) StopAsync() {
 
 // Get the error that stopped the ConsensusModule goroutine.
 //
-// Gets the recover value for the panic that stopped the goroutine.
-// The value will be nil if the goroutine is not stopped, stopped
-// without an error, or  panicked with a nil value.
-func (cm *ConsensusModule) GetStopError() interface{} {
-	return cm.stopError.Load()
+// The value will be nil if the goroutine is not stopped, or if it stopped
+// without an error.
+func (cm *ConsensusModule) GetStopError() error {
+	stopErr := cm.stopError.Load()
+	if stopErr != nil {
+		return stopErr.(error)
+	}
+	return nil
 }
 
 // Get the current server state.
@@ -284,11 +287,12 @@ func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRe
 }
 
 func (cm *ConsensusModule) processor() {
+	var stopErr error = nil
+
 	defer func() {
-		// TODO: should we really recover?!
-		// Recover & save the panic reason
-		if r := recover(); r != nil {
-			cm.stopError.Store(r)
+		// Save error if needed
+		if stopErr != nil {
+			cm.stopError.Store(stopErr)
 		}
 		// Mark the server as stopped
 		atomic.StoreInt32(&cm.stopped, 1)
@@ -304,22 +308,26 @@ loop:
 			if !ok {
 				// theoretically unreachable as we don't close the channel
 				// til shutdown
-				panic("FATAL: runnableChannel closed")
+				stopErr = errors.New("FATAL: runnableChannel closed")
+				break loop
 			}
 			err := runnable()
 			if err != nil {
-				panic(err)
+				stopErr = err
+				break loop
 			}
 		case _, ok := <-cm.ticker.C:
 			if !ok {
 				// theoretically unreachable as we don't stop the timer til shutdown
-				panic("FATAL: ticker channel closed")
+				stopErr = errors.New("FATAL: ticker channel closed")
+				break loop
 			}
 			// Get a fresh now since the ticker's now could have been waiting
 			now := time.Now()
 			err := cm.passiveConsensusModule.tick(now)
 			if err != nil {
-				panic(err)
+				stopErr = err
+				break loop
 			}
 		case <-cm.stopSignal:
 			break loop
