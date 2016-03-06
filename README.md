@@ -1,6 +1,6 @@
 # A Raft Consensus Implementation in Go
 
-[![Build Status](https://travis-ci.org/divtxt/raft-consensus.svg?branch=master)](https://travis-ci.org/divtxt/raft-consensus)
+[![Build Status](https://travis-ci.org/divtxt/raft.svg?branch=master)](https://travis-ci.org/divtxt/raft)
 
 An implementation of the Raft consensus protocol.
 (<http://ramcloud.stanford.edu/raft.pdf>)
