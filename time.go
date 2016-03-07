@@ -31,13 +31,16 @@ func ValidateTimeSettings(timeSettings TimeSettings) string {
 }
 
 type electionTimeoutTracker struct {
+	r                      *rand.Rand
 	electionTimeoutLow     time.Duration
 	currentElectionTimeout time.Duration
 	electionTimeoutTime    time.Time
 }
 
 func newElectionTimeoutTracker(electionTimeoutLow time.Duration, now time.Time) *electionTimeoutTracker {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	ett := &electionTimeoutTracker{
+		r,
 		electionTimeoutLow,
 		0,   // temp value, to be replaced later in initialization
 		now, // temp value, to be replaced before goroutine start
@@ -51,7 +54,7 @@ func newElectionTimeoutTracker(electionTimeoutLow time.Duration, now time.Time) 
 func (ett *electionTimeoutTracker) chooseNewRandomElectionTimeoutAndTouch(now time.Time) {
 	// #5.2-p6s2: ..., election timeouts are chosen randomly from a fixed
 	// interval (e.g., 150-300ms)
-	ett.currentElectionTimeout = ett.electionTimeoutLow + time.Duration(rand.Int63n(int64(ett.electionTimeoutLow)+1))
+	ett.currentElectionTimeout = ett.electionTimeoutLow + time.Duration(ett.r.Int63n(int64(ett.electionTimeoutLow)+1))
 	ett.touch(now)
 }
 
