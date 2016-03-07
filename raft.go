@@ -252,7 +252,7 @@ type AppendCommandResult struct {
 
 // Implement rpcSender.sendRpcAppendEntriesAsync to bridge to
 // RpcService.SendRpcAppendEntriesAsync() with a closure callback.
-func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) {
+func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) error {
 	replyAsync := func(rpcReply *RpcAppendEntriesReply) {
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
@@ -265,12 +265,12 @@ func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *Rpc
 			return nil
 		}
 	}
-	cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)
+	return cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)
 }
 
 // Implement rpcSender.sendRpcRequestVoteAsync to bridge to
 // RpcService.SendRpcRequestVoteAsync() with a closure callback.
-func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) {
+func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) error {
 	replyAsync := func(rpcReply *RpcRequestVoteReply) {
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
@@ -283,7 +283,7 @@ func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRe
 			return nil
 		}
 	}
-	cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
+	return cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
 }
 
 func (cm *ConsensusModule) processor() {

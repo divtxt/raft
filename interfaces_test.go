@@ -192,22 +192,22 @@ func newMockRpcSender() *mockRpcSender {
 	}
 }
 
-func (mrs *mockRpcSender) sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) {
-	mrs.SendRpcAppendEntriesAsync(toServer, rpc, nil)
+func (mrs *mockRpcSender) sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) error {
+	return mrs.SendRpcAppendEntriesAsync(toServer, rpc, nil)
 }
 
-func (mrs *mockRpcSender) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) {
-	mrs.SendRpcRequestVoteAsync(toServer, rpc, nil)
+func (mrs *mockRpcSender) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) error {
+	return mrs.SendRpcRequestVoteAsync(toServer, rpc, nil)
 }
 
 func (mrs *mockRpcSender) SendRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
 	replyAsync func(*RpcAppendEntriesReply),
-) {
+) error {
 	select {
 	default:
-		panic("oops!")
+		return errors.New("oops!")
 	case mrs.c <- mockSentRpc{toServer, rpc}:
 		if replyAsync != nil {
 			mrs.replyAsyncs <- func(rpcReply interface{}) {
@@ -220,16 +220,17 @@ func (mrs *mockRpcSender) SendRpcAppendEntriesAsync(
 			}
 		}
 	}
+	return nil
 }
 
 func (mrs *mockRpcSender) SendRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
 	replyAsync func(*RpcRequestVoteReply),
-) {
+) error {
 	select {
 	default:
-		panic("oops!")
+		return errors.New("oops!")
 	case mrs.c <- mockSentRpc{toServer, rpc}:
 		if replyAsync != nil {
 			mrs.replyAsyncs <- func(rpcReply interface{}) {
@@ -242,6 +243,7 @@ func (mrs *mockRpcSender) SendRpcRequestVoteAsync(
 			}
 		}
 	}
+	return nil
 }
 
 // Clear sent rpcs.
@@ -319,6 +321,7 @@ func (mrss mockRpcSenderSlice) Less(i, j int) bool { return mrss[i].toServer < m
 func (mrss mockRpcSenderSlice) Swap(i, j int)      { mrss[i], mrss[j] = mrss[j], mrss[i] }
 
 func TestMockRpcSender(t *testing.T) {
+	var err error
 	mrs := newMockRpcSender()
 
 	var actualReply *RpcAppendEntriesReply = nil
@@ -326,16 +329,22 @@ func TestMockRpcSender(t *testing.T) {
 		actualReply = rpcReply
 	}
 
-	mrs.SendRpcAppendEntriesAsync(
+	err = mrs.SendRpcAppendEntriesAsync(
 		"s2",
 		&RpcAppendEntries{101, 8080, 100, nil, 8000},
 		replyAsync,
 	)
-	mrs.SendRpcRequestVoteAsync(
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mrs.SendRpcRequestVoteAsync(
 		"s1",
 		&RpcRequestVote{102, 8008, 100},
 		nil,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	expected := []mockSentRpc{
 		{"s1", &RpcRequestVote{102, 8008, 100}},
