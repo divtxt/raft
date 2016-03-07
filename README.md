@@ -19,7 +19,7 @@ See [lockd](https://github.com/divtxt/lockd) for a example of how to use this mo
 Basics:
 
 - [x] Rename repo from `raft-consensus` to `raft`
-- [ ] Change error handling from `panic()` to returning `error`.
+- [x] Change error handling from `panic()` to returning `error`.
 - [ ] Fix TODOs
 - [ ] Code review & cleanup
 - [ ] Simplify/shorten names

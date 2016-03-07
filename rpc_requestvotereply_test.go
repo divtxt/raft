@@ -13,43 +13,58 @@ import (
 func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.setCommitIndex(3)
+	err := mcm.pcm.setCommitIndex(3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpcReply_RpcRequestVoteReply(
+	err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 		"s2",
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.pcm.rpcReply_RpcRequestVoteReply(
+	err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 		"s3",
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, false},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s4 grants vote - should become leader
-	mcm.pcm.rpcReply_RpcRequestVoteReply(
+	err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 		"s4",
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 
 	// s5 grants vote - should stay leader
-	mcm.pcm.rpcReply_RpcRequestVoteReply(
+	err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 		"s5",
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -82,7 +97,10 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 	}
 
 	// leader setup
-	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(mcm.pcm.log)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(mcm.pcm.log)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc := &RpcAppendEntries{
 		serverTerm,
 		lastLogIndex,
@@ -112,21 +130,27 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
-	mcm.pcm.rpcReply_RpcRequestVoteReply(
+	err := mcm.pcm.rpcReply_RpcRequestVoteReply(
 		"s2",
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 
 	// s3 denies vote - should stay as candidate
-	mcm.pcm.rpcReply_RpcRequestVoteReply(
+	err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 		"s3",
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, false},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
@@ -144,33 +168,42 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 		beforeState := mcm.pcm.getServerState()
 
 		// s2 grants vote - ignore
-		mcm.pcm.rpcReply_RpcRequestVoteReply(
+		err := mcm.pcm.rpcReply_RpcRequestVoteReply(
 			"s2",
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, true},
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
 		mrs.checkSentRpcs(t, []mockSentRpc{})
 
 		// s3 denies vote - ignore
-		mcm.pcm.rpcReply_RpcRequestVoteReply(
+		err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 			"s3",
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, false},
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
 		mrs.checkSentRpcs(t, []mockSentRpc{})
 
 		// s4 grants vote - ignore
-		mcm.pcm.rpcReply_RpcRequestVoteReply(
+		err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 			"s4",
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, true},
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
@@ -195,37 +228,49 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 	) {
 		mcm, mrs := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-		mcm.pcm.setCommitIndex(2)
+		err := mcm.pcm.setCommitIndex(2)
+		if err != nil {
+			t.Fatal(err)
+		}
 		sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 		beforeState := mcm.pcm.getServerState()
 
 		// s2 grants vote - should stay as candidate
-		mcm.pcm.rpcReply_RpcRequestVoteReply(
+		err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 			"s2",
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, true},
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
 
 		// s3 grants vote for previous term election - ignore and stay as candidate
-		mcm.pcm.rpcReply_RpcRequestVoteReply(
+		err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 			"s3",
 			&RpcRequestVote{serverTerm - 1, 0, 0},
 			&RpcRequestVoteReply{serverTerm - 1, true},
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
 
 		if sendMajorityVote {
 			// s3 grants vote for this election - become leader only if candidate
-			mcm.pcm.rpcReply_RpcRequestVoteReply(
+			err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 				"s3",
 				sentRpc,
 				&RpcRequestVoteReply{serverTerm, true},
 			)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if beforeState == CANDIDATE {
 				testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 			} else {
@@ -237,11 +282,14 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 
 		// s4 denies vote for this election indicating a newer term - increase term
 		// and become follower
-		mcm.pcm.rpcReply_RpcRequestVoteReply(
+		err = mcm.pcm.rpcReply_RpcRequestVoteReply(
 			"s4",
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm + 1, false},
 		)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.pcm.getServerState() != FOLLOWER {
 			t.Fatal()
 		}

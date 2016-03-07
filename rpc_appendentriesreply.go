@@ -11,13 +11,13 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	from ServerId,
 	appendEntries *RpcAppendEntries,
 	appendEntriesReply *RpcAppendEntriesReply,
-) {
+) error {
 	serverState := cm.getServerState()
 	serverTerm := cm.persistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc
 	if appendEntries.Term != serverTerm {
-		return
+		return nil
 	}
 
 	switch serverState {
@@ -26,11 +26,11 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 		fallthrough
 	case CANDIDATE:
 		// Extra: raft violation - only leader should get AppendEntriesReply
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"FATAL: non-leader got AppendEntriesReply from: %v with term: %v",
 			from,
 			serverTerm,
-		))
+		)
 	case LEADER:
 		// Pass through to main logic below
 	}
@@ -43,8 +43,11 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	// date, it immediately reverts to follower state.
 	senderCurrentTerm := appendEntriesReply.Term
 	if senderCurrentTerm > serverTerm {
-		cm.becomeFollowerWithTerm(senderCurrentTerm)
-		return
+		err := cm.becomeFollowerWithTerm(senderCurrentTerm)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// #RFS-L3.2: If AppendEntries fails because of log inconsistency:
@@ -52,18 +55,32 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	// #5.3-p8s6: After a rejection, the leader decrements nextIndex and
 	// retries the AppendEntries RPC.
 	if !appendEntriesReply.Success {
-		cm.leaderVolatileState.decrementNextIndex(from)
-		cm.sendAppendEntriesToPeer(from, false)
-		return
+		err := cm.leaderVolatileState.decrementNextIndex(from)
+		if err != nil {
+			return err
+		}
+		err = cm.sendAppendEntriesToPeer(from, false)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// #RFS-L3.1: If successful: update nextIndex and matchIndex for
 	// follower (#5.3)
 	newMatchIndex := appendEntries.PrevLogIndex + LogIndex(len(appendEntries.Entries))
-	cm.leaderVolatileState.setMatchIndexAndNextIndex(from, newMatchIndex)
+	err := cm.leaderVolatileState.setMatchIndexAndNextIndex(from, newMatchIndex)
+	if err != nil {
+		return err
+	}
 
 	// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 	// of matchIndex[i] >= N, and log[N].term == currentTerm:
 	// set commitIndex = N (#5.3, #5.4)
-	cm.advanceCommitIndexIfPossible()
+	err = cm.advanceCommitIndexIfPossible()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -15,7 +15,7 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	from ServerId,
 	appendEntries *RpcAppendEntries,
 	now time.Time,
-) *RpcAppendEntriesReply {
+) (*RpcAppendEntriesReply, error) {
 	makeReply := func(success bool) *RpcAppendEntriesReply {
 		return &RpcAppendEntriesReply{
 			cm.persistentState.GetCurrentTerm(), // refetch in case it has changed!
@@ -41,16 +41,16 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 
 	// 1. Reply false if term < currentTerm (#5.1)
 	if leaderCurrentTerm < serverTerm {
-		return makeReply(false)
+		return makeReply(false), nil
 	}
 
 	// Extra: raft violation - two leaders with same term
 	if serverState == LEADER && leaderCurrentTerm == serverTerm {
-		panic(fmt.Sprintf(
+		return nil, fmt.Errorf(
 			"FATAL: two leaders with same term - got AppendEntries from: %v with term: %v",
 			from,
 			serverTerm,
-		))
+		)
 	}
 
 	// #RFS-F2: (paraphrasing) AppendEntries RPC from current leader should
@@ -70,16 +70,19 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as
 	// large as the candidate’s current term, then the candidate recognizes
 	// the leader as legitimate and returns to follower state.
-	cm.becomeFollowerWithTerm(leaderCurrentTerm)
+	err := cm.becomeFollowerWithTerm(leaderCurrentTerm)
+	if err != nil {
+		return nil, err
+	}
 
 	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose
 	// term matches prevLogTerm (#5.3)
 	iole, err := log.GetIndexOfLastEntry()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if iole < prevLogIndex {
-		return makeReply(false)
+		return makeReply(false), nil
 	}
 
 	// 3. If an existing entry conflicts with a new one (same index
@@ -88,7 +91,7 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	// 4. Append any new entries not already in the log
 	err = log.SetEntriesAfterIndex(prevLogIndex, appendEntries.Entries)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit,
@@ -98,14 +101,20 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 		var indexOfLastNewEntry LogIndex
 		indexOfLastNewEntry, err = log.GetIndexOfLastEntry()
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		if leaderCommit < indexOfLastNewEntry {
-			cm.setCommitIndex(leaderCommit)
+			err = cm.setCommitIndex(leaderCommit)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			cm.setCommitIndex(indexOfLastNewEntry)
+			err = cm.setCommitIndex(indexOfLastNewEntry)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	return makeReply(true)
+	return makeReply(true), nil
 }

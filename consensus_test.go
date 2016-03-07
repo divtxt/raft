@@ -2,7 +2,6 @@ package raft
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -38,9 +37,12 @@ func setupManagedConsensusModuleR2(
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	mrs := newMockRpcSender()
-	ci := NewClusterInfo(testAllServerIds, testThisServerId)
+	ci, err := NewClusterInfo(testAllServerIds, testThisServerId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	now := time.Now()
-	cm := newPassiveConsensusModule(
+	cm, err := newPassiveConsensusModule(
 		ps,
 		imle,
 		mrs,
@@ -48,6 +50,9 @@ func setupManagedConsensusModuleR2(
 		testElectionTimeoutLow,
 		now,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if cm == nil {
 		t.Fatal()
 	}
@@ -71,82 +76,12 @@ func TestCM_InitialState(t *testing.T) {
 	}
 }
 
-func test_ExpectPanic(t *testing.T, f func(), expectedRecover interface{}) {
-	skipRecover := false
-	defer func() {
-		if !skipRecover {
-			if r := recover(); r != expectedRecover {
-				t.Fatal(fmt.Sprintf("Expected panic: %v; got: %v", expectedRecover, r))
-			}
-		}
-	}()
-
-	f()
-	skipRecover = true
-	t.Fatal(fmt.Sprintf("Expected panic: %v", expectedRecover))
-}
-
-func test_ExpectPanicAnyRecover(t *testing.T, f func()) {
-	skipRecover := false
-	defer func() {
-		if !skipRecover {
-			if r := recover(); r == nil {
-				t.Fatal("Expected panic, but got panic with recover of nil")
-			}
-		}
-	}()
-
-	f()
-	skipRecover = true
-	t.Fatal("Expected panic")
-}
-
-func testCM_setupMCMAndExpectPanicFor(
-	t *testing.T,
-	f func(*managedConsensusModule),
-	expectedRecover interface{},
-) {
+func TestCM_SetServerState_BadServerStateReturnsError(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
-	test_ExpectPanic(
-		t,
-		func() {
-			f(mcm)
-		},
-		expectedRecover,
-	)
-}
-
-func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
-			mcm.pcm.setServerState(42)
-		},
-		"FATAL: unknown ServerState: 42",
-	)
-}
-
-func TestCM_BadServerStatePanicsTick(t *testing.T) {
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
-			mcm.pcm._unsafe_serverState = 42
-
-			mcm.tick()
-		},
-		"FATAL: unknown ServerState: 42",
-	)
-}
-
-func TestCM_GetServerState_BadServerStatePanics(t *testing.T) {
-	testCM_setupMCMAndExpectPanicFor(
-		t,
-		func(mcm *managedConsensusModule) {
-			mcm.pcm._unsafe_serverState = 42
-			mcm.pcm.getServerState()
-		},
-		"FATAL: unknown ServerState: 42",
-	)
+	err := mcm.pcm.setServerState(42)
+	if err.Error() != "FATAL: unknown ServerState: 42" {
+		t.Fatal(err)
+	}
 }
 
 // #RFS-F2: If election timeout elapses without receiving
@@ -178,7 +113,10 @@ func testCM_Follower_StartsElectionOnElectionTimeout(
 	}
 
 	// Test that a tick before election timeout causes no state change.
-	mcm.tick()
+	err := mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.persistentState.GetCurrentTerm() != testCurrentTerm {
 		t.Fatal()
 	}
@@ -197,7 +135,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 ) {
 	timeout1 := mcm.pcm.electionTimeoutTracker.currentElectionTimeout
 	// Test that election timeout causes a new election
-	mcm.tickTilElectionTimeout()
+	mcm.tickTilElectionTimeout(t)
 	if mcm.pcm.persistentState.GetCurrentTerm() != expectedNewTerm {
 		t.Fatal(expectedNewTerm, mcm.pcm.persistentState.GetCurrentTerm())
 	}
@@ -214,13 +152,19 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 		t.Fatal()
 	}
 	// candidate state is fresh
-	expectedCvs := newCandidateVolatileState(mcm.pcm.clusterInfo)
+	expectedCvs, err := newCandidateVolatileState(mcm.pcm.clusterInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !reflect.DeepEqual(mcm.pcm.candidateVolatileState, expectedCvs) {
 		t.Fatal()
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(mcm.pcm.log)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(mcm.pcm.log)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc := &RpcRequestVote{expectedNewTerm, lastLogIndex, lastLogTerm}
 	expectedRpcs := []mockSentRpc{
 		{"s2", expectedRpc},
@@ -240,11 +184,17 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
 func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.setCommitIndex(6)
+	err := mcm.pcm.setCommitIndex(6)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	mrs.checkSentRpcs(t, []mockSentRpc{})
 
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	testIsLeaderWithTermAndSentEmptyAppendEntries(t, mcm, mrs, serverTerm)
 }
@@ -254,14 +204,26 @@ func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.setCommitIndex(5)
+	err := mcm.pcm.setCommitIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// repatch some peers as not caught up
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 7)
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 7)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// tick should trigger check & appropriate sends
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	expectedRpcEmpty := &RpcAppendEntries{
 		serverTerm,
@@ -302,7 +264,10 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
-	mcm.pcm.setCommitIndex(4)
+	err := mcm.pcm.setCommitIndex(4)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
@@ -311,7 +276,10 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	}
 
 	// nothing to send
-	mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc := &RpcAppendEntries{
 		serverTerm,
 		10,
@@ -325,8 +293,14 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// empty send
-	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
-	mcm.pcm.sendAppendEntriesToPeer("s2", true)
+	err = mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.sendAppendEntriesToPeer("s2", true)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
 		9,
@@ -340,7 +314,10 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// send one
-	mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
 		9,
@@ -356,9 +333,18 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// send multiple
-	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
-	mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
-	mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.decrementNextIndex("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc = &RpcAppendEntries{
 		serverTerm,
 		7,
@@ -470,13 +456,28 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// match peers for cases (a), (b), (c) & (d)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 4)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s4", 10)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 10)
+	err := mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s4", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s5", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// tick should try to advance commitIndex but nothing should happen
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getCommitIndex() != 0 {
 		t.Fatal()
 	}
@@ -517,7 +518,10 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 
 	// tick should try to advance commitIndex but nothing should happen
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getCommitIndex() != 0 {
 		t.Fatal()
 	}
@@ -556,11 +560,20 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// 2 peers - for cases (a) & (b) - catch up
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 11)
-	mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 11)
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s2", 11)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex("s3", 11)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// tick advances commitIndex
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getCommitIndex() != 11 {
 		t.Fatal()
 	}
@@ -595,7 +608,10 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// replies never came back -> tick cannot advance commitIndex
-	mcm.tick()
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getCommitIndex() != 11 {
 		t.Fatal(mcm.pcm.getCommitIndex())
 	}
@@ -610,12 +626,18 @@ func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
 			t.Fatal()
 		}
 
-		mcm.pcm.setCommitIndex(2)
+		err := mcm.pcm.setCommitIndex(2)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.iml._commitIndex != 2 {
 			t.Fatal()
 		}
 
-		mcm.pcm.setCommitIndex(9)
+		err = mcm.pcm.setCommitIndex(9)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.iml._commitIndex != 9 {
 			t.Fatal()
 		}
@@ -656,8 +678,14 @@ func testSetupMCM_Leader_WithTerms(
 	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
 	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
-	mcm.pcm.rpcReply_RpcRequestVoteReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
-	mcm.pcm.rpcReply_RpcRequestVoteReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	err := mcm.pcm.rpcReply_RpcRequestVoteReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.rpcReply_RpcRequestVoteReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
@@ -695,11 +723,18 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	if err != nil {
 		t.Fatal()
 	}
-	mcm.pcm.clusterInfo.ForEachPeer(
-		func(serverId ServerId) {
-			mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex(serverId, lastLogIndex)
+	err = mcm.pcm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) error {
+			err := mcm.pcm.leaderVolatileState.setMatchIndexAndNextIndex(serverId, lastLogIndex)
+			if err != nil {
+				return err
+			}
+			return nil
 		},
 	)
+	if err != nil {
+		t.Fatal()
+	}
 
 	// after check
 	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
@@ -799,37 +834,47 @@ type managedConsensusModule struct {
 	iml *inMemoryLog
 }
 
-func (mcm *managedConsensusModule) tick() {
-	mcm.pcm.tick(mcm.now)
+func (mcm *managedConsensusModule) tick() error {
+	err := mcm.pcm.tick(mcm.now)
+	if err != nil {
+		return err
+	}
 	mcm.now = mcm.now.Add(testTickerDuration)
+	return nil
 }
 
 func (mcm *managedConsensusModule) rpc_RpcAppendEntries(
 	from ServerId,
 	rpc *RpcAppendEntries,
-) *RpcAppendEntriesReply {
+) (*RpcAppendEntriesReply, error) {
 	return mcm.pcm.rpc_RpcAppendEntries(from, rpc, mcm.now)
 }
 
 func (mcm *managedConsensusModule) rpc_RpcRequestVote(
 	from ServerId,
 	rpc *RpcRequestVote,
-) *RpcRequestVoteReply {
+) (*RpcRequestVoteReply, error) {
 	return mcm.pcm.rpc_RpcRequestVote(from, rpc, mcm.now)
 }
 
-func (mcm *managedConsensusModule) tickTilElectionTimeout() {
+func (mcm *managedConsensusModule) tickTilElectionTimeout(t *testing.T) {
 	electionTimeoutTime := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 	for {
-		mcm.tick()
+		err := mcm.tick()
+		if err != nil {
+			t.Fatal(err)
+		}
 		if mcm.now.After(electionTimeoutTime) {
 			break
 		}
 	}
 	if mcm.pcm.electionTimeoutTracker.electionTimeoutTime != electionTimeoutTime {
-		panic("electionTimeoutTime changed!")
+		t.Fatal("electionTimeoutTime changed!")
 	}
 	// Because tick() increments "now" after calling tick(),
 	// we need one more to actually run with a post-timeout "now".
-	mcm.tick()
+	err := mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
 }

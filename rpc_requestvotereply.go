@@ -7,13 +7,13 @@ func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 	fromPeer ServerId,
 	rpcRequestVote *RpcRequestVote,
 	rpcRequestVoteReply *RpcRequestVoteReply,
-) {
+) error {
 	serverState := cm.getServerState()
 	serverTerm := cm.persistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc
 	if rpcRequestVote.Term != serverTerm {
-		return
+		return nil
 	}
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
@@ -24,7 +24,10 @@ func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 	// date, it immediately reverts to follower state.
 	senderCurrentTerm := rpcRequestVoteReply.Term
 	if senderCurrentTerm > serverTerm {
-		cm.becomeFollowerWithTerm(senderCurrentTerm)
+		err := cm.becomeFollowerWithTerm(senderCurrentTerm)
+		if err != nil {
+			return err
+		}
 	}
 
 	switch serverState {
@@ -35,13 +38,20 @@ func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 		// #5.2-p3s1: A candidate wins an election if it receives votes from a
 		// majority of the servers in the full cluster for the same term.
 		if rpcRequestVoteReply.VoteGranted {
-			haveQuorum := cm.candidateVolatileState.addVoteFrom(fromPeer)
+			haveQuorum, err := cm.candidateVolatileState.addVoteFrom(fromPeer)
+			if err != nil {
+				return err
+			}
 			if haveQuorum {
-				cm.becomeLeader()
+				err = cm.becomeLeader()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	case LEADER:
 		// Ignore - not a candidate
 	}
 
+	return nil
 }
