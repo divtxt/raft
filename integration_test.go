@@ -18,8 +18,14 @@ func setupConsensusModuleR3(
 	ps := newIMPSWithCurrentTerm(0)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	ts := TimeSettings{testTickerDuration, electionTimeoutLow}
-	ci := NewClusterInfo(testClusterServerIds, thisServerId)
-	cm := NewConsensusModule(ps, imle, imrsc, ci, ts)
+	ci, err := NewClusterInfo(testClusterServerIds, thisServerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cm, err := NewConsensusModule(ps, imle, imrsc, ci, ts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if cm == nil {
 		t.Fatal()
 	}
@@ -229,7 +235,7 @@ func (imrs *inMemoryRpcServiceConnector) SendRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
 	replyAsync func(*RpcAppendEntriesReply),
-) {
+) error {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
 		replyChan := cm.ProcessRpcAppendEntriesAsync(imrs.from, rpc)
@@ -237,13 +243,14 @@ func (imrs *inMemoryRpcServiceConnector) SendRpcAppendEntriesAsync(
 			replyAsync(<-replyChan)
 		}()
 	}
+	return nil
 }
 
 func (imrs *inMemoryRpcServiceConnector) SendRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
 	replyAsync func(*RpcRequestVoteReply),
-) {
+) error {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
 		replyChan := cm.ProcessRpcRequestVoteAsync(imrs.from, rpc)
@@ -251,4 +258,5 @@ func (imrs *inMemoryRpcServiceConnector) SendRpcRequestVoteAsync(
 			replyAsync(<-replyChan)
 		}()
 	}
+	return nil
 }

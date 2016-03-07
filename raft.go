@@ -15,13 +15,14 @@
 // - Concurrency: a ConsensusModule will only ever call the methods of these
 // interfaces from it's single goroutine.
 //
-// - Errors: all errors should be indicated using panic(). This includes both
+// - Errors: all errors should be checked and returned. This includes both
 // invalid parameters sent by the consensus module and internal errors in the
-// implementation. Note that such a panic will shutdown the ConsensusModule.
+// implementation. Note that any error will shutdown the ConsensusModule.
 //
 package raft
 
 import (
+	"errors"
 	"sync/atomic"
 	"time"
 )
@@ -37,7 +38,7 @@ type ConsensusModule struct {
 	stopped int32
 
 	// -- Channels
-	runnableChannel chan func()
+	runnableChannel chan func() error
 	ticker          *time.Ticker
 
 	// -- Control
@@ -57,8 +58,8 @@ func NewConsensusModule(
 	rpcService RpcService,
 	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
-) *ConsensusModule {
-	runnableChannel := make(chan func(), RPC_CHANNEL_BUFFER_SIZE)
+) (*ConsensusModule, error) {
+	runnableChannel := make(chan func() error, RPC_CHANNEL_BUFFER_SIZE)
 	ticker := time.NewTicker(timeSettings.TickerDuration)
 	now := time.Now()
 
@@ -80,7 +81,7 @@ func NewConsensusModule(
 		&atomic.Value{},
 	}
 
-	pcm := newPassiveConsensusModule(
+	pcm, err := newPassiveConsensusModule(
 		persistentState,
 		log,
 		cm,
@@ -88,6 +89,9 @@ func NewConsensusModule(
 		timeSettings.ElectionTimeoutLow,
 		now,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	// we can only set the value here because it's a cyclic reference
 	cm.passiveConsensusModule = pcm
@@ -95,7 +99,7 @@ func NewConsensusModule(
 	// Start the go routine
 	go cm.processor()
 
-	return cm
+	return cm, nil
 }
 
 // Check if the ConsensusModule is stopped.
@@ -114,11 +118,14 @@ func (cm *ConsensusModule) StopAsync() {
 
 // Get the error that stopped the ConsensusModule goroutine.
 //
-// Gets the recover value for the panic that stopped the goroutine.
-// The value will be nil if the goroutine is not stopped, stopped
-// without an error, or  panicked with a nil value.
-func (cm *ConsensusModule) GetStopError() interface{} {
-	return cm.stopError.Load()
+// The value will be nil if the goroutine is not stopped, or if it stopped
+// without an error.
+func (cm *ConsensusModule) GetStopError() error {
+	stopErr := cm.stopError.Load()
+	if stopErr != nil {
+		return stopErr.(error)
+	}
+	return nil
 }
 
 // Get the current server state.
@@ -140,17 +147,21 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 	rpc *RpcAppendEntries,
 ) <-chan *RpcAppendEntriesReply {
 	replyChan := make(chan *RpcAppendEntriesReply, 1)
-	cm.runnableChannel <- func() {
+	cm.runnableChannel <- func() error {
 		now := time.Now()
 
-		rpcReply := cm.passiveConsensusModule.rpc_RpcAppendEntries(from, rpc, now)
+		rpcReply, err := cm.passiveConsensusModule.rpc_RpcAppendEntries(from, rpc, now)
+		if err != nil {
+			return err
+		}
 
 		select {
 		case replyChan <- rpcReply:
+			return nil
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
-			panic("FATAL: replyChan is nil or wants to block")
+			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
 	return replyChan
@@ -170,17 +181,21 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 	rpc *RpcRequestVote,
 ) <-chan *RpcRequestVoteReply {
 	replyChan := make(chan *RpcRequestVoteReply, 1)
-	cm.runnableChannel <- func() {
+	cm.runnableChannel <- func() error {
 		now := time.Now()
 
-		rpcReply := cm.passiveConsensusModule.rpc_RpcRequestVote(from, rpc, now)
+		rpcReply, err := cm.passiveConsensusModule.rpc_RpcRequestVote(from, rpc, now)
+		if err != nil {
+			return err
+		}
 
 		select {
 		case replyChan <- rpcReply:
+			return nil
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
-			panic("FATAL: replyChan is nil or wants to block")
+			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
 	return replyChan
@@ -213,15 +228,16 @@ func (cm *ConsensusModule) AppendCommandAsync(
 	command Command,
 ) <-chan AppendCommandResult {
 	replyChan := make(chan AppendCommandResult, 1)
-	cm.runnableChannel <- func() {
+	cm.runnableChannel <- func() error {
 		logIndex, err := cm.passiveConsensusModule.appendCommand(command)
 		appendCommandResult := AppendCommandResult{logIndex, err}
 		select {
 		case replyChan <- appendCommandResult:
+			return nil
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
-			panic("FATAL: replyChan is nil or wants to block")
+			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
 	return replyChan
@@ -236,38 +252,47 @@ type AppendCommandResult struct {
 
 // Implement rpcSender.sendRpcAppendEntriesAsync to bridge to
 // RpcService.SendRpcAppendEntriesAsync() with a closure callback.
-func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) {
+func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) error {
 	replyAsync := func(rpcReply *RpcAppendEntriesReply) {
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
 		// TODO: behavior when channel full?
-		cm.runnableChannel <- func() {
-			cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
+		cm.runnableChannel <- func() error {
+			err := cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 	}
-	cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)
+	return cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)
 }
 
 // Implement rpcSender.sendRpcRequestVoteAsync to bridge to
 // RpcService.SendRpcRequestVoteAsync() with a closure callback.
-func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) {
+func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) error {
 	replyAsync := func(rpcReply *RpcRequestVoteReply) {
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
 		// TODO: behavior when channel full?
-		cm.runnableChannel <- func() {
-			cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
+		cm.runnableChannel <- func() error {
+			err := cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 	}
-	cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
+	return cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
 }
 
 func (cm *ConsensusModule) processor() {
+	var stopErr error = nil
+
 	defer func() {
-		// TODO: should we really recover?!
-		// Recover & save the panic reason
-		if r := recover(); r != nil {
-			cm.stopError.Store(r)
+		// Save error if needed
+		if stopErr != nil {
+			cm.stopError.Store(stopErr)
 		}
 		// Mark the server as stopped
 		atomic.StoreInt32(&cm.stopped, 1)
@@ -283,17 +308,27 @@ loop:
 			if !ok {
 				// theoretically unreachable as we don't close the channel
 				// til shutdown
-				panic("FATAL: runnableChannel closed")
+				stopErr = errors.New("FATAL: runnableChannel closed")
+				break loop
 			}
-			runnable()
+			err := runnable()
+			if err != nil {
+				stopErr = err
+				break loop
+			}
 		case _, ok := <-cm.ticker.C:
 			if !ok {
 				// theoretically unreachable as we don't stop the timer til shutdown
-				panic("FATAL: ticker channel closed")
+				stopErr = errors.New("FATAL: ticker channel closed")
+				break loop
 			}
 			// Get a fresh now since the ticker's now could have been waiting
 			now := time.Now()
-			cm.passiveConsensusModule.tick(now)
+			err := cm.passiveConsensusModule.tick(now)
+			if err != nil {
+				stopErr = err
+				break loop
+			}
 		case <-cm.stopSignal:
 			break loop
 		}

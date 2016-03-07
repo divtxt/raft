@@ -1,6 +1,8 @@
 package raft
 
 import (
+	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -43,18 +45,18 @@ func TestNewClusterInfo_Validation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test_ExpectPanic(
-			t,
-			func() {
-				NewClusterInfo(test.aids, test.tid)
-			},
-			test.expectedErr,
-		)
+		_, err := NewClusterInfo(test.aids, test.tid)
+		if e := err.Error(); e != test.expectedErr {
+			t.Fatal(e)
+		}
 	}
 }
 
 func TestClusterInfo_Assorted(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s1")
+	ci, err := NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if ci.GetThisServerId() != "s1" {
 		t.Fatal()
@@ -66,12 +68,34 @@ func TestClusterInfo_Assorted(t *testing.T) {
 }
 
 func TestClusterInfo_ForEach(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s1")
+	ci, err := NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	seenIds := make([]ServerId, 0, 3)
-	ci.ForEachPeer(func(serverId ServerId) {
+	err = ci.ForEachPeer(func(serverId ServerId) error {
 		seenIds = append(seenIds, serverId)
+		return nil
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(seenIds, []ServerId{"s2", "s3"}) {
+		t.Fatal(seenIds)
+	}
+
+	seenIds = make([]ServerId, 0, 3)
+	err = ci.ForEachPeer(func(serverId ServerId) error {
+		seenIds = append(seenIds, serverId)
+		return errors.New("foo!")
+	})
+	if err.Error() != "foo!" {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(seenIds, []ServerId{"s2"}) {
+		t.Fatal(seenIds)
+	}
 }
 
 func TestQuorumSizeForClusterSize(t *testing.T) {

@@ -2,7 +2,6 @@ package raft
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -21,8 +20,14 @@ func setupConsensusModuleR2(
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	mrs := newMockRpcSender()
 	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}
-	ci := NewClusterInfo(testAllServerIds, testThisServerId)
-	cm := NewConsensusModule(ps, imle, mrs, ci, ts)
+	ci, err := NewClusterInfo(testAllServerIds, testThisServerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cm, err := NewConsensusModule(ps, imle, mrs, ci, ts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if cm == nil {
 		t.Fatal()
 	}
@@ -35,37 +40,6 @@ func (cm *ConsensusModule) stopAsyncWithRecover() (e interface{}) {
 	}()
 	cm.StopAsync()
 	return nil
-}
-
-func (cm *ConsensusModule) stopAndCheckError() {
-	var callersError, stopAsyncError, stopStatusError, stopError interface{}
-
-	callersError = recover()
-
-	stopAsyncError = cm.stopAsyncWithRecover()
-
-	time.Sleep(testSleepToLetGoroutineRun)
-	if !cm.IsStopped() {
-		stopStatusError = "Timeout waiting for stop!"
-	}
-
-	stopError = cm.GetStopError()
-
-	if stopAsyncError == nil && stopStatusError == nil && stopError == nil {
-		if callersError != nil {
-			panic(callersError)
-		} else {
-			return
-		}
-	} else {
-		errs := [...]interface{}{
-			callersError,
-			stopAsyncError,
-			stopStatusError,
-			stopError,
-		}
-		panic(fmt.Sprintf("%v", errs))
-	}
 }
 
 func TestConsensusModule_StartStateAndStop(t *testing.T) {
@@ -154,7 +128,10 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(cm.passiveConsensusModule.log)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.passiveConsensusModule.log)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedRpc := &RpcRequestVote{testCurrentTerm + 1, lastLogIndex, lastLogTerm}
 	expectedRpcs := []mockSentRpc{
 		{"s2", expectedRpc},

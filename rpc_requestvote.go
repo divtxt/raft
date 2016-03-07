@@ -12,7 +12,7 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 	fromPeer ServerId,
 	rpcRequestVote *RpcRequestVote,
 	now time.Time,
-) *RpcRequestVoteReply {
+) (*RpcRequestVoteReply, error) {
 	makeReply := func(voteGranted bool) *RpcRequestVoteReply {
 		return &RpcRequestVoteReply{
 			cm.persistentState.GetCurrentTerm(), // refetch in case it has changed!
@@ -36,7 +36,7 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 
 	// 1. Reply false if term < currentTerm (#5.1)
 	if senderCurrentTerm < serverTerm {
-		return makeReply(false)
+		return makeReply(false), nil
 	}
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
@@ -46,14 +46,20 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 	// #5.1-p3s5: If a candidate or leader discovers that its term is out of
 	// date, it immediately reverts to follower state.
 	if senderCurrentTerm > serverTerm {
-		cm.becomeFollowerWithTerm(senderCurrentTerm)
+		err := cm.becomeFollowerWithTerm(senderCurrentTerm)
+		if err != nil {
+			return nil, err
+		}
 		serverTerm = cm.persistentState.GetCurrentTerm()
 	}
 
 	// #5.4.1-p3s1: Raft determines which of two logs is more up-to-date by
 	// comparing the index and term of the last entries in the logs.
 	var senderIsAtLeastAsUpToDate bool = false
-	lastEntryIndex, lastEntryTerm := GetIndexAndTermOfLastEntry(cm.log)
+	lastEntryIndex, lastEntryTerm, err := GetIndexAndTermOfLastEntry(cm.log)
+	if err != nil {
+		return nil, err
+	}
 	senderLastEntryIndex := rpcRequestVote.LastLogIndex
 	senderLastEntryTerm := rpcRequestVote.LastLogTerm
 	if senderLastEntryTerm != lastEntryTerm {
@@ -75,12 +81,15 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 	votedFor := cm.persistentState.GetVotedFor()
 	if (votedFor == "" || votedFor == fromPeer) && senderIsAtLeastAsUpToDate {
 		if votedFor == "" {
-			cm.persistentState.SetVotedFor(fromPeer)
+			err = cm.persistentState.SetVotedFor(fromPeer)
+			if err != nil {
+				return nil, err
+			}
 		}
 		// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
 		cm.electionTimeoutTracker.touch(now)
-		return makeReply(true)
+		return makeReply(true), nil
 	}
 
-	return makeReply(false)
+	return makeReply(false), nil
 }

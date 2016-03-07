@@ -23,7 +23,10 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 
 		appendEntries := makeAEWithTerm(serverTerm - 1)
 
-		reply := mcm.rpc_RpcAppendEntries("s2", appendEntries)
+		reply, err := mcm.rpc_RpcAppendEntries("s2", appendEntries)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		expectedRpc := RpcAppendEntriesReply{serverTerm, false}
 		if *reply != expectedRpc {
@@ -76,8 +79,9 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 	f := func(
 		setup func(*testing.T, []TermNo) (*managedConsensusModule, *mockRpcSender),
 		senderTermIsNewer bool,
-	) (*managedConsensusModule, *mockRpcSender) {
-		mcm, mrs := setup(t, []TermNo{1, 1, 1, 4})
+		expectedErr string,
+	) {
+		mcm, _ := setup(t, []TermNo{1, 1, 1, 4})
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
@@ -88,7 +92,17 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 
 		appendEntries := makeAEWithTermAndPrevLogDetails(senderTerm, 10, 6)
 
-		reply := mcm.rpc_RpcAppendEntries("s3", appendEntries)
+		reply, err := mcm.rpc_RpcAppendEntries("s3", appendEntries)
+		if expectedErr != "" {
+			if err != nil && err.Error() == expectedErr {
+				return
+			}
+			t.Fatal(err)
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 
 		expectedRpc := RpcAppendEntriesReply{senderTerm, false}
 		if *reply != expectedRpc {
@@ -123,26 +137,21 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 		if mcm.pcm.electionTimeoutTracker.electionTimeoutTime == electionTimeoutTime1 {
 			t.Fatal()
 		}
-
-		return mcm, mrs
 	}
 
 	// Follower
-	f(testSetupMCM_Follower_WithTerms, true)
-	f(testSetupMCM_Follower_WithTerms, false)
+	f(testSetupMCM_Follower_WithTerms, true, "")
+	f(testSetupMCM_Follower_WithTerms, false, "")
 
 	// Candidate
-	f(testSetupMCM_Candidate_WithTerms, true)
-	f(testSetupMCM_Candidate_WithTerms, false)
+	f(testSetupMCM_Candidate_WithTerms, true, "")
+	f(testSetupMCM_Candidate_WithTerms, false, "")
 
 	// Leader
-	f(testSetupMCM_Leader_WithTerms, true)
+	f(testSetupMCM_Leader_WithTerms, true, "")
 	// Extra: raft violation - two leaders with same term
-	test_ExpectPanic(
-		t,
-		func() {
-			f(testSetupMCM_Leader_WithTerms, false)
-		},
+	f(
+		testSetupMCM_Leader_WithTerms, false,
 		"FATAL: two leaders with same term - got AppendEntries from: s3 with term: 8",
 	)
 }
@@ -161,12 +170,16 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 	f := func(
 		setup func(t *testing.T, terms []TermNo) (mcm *managedConsensusModule, mrs *mockRpcSender),
 		senderTermIsNewer bool,
+		expectedErr string,
 	) {
 		mcm, _ := setup(
 			t,
 			[]TermNo{1, 1, 1, 4, 4, 4, 4, 4, 4, 4, 4},
 		)
-		mcm.pcm.setCommitIndex(3)
+		err := mcm.pcm.setCommitIndex(3)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
@@ -188,7 +201,17 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 
 		appendEntries := &RpcAppendEntries{senderTerm, 5, 4, sentLogEntries, 7}
 
-		reply := mcm.rpc_RpcAppendEntries("s4", appendEntries)
+		reply, err := mcm.rpc_RpcAppendEntries("s4", appendEntries)
+		if expectedErr != "" {
+			if err != nil && err.Error() == expectedErr {
+				return
+			}
+			t.Fatal(err)
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 
 		expectedRpc := RpcAppendEntriesReply{senderTerm, true}
 		if *reply != expectedRpc {
@@ -222,20 +245,17 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 	}
 
 	// Follower
-	f(testSetupMCM_Follower_WithTerms, false)
-	f(testSetupMCM_Follower_WithTerms, false)
+	f(testSetupMCM_Follower_WithTerms, false, "")
+	f(testSetupMCM_Follower_WithTerms, false, "")
 
 	// Candidate
-	f(testSetupMCM_Candidate_WithTerms, false)
-	f(testSetupMCM_Candidate_WithTerms, false)
+	f(testSetupMCM_Candidate_WithTerms, false, "")
+	f(testSetupMCM_Candidate_WithTerms, false, "")
 
 	// Leader
-	f(testSetupMCM_Leader_WithTerms, true)
-	test_ExpectPanic(
-		t,
-		func() {
-			f(testSetupMCM_Leader_WithTerms, false)
-		},
+	f(testSetupMCM_Leader_WithTerms, true, "")
+	f(
+		testSetupMCM_Leader_WithTerms, false,
 		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 8",
 	)
 }
@@ -247,12 +267,16 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		setup func(t *testing.T, terms []TermNo) (mcm *managedConsensusModule, mrs *mockRpcSender),
 		senderTermIsNewer bool,
 		expectedVotedFor ServerId,
+		expectedErr string,
 	) {
 		mcm, _ := setup(
 			t,
 			[]TermNo{1, 1, 1, 4},
 		)
-		mcm.pcm.setCommitIndex(3)
+		err := mcm.pcm.setCommitIndex(3)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
@@ -273,7 +297,17 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 
 		appendEntries := &RpcAppendEntries{senderTerm, 4, 4, sentLogEntries, 7}
 
-		reply := mcm.rpc_RpcAppendEntries("s4", appendEntries)
+		reply, err := mcm.rpc_RpcAppendEntries("s4", appendEntries)
+		if expectedErr != "" {
+			if err != nil && err.Error() == expectedErr {
+				return
+			}
+			t.Fatal(err)
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 
 		expectedRpc := RpcAppendEntriesReply{senderTerm, true}
 		if *reply != expectedRpc {
@@ -311,20 +345,17 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 	}
 
 	// Follower
-	f(testSetupMCM_Follower_WithTerms, true, "")
-	f(testSetupMCM_Follower_WithTerms, false, "")
+	f(testSetupMCM_Follower_WithTerms, true, "", "")
+	f(testSetupMCM_Follower_WithTerms, false, "", "")
 
 	// Candidate
-	f(testSetupMCM_Candidate_WithTerms, true, "")
-	f(testSetupMCM_Candidate_WithTerms, false, "s1")
+	f(testSetupMCM_Candidate_WithTerms, true, "", "")
+	f(testSetupMCM_Candidate_WithTerms, false, "s1", "")
 
 	// Leader
-	f(testSetupMCM_Leader_WithTerms, true, "")
-	test_ExpectPanic(
-		t,
-		func() {
-			f(testSetupMCM_Leader_WithTerms, false, "s1")
-		},
+	f(testSetupMCM_Leader_WithTerms, true, "", "")
+	f(
+		testSetupMCM_Leader_WithTerms, false, "s1",
 		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 8",
 	)
 

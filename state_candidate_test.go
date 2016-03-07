@@ -5,8 +5,14 @@ import (
 )
 
 func TestCandidateVolatileState(t *testing.T) {
-	ci := NewClusterInfo(testAllServerIds, testThisServerId)
-	cvs := newCandidateVolatileState(ci)
+	ci, err := NewClusterInfo(testAllServerIds, testThisServerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cvs, err := newCandidateVolatileState(ci)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Initial state
 	if cvs.receivedVotes != 1 {
@@ -16,57 +22,84 @@ func TestCandidateVolatileState(t *testing.T) {
 		t.Fatal()
 	}
 
+	addVoteFrom := func(peerId ServerId) bool {
+		r, err := cvs.addVoteFrom(peerId)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+
 	// Add a vote - no quorum yet
-	if cvs.addVoteFrom("s2") {
+	if addVoteFrom("s2") {
 		t.Fatal()
 	}
 
 	// Duplicate vote - no error and no quorum yet
-	if cvs.addVoteFrom("s2") {
+	if addVoteFrom("s2") {
 		t.Fatal()
 	}
 
 	// Add 2nd vote - should be at quorum
-	if !cvs.addVoteFrom("s3") {
+	if !addVoteFrom("s3") {
 		t.Fatal()
 	}
 
 	// Add remaining votes - should stay at quorum
-	if !cvs.addVoteFrom("s4") {
+	if !addVoteFrom("s4") {
 		t.Fatal()
 	}
-	if !cvs.addVoteFrom("s5") {
+	if !addVoteFrom("s5") {
 		t.Fatal()
 	}
 	// Another duplicate vote - no error and stay at quorum
-	if !cvs.addVoteFrom("s3") {
+	if !addVoteFrom("s3") {
 		t.Fatal()
 	}
 
 }
 
 func TestCandidateVolatileState_3nodes(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"peer1", "peer2", "peer3"}, "peer1")
-	cvs := newCandidateVolatileState(ci)
+	ci, err := NewClusterInfo([]ServerId{"peer1", "peer2", "peer3"}, "peer1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cvs, err := newCandidateVolatileState(ci)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if cvs.receivedVotes != 1 || cvs.requiredVotes != 2 {
 		t.Fatal()
 	}
-	if !cvs.addVoteFrom("peer3") {
+
+	addVoteFrom := func(peerId ServerId) bool {
+		r, err := cvs.addVoteFrom(peerId)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+
+	if !addVoteFrom("peer3") {
 		t.Fatal()
 	}
-	if !cvs.addVoteFrom("peer2") {
+	if !addVoteFrom("peer2") {
 		t.Fatal()
 	}
 }
 
-func TestCandidateVolatileState_VoteFromNonMemberPanics(t *testing.T) {
-	ci := NewClusterInfo([]ServerId{"peer1", "peer2", "peer3"}, "peer1")
-	cvs := newCandidateVolatileState(ci)
-	defer func() {
-		if r := recover(); r != "candidateVolatileState.addVoteFrom(): unknown peer: peer4" {
-			t.Error(r)
-		}
-	}()
-	cvs.addVoteFrom("peer4")
-	t.Fatal()
+func TestCandidateVolatileState_VoteFromNonMemberIsAnError(t *testing.T) {
+	ci, err := NewClusterInfo([]ServerId{"peer1", "peer2", "peer3"}, "peer1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cvs, err := newCandidateVolatileState(ci)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = cvs.addVoteFrom("peer4")
+	if err.Error() != "candidateVolatileState.addVoteFrom(): unknown peer: peer4" {
+		t.Fatal(err)
+	}
 }

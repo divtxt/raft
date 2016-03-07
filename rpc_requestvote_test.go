@@ -14,7 +14,10 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 
 		requestVote := &RpcRequestVote{7, 9, 6}
 
-		reply := mcm.rpc_RpcRequestVote("s2", requestVote)
+		reply, err := mcm.rpc_RpcRequestVote("s2", requestVote)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		expectedRpc := RpcRequestVoteReply{serverTerm, false}
 		if *reply != expectedRpc {
@@ -56,7 +59,10 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.rpc_RpcRequestVote("s3", requestVote)
+		reply, err := mcm.rpc_RpcRequestVote("s3", requestVote)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
@@ -101,7 +107,10 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.rpc_RpcRequestVote("s2", requestVote)
+		reply, err := mcm.rpc_RpcRequestVote("s2", requestVote)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		expectedRpc := RpcRequestVoteReply{serverTerm, true}
 		if *reply != expectedRpc {
@@ -139,7 +148,10 @@ func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply := mcm.rpc_RpcRequestVote("s2", requestVote)
+		reply, err := mcm.rpc_RpcRequestVote("s2", requestVote)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		expectedRpc := RpcRequestVoteReply{serverTerm, false}
 		if *reply != expectedRpc {
@@ -171,7 +183,10 @@ func testSetupMCM_FollowerThatVotedForS2_Figure7LeaderLine(
 		t.Fatal()
 	}
 	// pretend server voted
-	mcm.pcm.persistentState.SetVotedFor("s2")
+	err := mcm.pcm.persistentState.SetVotedFor("s2")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return mcm, mrs
 }
@@ -250,7 +265,10 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 
 		requestVote := &RpcRequestVote{10, senderLastEntryIndex, senderLastEntryTerm}
 
-		reply := mcm.rpc_RpcRequestVote("s5", requestVote)
+		reply, err := mcm.rpc_RpcRequestVote("s5", requestVote)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		// #RFS-A2: If RPC request or response contains term T > currentTerm:
 		// set currentTerm = T, convert to follower (#5.1)
@@ -305,7 +323,10 @@ func testSetupMCM_FollowerTerm8_Figure7LeaderLine(t *testing.T) (*managedConsens
 		t.Fatal(serverTerm)
 	}
 	// pretend server was pushed to term 8
-	mcm.pcm.persistentState.SetCurrentTerm(8)
+	err := mcm.pcm.persistentState.SetCurrentTerm(8)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return mcm, mrs
 }

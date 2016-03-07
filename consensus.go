@@ -49,22 +49,22 @@ func newPassiveConsensusModule(
 	clusterInfo *ClusterInfo,
 	electionTimeoutLow time.Duration,
 	now time.Time,
-) *passiveConsensusModule {
+) (*passiveConsensusModule, error) {
 	// Param checks
 	if persistentState == nil {
-		panic("'persistentState' cannot be nil")
+		return nil, errors.New("'persistentState' cannot be nil")
 	}
 	if log == nil {
-		panic("'log' cannot be nil")
+		return nil, errors.New("'log' cannot be nil")
 	}
 	if rpcSender == nil {
-		panic("'rpcSender' cannot be nil")
+		return nil, errors.New("'rpcSender' cannot be nil")
 	}
 	if clusterInfo == nil {
-		panic("clusterInfo cannot be nil")
+		return nil, errors.New("clusterInfo cannot be nil")
 	}
 	if electionTimeoutLow.Nanoseconds() <= 0 {
-		panic("electionTimeoutLow must be greater than zero")
+		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
 
 	pcm := &passiveConsensusModule{
@@ -93,22 +93,23 @@ func newPassiveConsensusModule(
 		nil,
 	}
 
-	return pcm
+	return pcm, nil
 }
 
 // Get the current server state.
 // Validates the server state before returning.
 func (cm *passiveConsensusModule) getServerState() ServerState {
-	serverState := ServerState(atomic.LoadUint32((*uint32)(&cm._unsafe_serverState)))
-	validateServerState(serverState)
-	return serverState
+	return ServerState(atomic.LoadUint32((*uint32)(&cm._unsafe_serverState)))
 }
 
 // Set the current server state.
 // Validates the server state before setting.
-func (cm *passiveConsensusModule) setServerState(serverState ServerState) {
-	validateServerState(serverState)
+func (cm *passiveConsensusModule) setServerState(serverState ServerState) error {
+	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
+		return fmt.Errorf("FATAL: unknown ServerState: %v", serverState)
+	}
 	atomic.StoreUint32((*uint32)(&cm._unsafe_serverState), (uint32)(serverState))
+	return nil
 }
 
 // Get the current commitIndex value.
@@ -118,19 +119,20 @@ func (cm *passiveConsensusModule) getCommitIndex() LogIndex {
 
 // Set the current commitIndex value.
 // Checks that it is does not reduce.
-func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) {
+func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 	if commitIndex < cm._commitIndex {
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"setCommitIndex to %v < current commitIndex %v",
 			commitIndex,
 			cm._commitIndex,
-		))
+		)
 	}
 	cm._commitIndex = commitIndex
 	err := cm.log.CommitIndexChanged(commitIndex)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 // Append the given command as an entry in the log.
@@ -142,22 +144,22 @@ func (cm *passiveConsensusModule) appendCommand(
 	if serverState == LEADER {
 		iole, err := cm.log.GetIndexOfLastEntry()
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		logEntries := []LogEntry{
 			{cm.persistentState.GetCurrentTerm(), command},
 		}
 		err = cm.log.SetEntriesAfterIndex(iole, logEntries)
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		var newIole LogIndex
 		newIole, err = cm.log.GetIndexOfLastEntry()
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		if newIole != iole+1 {
-			panic(fmt.Sprintf("newIole=%v != %v + 1", newIole, iole))
+			return 0, fmt.Errorf("newIole=%v != %v + 1", newIole, iole)
 		}
 		return newIole, nil
 	} else {
@@ -166,7 +168,7 @@ func (cm *passiveConsensusModule) appendCommand(
 }
 
 // Iterate
-func (cm *passiveConsensusModule) tick(now time.Time) {
+func (cm *passiveConsensusModule) tick(now time.Time) error {
 	serverState := cm.getServerState()
 	switch serverState {
 	case FOLLOWER:
@@ -186,66 +188,116 @@ func (cm *passiveConsensusModule) tick(now time.Time) {
 		// start a new election by incrementing its term and initiating
 		// another round of RequestVote RPCs.
 		if cm.electionTimeoutTracker.electionTimeoutHasOccurred(now) {
-			cm.becomeCandidateAndBeginElection(now)
+			err := cm.becomeCandidateAndBeginElection(now)
+			if err != nil {
+				return err
+			}
 		}
 	case LEADER:
 		// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 		// of matchIndex[i] >= N, and log[N].term == currentTerm:
 		// set commitIndex = N (#5.3, #5.4)
-		cm.advanceCommitIndexIfPossible()
+		err := cm.advanceCommitIndexIfPossible()
+		if err != nil {
+			return err
+		}
 		// #RFS-L3.0: If last log index >= nextIndex for a follower: send
 		// AppendEntries RPC with log entries starting at nextIndex
-		cm.sendAppendEntriesToAllPeers(false)
+		err = cm.sendAppendEntriesToAllPeers(false)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) {
+func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) error {
 	// #RFS-C1: On conversion to candidate, start election:
 	// Increment currentTerm; Vote for self; Send RequestVote RPCs
 	// to all other servers; Reset election timer
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
 	newTerm := cm.persistentState.GetCurrentTerm() + 1
-	cm.persistentState.SetCurrentTerm(newTerm)
-	cm.candidateVolatileState = newCandidateVolatileState(cm.clusterInfo)
-	cm.setServerState(CANDIDATE)
+	err := cm.persistentState.SetCurrentTerm(newTerm)
+	if err != nil {
+		return err
+	}
+	cm.candidateVolatileState, err = newCandidateVolatileState(cm.clusterInfo)
+	if err != nil {
+		return err
+	}
+	err = cm.setServerState(CANDIDATE)
+	if err != nil {
+		return err
+	}
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
-	cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
-	lastLogIndex, lastLogTerm := GetIndexAndTermOfLastEntry(cm.log)
-	cm.clusterInfo.ForEachPeer(
-		func(serverId ServerId) {
+	err = cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
+	if err != nil {
+		return err
+	}
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.log)
+	if err != nil {
+		return err
+	}
+	err = cm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) error {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-			cm.rpcSender.sendRpcRequestVoteAsync(serverId, rpcRequestVote)
+			return cm.rpcSender.sendRpcRequestVoteAsync(serverId, rpcRequestVote)
 		},
 	)
+	if err != nil {
+		return err
+	}
 	// Reset election timeout!
 	cm.electionTimeoutTracker.chooseNewRandomElectionTimeoutAndTouch(now)
+	return nil
 }
 
-func (cm *passiveConsensusModule) becomeLeader() {
+func (cm *passiveConsensusModule) becomeLeader() error {
 	iole, err := cm.log.GetIndexOfLastEntry()
 	if err != nil {
-		panic(err)
+		return err
 	}
-	cm.leaderVolatileState = newLeaderVolatileState(cm.clusterInfo, iole)
-	cm.setServerState(LEADER)
+	cm.leaderVolatileState, err = newLeaderVolatileState(cm.clusterInfo, iole)
+	if err != nil {
+		return err
+	}
+	err = cm.setServerState(LEADER)
+	if err != nil {
+		return err
+	}
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
-	cm.sendAppendEntriesToAllPeers(true)
+	err = cm.sendAppendEntriesToAllPeers(true)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) {
-	cm.setServerState(FOLLOWER)
-	cm.persistentState.SetCurrentTerm(newTerm)
+func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
+	err := cm.setServerState(FOLLOWER)
+	if err != nil {
+		return err
+	}
+	err = cm.persistentState.SetCurrentTerm(newTerm)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // -- leader code
 
-func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) {
-	cm.clusterInfo.ForEachPeer(
-		func(serverId ServerId) {
-			cm.sendAppendEntriesToPeer(serverId, empty)
+func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error {
+	return cm.clusterInfo.ForEachPeer(
+		func(serverId ServerId) error {
+			err := cm.sendAppendEntriesToPeer(serverId, empty)
+			if err != nil {
+				return err
+			}
+			return nil
 		},
 	)
 }
@@ -253,10 +305,14 @@ func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) {
 func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 	peerId ServerId,
 	empty bool,
-) {
+) error {
 	serverTerm := cm.persistentState.GetCurrentTerm()
 	//
-	peerLastLogIndex := cm.leaderVolatileState.getNextIndex(peerId) - 1
+	peerNextIndex, err := cm.leaderVolatileState.getNextIndex(peerId)
+	if err != nil {
+		return err
+	}
+	peerLastLogIndex := peerNextIndex - 1
 	var peerLastLogTerm TermNo
 	if peerLastLogIndex == 0 {
 		peerLastLogTerm = 0
@@ -264,7 +320,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		var err error
 		peerLastLogTerm, err = cm.log.GetTermAtIndex(peerLastLogIndex)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 	//
@@ -275,7 +331,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		var err error
 		entriesToSend, err = cm.log.GetEntriesAfterIndex(peerLastLogIndex)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 	//
@@ -286,29 +342,36 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		entriesToSend,
 		cm.getCommitIndex(),
 	}
-	cm.rpcSender.sendRpcAppendEntriesAsync(peerId, rpcAppendEntries)
+	return cm.rpcSender.sendRpcAppendEntriesAsync(peerId, rpcAppendEntries)
 }
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
-func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() {
-	newerCommitIndex := findNewerCommitIndex(
+func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() error {
+	newerCommitIndex, err := findNewerCommitIndex(
 		cm.clusterInfo,
 		cm.leaderVolatileState,
 		cm.log,
 		cm.persistentState.GetCurrentTerm(),
 		cm.getCommitIndex(),
 	)
-	if newerCommitIndex != 0 && newerCommitIndex > cm.getCommitIndex() {
-		cm.setCommitIndex(newerCommitIndex)
+	if err != nil {
+		return err
 	}
+	if newerCommitIndex != 0 && newerCommitIndex > cm.getCommitIndex() {
+		err = cm.setCommitIndex(newerCommitIndex)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // -- rpc bridging things
 
 // This is an internal equivalent to RpcService without the reply setup.
 type rpcSender interface {
-	sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries)
-	sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote)
+	sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) error
+	sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) error
 }
