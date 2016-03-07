@@ -2,7 +2,6 @@ package raft
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -41,37 +40,6 @@ func (cm *ConsensusModule) stopAsyncWithRecover() (e interface{}) {
 	}()
 	cm.StopAsync()
 	return nil
-}
-
-func (cm *ConsensusModule) stopAndCheckError() {
-	var callersError, stopAsyncError, stopStatusError, stopError interface{}
-
-	callersError = recover()
-
-	stopAsyncError = cm.stopAsyncWithRecover()
-
-	time.Sleep(testSleepToLetGoroutineRun)
-	if !cm.IsStopped() {
-		stopStatusError = "Timeout waiting for stop!"
-	}
-
-	stopError = cm.GetStopError()
-
-	if stopAsyncError == nil && stopStatusError == nil && stopError == nil {
-		if callersError != nil {
-			panic(callersError)
-		} else {
-			return
-		}
-	} else {
-		errs := [...]interface{}{
-			callersError,
-			stopAsyncError,
-			stopStatusError,
-			stopError,
-		}
-		panic(fmt.Sprintf("%v", errs))
-	}
 }
 
 func TestConsensusModule_StartStateAndStop(t *testing.T) {

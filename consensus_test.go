@@ -76,7 +76,7 @@ func TestCM_InitialState(t *testing.T) {
 	}
 }
 
-func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
+func TestCM_SetServerState_BadServerStateReturnsError(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 	err := mcm.pcm.setServerState(42)
 	if err.Error() != "FATAL: unknown ServerState: 42" {
