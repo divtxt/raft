@@ -2,7 +2,6 @@ package raft
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -77,49 +76,12 @@ func TestCM_InitialState(t *testing.T) {
 	}
 }
 
-func test_ExpectPanic(t *testing.T, f func(), expectedRecover interface{}) {
-	skipRecover := false
-	defer func() {
-		if !skipRecover {
-			if r := recover(); r != expectedRecover {
-				t.Fatal(fmt.Sprintf("Expected panic: %v; got: %v", expectedRecover, r))
-			}
-		}
-	}()
-
-	f()
-	skipRecover = true
-	t.Fatal(fmt.Sprintf("Expected panic: %v", expectedRecover))
-}
-
-func test_ExpectPanicAnyRecover(t *testing.T, f func()) {
-	skipRecover := false
-	defer func() {
-		if !skipRecover {
-			if r := recover(); r == nil {
-				t.Fatal("Expected panic, but got panic with recover of nil")
-			}
-		}
-	}()
-
-	f()
-	skipRecover = true
-	t.Fatal("Expected panic")
-}
-
 func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
-	test_ExpectPanic(
-		t,
-		func() {
-			err := mcm.pcm.setServerState(42)
-			if err != nil {
-				panic(err.Error())
-			}
-		},
-		"FATAL: unknown ServerState: 42",
-	)
-
+	err := mcm.pcm.setServerState(42)
+	if err.Error() != "FATAL: unknown ServerState: 42" {
+		t.Fatal(err)
+	}
 }
 
 // #RFS-F2: If election timeout elapses without receiving
