@@ -47,7 +47,7 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 }
 
 // Extra: raft violation - only leader can get AppendEntriesReply
-func TestCM_RpcAER_FollowerOrCandidate_PanicsForSameTermReply(t *testing.T) {
+func TestCM_RpcAER_FollowerOrCandidate_ReturnsErrorForSameTermReply(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
