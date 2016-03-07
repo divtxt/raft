@@ -94,7 +94,7 @@ type RpcService interface {
 		toServer ServerId,
 		rpc *RpcAppendEntries,
 		replyAsync func(*RpcAppendEntriesReply),
-	)
+	) error
 
 	// Send the given RpcRequestVote message to the given server
 	// asynchronously.
@@ -102,5 +102,5 @@ type RpcService interface {
 		toServer ServerId,
 		rpc *RpcRequestVote,
 		replyAsync func(*RpcRequestVoteReply),
-	)
+	) error
 }

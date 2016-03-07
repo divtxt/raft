@@ -243,8 +243,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	err = cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-			cm.rpcSender.sendRpcRequestVoteAsync(serverId, rpcRequestVote)
-			return nil
+			return cm.rpcSender.sendRpcRequestVoteAsync(serverId, rpcRequestVote)
 		},
 	)
 	if err != nil {
@@ -343,8 +342,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		entriesToSend,
 		cm.getCommitIndex(),
 	}
-	cm.rpcSender.sendRpcAppendEntriesAsync(peerId, rpcAppendEntries)
-	return nil
+	return cm.rpcSender.sendRpcAppendEntriesAsync(peerId, rpcAppendEntries)
 }
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
@@ -374,6 +372,6 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() error {
 
 // This is an internal equivalent to RpcService without the reply setup.
 type rpcSender interface {
-	sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries)
-	sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote)
+	sendRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) error
+	sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) error
 }
