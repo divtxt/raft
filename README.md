@@ -39,6 +39,7 @@ Misc/Maybe:
 
 Later:
 
+- [ ] Add errcheck to Travis build
 - [ ] Add support for snapshotting & InstallSnapshot RPC
 - [ ] Documentation
 - [ ] Live cluster membership changes
