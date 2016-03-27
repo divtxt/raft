@@ -297,7 +297,7 @@ func (cm *ConsensusModule) processor() {
 		// Mark the server as stopped
 		atomic.StoreInt32(&cm.stopped, 1)
 		// Clean up things
-		close(cm.runnableChannel)
+		cm.runnableChannel = nil // don't close channel - avoids sender panics (rpc callbacks)
 		cm.ticker.Stop()
 	}()
 
