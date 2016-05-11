@@ -16,7 +16,7 @@ type passiveConsensusModule struct {
 
 	// -- External components
 	persistentState PersistentState
-	log             Log
+	lasm            LogAndStateMachine
 	rpcSender       rpcSender
 
 	// -- Config
@@ -44,7 +44,7 @@ type passiveConsensusModule struct {
 
 func newPassiveConsensusModule(
 	persistentState PersistentState,
-	log Log,
+	lasm LogAndStateMachine,
 	rpcSender rpcSender,
 	clusterInfo *ClusterInfo,
 	electionTimeoutLow time.Duration,
@@ -54,7 +54,7 @@ func newPassiveConsensusModule(
 	if persistentState == nil {
 		return nil, errors.New("'persistentState' cannot be nil")
 	}
-	if log == nil {
+	if lasm == nil {
 		return nil, errors.New("'log' cannot be nil")
 	}
 	if rpcSender == nil {
@@ -70,7 +70,7 @@ func newPassiveConsensusModule(
 	pcm := &passiveConsensusModule{
 		// -- External components
 		persistentState,
-		log,
+		lasm,
 		rpcSender,
 
 		// -- Config
@@ -128,7 +128,7 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	err := cm.log.CommitIndexChanged(commitIndex)
+	err := cm.lasm.CommitIndexChanged(commitIndex)
 	if err != nil {
 		return err
 	}
@@ -142,19 +142,19 @@ func (cm *passiveConsensusModule) appendCommand(
 ) (LogIndex, error) {
 	serverState := cm.getServerState()
 	if serverState == LEADER {
-		iole, err := cm.log.GetIndexOfLastEntry()
+		iole, err := cm.lasm.GetIndexOfLastEntry()
 		if err != nil {
 			return 0, err
 		}
 		logEntries := []LogEntry{
 			{cm.persistentState.GetCurrentTerm(), command},
 		}
-		err = cm.log.SetEntriesAfterIndex(iole, logEntries)
+		err = cm.lasm.SetEntriesAfterIndex(iole, logEntries)
 		if err != nil {
 			return 0, err
 		}
 		var newIole LogIndex
-		newIole, err = cm.log.GetIndexOfLastEntry()
+		newIole, err = cm.lasm.GetIndexOfLastEntry()
 		if err != nil {
 			return 0, err
 		}
@@ -236,7 +236,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	if err != nil {
 		return err
 	}
-	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.log)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.lasm)
 	if err != nil {
 		return err
 	}
@@ -255,7 +255,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 }
 
 func (cm *passiveConsensusModule) becomeLeader() error {
-	iole, err := cm.log.GetIndexOfLastEntry()
+	iole, err := cm.lasm.GetIndexOfLastEntry()
 	if err != nil {
 		return err
 	}
@@ -318,7 +318,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		peerLastLogTerm = 0
 	} else {
 		var err error
-		peerLastLogTerm, err = cm.log.GetTermAtIndex(peerLastLogIndex)
+		peerLastLogTerm, err = cm.lasm.GetTermAtIndex(peerLastLogIndex)
 		if err != nil {
 			return err
 		}
@@ -329,7 +329,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 		entriesToSend = []LogEntry{}
 	} else {
 		var err error
-		entriesToSend, err = cm.log.GetEntriesAfterIndex(peerLastLogIndex)
+		entriesToSend, err = cm.lasm.GetEntriesAfterIndex(peerLastLogIndex)
 		if err != nil {
 			return err
 		}
@@ -352,7 +352,7 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() error {
 	newerCommitIndex, err := findNewerCommitIndex(
 		cm.clusterInfo,
 		cm.leaderVolatileState,
-		cm.log,
+		cm.lasm,
 		cm.persistentState.GetCurrentTerm(),
 		cm.getCommitIndex(),
 	)

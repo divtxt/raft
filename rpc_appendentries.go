@@ -37,7 +37,7 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	serverTerm := cm.persistentState.GetCurrentTerm()
 	leaderCurrentTerm := appendEntries.Term
 	prevLogIndex := appendEntries.PrevLogIndex
-	log := cm.log
+	lasm := cm.lasm
 
 	// 1. Reply false if term < currentTerm (#5.1)
 	if leaderCurrentTerm < serverTerm {
@@ -77,7 +77,7 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 
 	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose
 	// term matches prevLogTerm (#5.3)
-	iole, err := log.GetIndexOfLastEntry()
+	iole, err := lasm.GetIndexOfLastEntry()
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	// but different terms), delete the existing entry and all that
 	// follow it (#5.3)
 	// 4. Append any new entries not already in the log
-	err = log.SetEntriesAfterIndex(prevLogIndex, appendEntries.Entries)
+	err = lasm.SetEntriesAfterIndex(prevLogIndex, appendEntries.Entries)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	leaderCommit := appendEntries.LeaderCommit
 	if leaderCommit > cm.getCommitIndex() {
 		var indexOfLastNewEntry LogIndex
-		indexOfLastNewEntry, err = log.GetIndexOfLastEntry()
+		indexOfLastNewEntry, err = lasm.GetIndexOfLastEntry()
 		if err != nil {
 			return nil, err
 		}

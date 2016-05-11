@@ -128,7 +128,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.passiveConsensusModule.log)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.passiveConsensusModule.lasm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
 
 	// pre check
-	iole, err := cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+	iole, err := cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -213,7 +213,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 	command := Command("c11x")
 	replyChan := cm.AppendCommandAsync(command)
 
-	iole, err = cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+	iole, err = cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -232,14 +232,14 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		if !reflect.DeepEqual(reply, expectedReply) {
 			t.Fatal(reply)
 		}
-		iole, err = cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+		iole, err = cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}
 		if iole != 11 {
 			t.Fatal()
 		}
-		le := testHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.log, 11)
+		le := testHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.lasm, 11)
 		if !reflect.DeepEqual(le, LogEntry{8, Command("c11x")}) {
 			t.Fatal(le)
 		}
@@ -253,7 +253,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 	defer cm.StopAsync()
 
 	// pre check
-	iole, err := cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+	iole, err := cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -264,7 +264,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 	command := Command("c11x")
 	replyChan := cm.AppendCommandAsync(command)
 
-	iole, err = cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+	iole, err = cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -286,7 +286,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		if !reflect.DeepEqual(reply, expectedReply) {
 			t.Fatal(reply)
 		}
-		iole, err := cm.passiveConsensusModule.log.GetIndexOfLastEntry()
+		iole, err := cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}

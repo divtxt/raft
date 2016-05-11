@@ -22,16 +22,16 @@ func testCommandEquals(c Command, s string) bool {
 // Blackbox test
 // Send a Log with 10 entries with terms as shown in Figure 7, leader line.
 // No commands should have been applied yet.
-func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
+func PartialTest_Log_BlackboxTest(t *testing.T, lasm LogAndStateMachine) {
 	// Initial data tests
-	iole, err := log.GetIndexOfLastEntry()
+	iole, err := lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
 	if iole != 10 {
 		t.Fatal()
 	}
-	term, err := log.GetTermAtIndex(10)
+	term, err := lasm.GetTermAtIndex(10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 	}
 
 	// get entries test
-	le := testHelper_GetLogEntryAtIndex(log, 10)
+	le := testHelper_GetLogEntryAtIndex(lasm, 10)
 	if le.TermNo != 6 {
 		t.Fatal(le.TermNo)
 	}
@@ -52,87 +52,87 @@ func PartialTest_Log_BlackboxTest(t *testing.T, log Log) {
 
 	// set test - invalid index
 	logEntries = []LogEntry{{8, Command("c12")}}
-	err = log.SetEntriesAfterIndex(11, logEntries)
+	err = lasm.SetEntriesAfterIndex(11, logEntries)
 	if err == nil {
 		t.Fatal()
 	}
 
 	// set test - no replacing
 	logEntries = []LogEntry{{7, Command("c11")}, {8, Command("c12")}}
-	err = log.SetEntriesAfterIndex(10, logEntries)
+	err = lasm.SetEntriesAfterIndex(10, logEntries)
 	if err != nil {
 		t.Fatal()
 	}
-	iole, err = log.GetIndexOfLastEntry()
+	iole, err = lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
 	if iole != 12 {
 		t.Fatal()
 	}
-	le = testHelper_GetLogEntryAtIndex(log, 12)
+	le = testHelper_GetLogEntryAtIndex(lasm, 12)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c12")}) {
 		t.Fatal(le)
 	}
 
 	// set test - partial replacing
 	logEntries = []LogEntry{{7, Command("c11")}, {9, Command("c12")}, {9, Command("c13'")}}
-	err = log.SetEntriesAfterIndex(10, logEntries)
+	err = lasm.SetEntriesAfterIndex(10, logEntries)
 	if err != nil {
 		t.Fatal()
 	}
-	iole, err = log.GetIndexOfLastEntry()
+	iole, err = lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
 	if iole != 13 {
 		t.Fatal()
 	}
-	le = testHelper_GetLogEntryAtIndex(log, 12)
+	le = testHelper_GetLogEntryAtIndex(lasm, 12)
 	if !reflect.DeepEqual(le, LogEntry{9, Command("c12")}) {
 		t.Fatal(le)
 	}
 
 	// commitIndex tests
-	err = log.CommitIndexChanged(1)
+	err = lasm.CommitIndexChanged(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = log.CommitIndexChanged(3)
+	err = lasm.CommitIndexChanged(3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = log.CommitIndexChanged(2)
+	err = lasm.CommitIndexChanged(2)
 	if err == nil {
 		t.Fatal()
 	}
 
 	// set test - no new entries with empty slice
 	logEntries = []LogEntry{}
-	err = log.SetEntriesAfterIndex(3, logEntries)
+	err = lasm.SetEntriesAfterIndex(3, logEntries)
 	if err != nil {
 		t.Fatal()
 	}
-	iole, err = log.GetIndexOfLastEntry()
+	iole, err = lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
 	if iole != 3 {
 		t.Fatal()
 	}
-	le = testHelper_GetLogEntryAtIndex(log, 3)
+	le = testHelper_GetLogEntryAtIndex(lasm, 3)
 	if !reflect.DeepEqual(le, LogEntry{1, Command("c3")}) {
 		t.Fatal(le)
 	}
 
 	// commitIndex test - error to go past end of log
-	err = log.CommitIndexChanged(4)
+	err = lasm.CommitIndexChanged(4)
 	if err == nil {
 		t.Fatal()
 	}
 
 	// set test - error to modify log before commitIndex
-	err = log.SetEntriesAfterIndex(2, []LogEntry{})
+	err = lasm.SetEntriesAfterIndex(2, []LogEntry{})
 	if err == nil {
 		t.Fatal()
 	}
@@ -370,11 +370,11 @@ func TestIMLE_GetEntriesAfterIndex(t *testing.T) {
 }
 
 // Helper
-func testHelper_GetLogEntryAtIndex(log Log, li LogIndex) LogEntry {
+func testHelper_GetLogEntryAtIndex(lasm LogAndStateMachine, li LogIndex) LogEntry {
 	if li == 0 {
 		panic("oops!")
 	}
-	entries, err := log.GetEntriesAfterIndex(li - 1)
+	entries, err := lasm.GetEntriesAfterIndex(li - 1)
 	if err != nil {
 		panic(err)
 	}

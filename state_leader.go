@@ -85,11 +85,11 @@ func (lvs *leaderVolatileState) setMatchIndexAndNextIndex(peerId ServerId, match
 func findNewerCommitIndex(
 	ci *ClusterInfo,
 	lvs *leaderVolatileState,
-	log Log,
+	lasm LogAndStateMachine,
 	currentTerm TermNo,
 	commitIndex LogIndex,
 ) (LogIndex, error) {
-	indexOfLastEntry, err := log.GetIndexOfLastEntry()
+	indexOfLastEntry, err := lasm.GetIndexOfLastEntry()
 	if err != nil {
 		return 0, err
 	}
@@ -98,7 +98,7 @@ func findNewerCommitIndex(
 	// stop when we pass the end of the log
 	for N := commitIndex + 1; N <= indexOfLastEntry; N++ {
 		// check log[N].term
-		termAtN, err := log.GetTermAtIndex(N)
+		termAtN, err := lasm.GetTermAtIndex(N)
 		if err != nil {
 			return 0, err
 		}
