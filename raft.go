@@ -54,7 +54,7 @@ type ConsensusModule struct {
 // timeSettings is checked using ValidateTimeSettings().
 func NewConsensusModule(
 	persistentState PersistentState,
-	log Log,
+	lasm LogAndStateMachine,
 	rpcService RpcService,
 	clusterInfo *ClusterInfo,
 	timeSettings TimeSettings,
@@ -83,7 +83,7 @@ func NewConsensusModule(
 
 	pcm, err := newPassiveConsensusModule(
 		persistentState,
-		log,
+		lasm,
 		cm,
 		clusterInfo,
 		timeSettings.ElectionTimeoutLow,

@@ -161,7 +161,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(mcm.pcm.log)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(mcm.pcm.lasm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -719,7 +719,7 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	}
 
 	// pretend peers caught up!
-	lastLogIndex, err := mcm.pcm.log.GetIndexOfLastEntry()
+	lastLogIndex, err := mcm.pcm.lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -758,7 +758,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
 
 	// pre check
-	iole, err := mcm.pcm.log.GetIndexOfLastEntry()
+	iole, err := mcm.pcm.lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -772,14 +772,14 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	if li != 11 || err != nil {
 		t.Fatal()
 	}
-	iole, err = mcm.pcm.log.GetIndexOfLastEntry()
+	iole, err = mcm.pcm.lasm.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
 	if iole != 11 {
 		t.Fatal()
 	}
-	le := testHelper_GetLogEntryAtIndex(mcm.pcm.log, 11)
+	le := testHelper_GetLogEntryAtIndex(mcm.pcm.lasm, 11)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c11x")}) {
 		t.Fatal(le)
 	}
@@ -794,7 +794,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		// serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 		// pre check
-		iole, err := mcm.pcm.log.GetIndexOfLastEntry()
+		iole, err := mcm.pcm.lasm.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}
@@ -812,7 +812,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		iole, err = mcm.pcm.log.GetIndexOfLastEntry()
+		iole, err = mcm.pcm.lasm.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}

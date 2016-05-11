@@ -1,14 +1,14 @@
 package raft
 
 // Helper function
-func GetIndexAndTermOfLastEntry(log Log) (LogIndex, TermNo, error) {
-	lastLogIndex, err := log.GetIndexOfLastEntry()
+func GetIndexAndTermOfLastEntry(lasm LogAndStateMachine) (LogIndex, TermNo, error) {
+	lastLogIndex, err := lasm.GetIndexOfLastEntry()
 	if err != nil {
 		return 0, 0, err
 	}
 	var lastLogTerm TermNo = 0
 	if lastLogIndex > 0 {
-		lastLogTerm, err = log.GetTermAtIndex(lastLogIndex)
+		lastLogTerm, err = lasm.GetTermAtIndex(lastLogIndex)
 		if err != nil {
 			return 0, 0, err
 		}

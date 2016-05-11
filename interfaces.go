@@ -2,12 +2,13 @@
 
 package raft
 
-// The Raft Log.
+// The Raft Log and the service's state machine.
 //
 // You must implement this interface!
 //
 // Your service must implement the storage of the Raft log and expose it to the
-// ConsensusModule through this interface.
+// ConsensusModule through this interface. Parts of the service's state machine
+// also need to be exposed in this interface.
 //
 // The log is an ordered array of 'LogEntry's with first index 1.
 // A LogEntry is a tuple of a Raft term number and a command to be applied
@@ -28,10 +29,8 @@ package raft
 // value of commitIndex.
 //
 // With this tweak, the implementation of lastApplied is no longer a concern
-// of the ConsensusModule.
-//
-// Since lastApplied is now delegated to the state machine, we capture it's
-// details here:
+// of the ConsensusModule. Instead, lastApplied is delegated to the state
+// machine via this interface. We capture it's details here:
 //
 // - lastIndex is the index of highest log entry applied to state machine
 // (initialized to 0, increases monotonically)
@@ -43,10 +42,10 @@ package raft
 // lastApplied should be volatile. If the state machine is persistent,
 // lastApplied should be just as persistent.
 //
-// The consensus module needs all method calls to succeed and any error will
+// The ConsensusModule needs all method calls to succeed and any error will
 // shutdown the consensus module.
 //
-type Log interface {
+type LogAndStateMachine interface {
 	// Get the index of the last entry in the log.
 	// An index of 0 indicates no entries present.
 	// This should be 0 for the Log of a new server.

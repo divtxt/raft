@@ -189,7 +189,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !testCommandEquals(testHelper_GetLogEntryAtIndex(mcm.pcm.log, 6).Command, "c6") {
+		if !testCommandEquals(testHelper_GetLogEntryAtIndex(mcm.pcm.lasm, 6).Command, "c6") {
 			t.Error()
 		}
 
@@ -218,14 +218,14 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			t.Fatal(reply)
 		}
 
-		iole, err := mcm.pcm.log.GetIndexOfLastEntry()
+		iole, err := mcm.pcm.lasm.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}
 		if iole != 8 {
 			t.Fatal(iole)
 		}
-		addedLogEntry := testHelper_GetLogEntryAtIndex(mcm.pcm.log, 6)
+		addedLogEntry := testHelper_GetLogEntryAtIndex(mcm.pcm.lasm, 6)
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
@@ -286,7 +286,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !testCommandEquals(testHelper_GetLogEntryAtIndex(mcm.pcm.log, 4).Command, "c4") {
+		if !testCommandEquals(testHelper_GetLogEntryAtIndex(mcm.pcm.lasm, 4).Command, "c4") {
 			t.Error()
 		}
 
@@ -314,14 +314,14 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			t.Fatal(reply)
 		}
 
-		iole, err := mcm.pcm.log.GetIndexOfLastEntry()
+		iole, err := mcm.pcm.lasm.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}
 		if iole != 6 {
 			t.Fatal(iole)
 		}
-		addedLogEntry := testHelper_GetLogEntryAtIndex(mcm.pcm.log, 6)
+		addedLogEntry := testHelper_GetLogEntryAtIndex(mcm.pcm.lasm, 6)
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}

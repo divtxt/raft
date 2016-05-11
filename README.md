@@ -21,7 +21,7 @@ Basics:
 - [x] Rename repo from `raft-consensus` to `raft`
 - [x] Change error handling from `panic()` to returning `error`.
 - [x] Move Log interface to interfaces.go
-- [ ] Rename Log to LogAndStateMachine
+- [x] Rename Log to LogAndStateMachine
 - [ ] Split SetEntriesAfterIndex for leader and follower
 - [ ] Allow leader Log to reject new log entry
 - [ ] Fix TODOs
