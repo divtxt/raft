@@ -22,8 +22,6 @@ Basics:
 - [x] Change error handling from `panic()` to returning `error`.
 - [x] Move Log interface to interfaces.go
 - [x] Rename Log to LogAndStateMachine
-- [ ] Split SetEntriesAfterIndex for leader and follower
-- [ ] Allow leader Log to reject new log entry
 - [ ] Fix TODOs
 - [ ] Code review & cleanup
 - [ ] Simplify/shorten names
@@ -45,6 +43,8 @@ Later:
 
 - [ ] Add errcheck to Travis build
 - [ ] Add support for snapshotting & InstallSnapshot RPC
+- [ ] Split SetEntriesAfterIndex for leader and follower
+- [ ] Allow leader LogAndStateMachine to reject new log entry
 - [ ] Documentation
 - [ ] Live cluster membership changes
 - [ ] Read-only nodes (replication)
