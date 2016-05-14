@@ -791,7 +791,6 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender),
 	) {
 		mcm, _ := setup(t)
-		// serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
 
 		// pre check
 		iole, err := mcm.pcm.lasm.GetIndexOfLastEntry()
@@ -822,7 +821,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
-	// f(testSetupMCM_Candidate_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
 }
 
 // For most tests, we'll use a passive CM where we control the progress
