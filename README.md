@@ -22,6 +22,8 @@ Basics:
 - [x] Change error handling from `panic()` to returning `error`.
 - [x] Move Log interface to interfaces.go
 - [x] Rename Log to LogAndStateMachine
+- [ ] Support for single-node cluster
+- [ ] Test for RPCs from senders not in cluster
 - [ ] Fix TODOs
 - [ ] Code review & cleanup
 - [ ] Simplify/shorten names
