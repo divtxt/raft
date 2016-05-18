@@ -15,6 +15,7 @@ type ClusterInfo struct {
 	peerServerIds []ServerId
 
 	//
+	clusterSize          uint
 	quorumSizeForCluster uint
 }
 
@@ -33,8 +34,8 @@ func NewClusterInfo(
 	if allServerIds == nil {
 		return nil, errors.New("allServerIds is nil")
 	}
-	if len(allServerIds) < 2 {
-		return nil, errors.New("allServerIds must have at least 2 elements")
+	if len(allServerIds) < 1 {
+		return nil, errors.New("allServerIds must have at least 1 element")
 	}
 	if len(thisServerId) == 0 {
 		return nil, errors.New("thisServerId is empty string")
@@ -65,6 +66,7 @@ func NewClusterInfo(
 	ci := &ClusterInfo{
 		thisServerId,
 		peerServerIds,
+		uint(clusterSize),
 		quorumSizeForCluster,
 	}
 
@@ -88,6 +90,11 @@ func (ci *ClusterInfo) ForEachPeer(f func(serverId ServerId) error) error {
 		}
 	}
 	return nil
+}
+
+// Get the cluster size for this ClusterInfo.
+func (ci *ClusterInfo) GetClusterSize() uint {
+	return ci.clusterSize
 }
 
 // Get the quorum size for this ClusterInfo.
