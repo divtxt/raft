@@ -192,6 +192,15 @@ func (cm *passiveConsensusModule) tick(now time.Time) error {
 			if err != nil {
 				return err
 			}
+			// *** SOLO ***
+			// Single node cluster wins election immediately since it has all the votes
+			// But don't skip the election process, mainly since it increases current term!
+			if cm.clusterInfo.GetClusterSize() == 1 {
+				err := cm.becomeLeader()
+				if err != nil {
+					return err
+				}
+			}
 		}
 	case LEADER:
 		// #RFS-L4: If there exists an N such that N > commitIndex, a majority
