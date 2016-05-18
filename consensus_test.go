@@ -26,18 +26,25 @@ const (
 var testAllServerIds = []ServerId{testThisServerId, "s2", "s3", "s4", "s5"}
 
 func setupManagedConsensusModule(t *testing.T, logTerms []TermNo) *managedConsensusModule {
-	mcm, _ := setupManagedConsensusModuleR2(t, logTerms)
+	mcm, _ := setupManagedConsensusModuleR2(t, logTerms, false)
 	return mcm
 }
 
 func setupManagedConsensusModuleR2(
 	t *testing.T,
 	logTerms []TermNo,
+	solo bool,
 ) (*managedConsensusModule, *mockRpcSender) {
 	ps := newIMPSWithCurrentTerm(testCurrentTerm)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	mrs := newMockRpcSender()
-	ci, err := NewClusterInfo(testAllServerIds, testThisServerId)
+	var allServerIds []ServerId
+	if solo {
+		allServerIds = []ServerId{testThisServerId}
+	} else {
+		allServerIds = testAllServerIds
+	}
+	ci, err := NewClusterInfo(allServerIds, testThisServerId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,18 +173,82 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 		t.Fatal(err)
 	}
 	expectedRpc := &RpcRequestVote{expectedNewTerm, lastLogIndex, lastLogTerm}
-	expectedRpcs := []mockSentRpc{
-		{"s2", expectedRpc},
-		{"s3", expectedRpc},
-		{"s4", expectedRpc},
-		{"s5", expectedRpc},
+	expectedRpcs := make([]mockSentRpc, 0, 4)
+	err = mcm.pcm.clusterInfo.ForEachPeer(func(serverId ServerId) error {
+		expectedRpcs = append(expectedRpcs, mockSentRpc{serverId, expectedRpc})
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
+func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
+	t *testing.T,
+	mcm *managedConsensusModule,
+	mrs *mockRpcSender,
+) {
+	if mcm.pcm.getServerState() != FOLLOWER {
+		t.Fatal()
+	}
+	if mcm.pcm.persistentState.GetVotedFor() != "" {
+		t.Fatal()
+	}
+
+	// Test that a tick before election timeout causes no state change.
+	err := mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mcm.pcm.persistentState.GetCurrentTerm() != testCurrentTerm {
+		t.Fatal()
+	}
+	if mcm.pcm.getServerState() != FOLLOWER {
+		t.Fatal()
+	}
+
+	var expectedNewTerm TermNo = testCurrentTerm + 1
+
+	timeout1 := mcm.pcm.electionTimeoutTracker.currentElectionTimeout
+	// Test that election timeout causes a new election
+	mcm.tickTilElectionTimeout(t)
+	if mcm.pcm.persistentState.GetCurrentTerm() != expectedNewTerm {
+		t.Fatal(expectedNewTerm, mcm.pcm.persistentState.GetCurrentTerm())
+	}
+	// Single node should immediately elect itself as leader
+	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
+	// candidate has voted for itself
+	if mcm.pcm.persistentState.GetVotedFor() != testThisServerId {
+		t.Fatal()
+	}
+	// a new election timeout was chosen
+	if mcm.pcm.electionTimeoutTracker.currentElectionTimeout == timeout1 {
+		t.Fatal()
+	}
+	// candidate state is fresh
+	expectedCvs, err := newCandidateVolatileState(mcm.pcm.clusterInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(mcm.pcm.candidateVolatileState, expectedCvs) {
+		t.Fatal()
+	}
+
+	// no RPCs issued
+	mrs.checkSentRpcs(t, []mockSentRpc{})
+}
+
 func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
-	mcm, mrs := setupManagedConsensusModuleR2(t, nil)
+	mcm, mrs := setupManagedConsensusModuleR2(t, nil, false)
 	testCM_Follower_StartsElectionOnElectionTimeout(t, mcm, mrs)
+}
+
+func TestCM_SOLO_Follower_ElectsSelfOnElectionTimeout_EmptyLog(t *testing.T) {
+	mcm, mrs := setupManagedConsensusModuleR2(t, nil, true)
+	testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(t, mcm, mrs)
 }
 
 // #RFS-L1b: repeat during idle periods to prevent election timeout (#5.2)
@@ -652,7 +723,7 @@ func testSetupMCM_Follower_WithTerms(
 	t *testing.T,
 	terms []TermNo,
 ) (*managedConsensusModule, *mockRpcSender) {
-	mcm, mrs := setupManagedConsensusModuleR2(t, terms)
+	mcm, mrs := setupManagedConsensusModuleR2(t, terms, false)
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
