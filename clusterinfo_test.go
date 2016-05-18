@@ -18,9 +18,9 @@ func TestNewClusterInfo_Validation(t *testing.T) {
 			"allServerIds is nil",
 		},
 		{
-			[]ServerId{"s1"},
+			[]ServerId{},
 			"s1",
-			"allServerIds must have at least 2 elements",
+			"allServerIds must have at least 1 element",
 		},
 		{
 			[]ServerId{"s1", "s2"},
@@ -62,7 +62,28 @@ func TestClusterInfo_Assorted(t *testing.T) {
 		t.Fatal()
 	}
 
+	if ci.GetClusterSize() != 3 {
+		t.Fatal()
+	}
 	if ci.QuorumSizeForCluster() != 2 {
+		t.Fatal()
+	}
+}
+
+func TestClusterInfo_SOLO_Assorted(t *testing.T) {
+	ci, err := NewClusterInfo([]ServerId{"s1"}, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ci.GetThisServerId() != "s1" {
+		t.Fatal()
+	}
+
+	if ci.GetClusterSize() != 1 {
+		t.Fatal()
+	}
+	if ci.QuorumSizeForCluster() != 1 {
 		t.Fatal()
 	}
 }
