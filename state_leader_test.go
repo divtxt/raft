@@ -327,21 +327,24 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	}
 
 	// currentTerm = 4 has a solution
-	// the test here captures the fact that first match is returned
-	if _findNewerCommitIndex(4, 0) != 3 {
+	// the highest match is returned
+	if _findNewerCommitIndex(4, 0) != 4 {
 		t.Fatal()
 	}
-	if _findNewerCommitIndex(4, 1) != 3 {
+	if _findNewerCommitIndex(4, 1) != 4 {
 		t.Fatal()
 	}
-	if _findNewerCommitIndex(4, 2) != 3 {
+	if _findNewerCommitIndex(4, 2) != 4 {
 		t.Fatal()
 	}
-	// the next match is returned only after we cross the previous match
 	if _findNewerCommitIndex(4, 3) != 4 {
 		t.Fatal()
 	}
 
+	// returns 0 if current commitIndex is the highest match
+	if _findNewerCommitIndex(4, 4) != 0 {
+		t.Fatal()
+	}
 }
 
 func TestFindNewerCommitIndex_SOLO(t *testing.T) {
@@ -372,22 +375,20 @@ func TestFindNewerCommitIndex_SOLO(t *testing.T) {
 		t.Fatal(nci)
 	}
 
-	// the test here captures the fact that first match is returned
-	if nci := _findNewerCommitIndex(2, 0); nci != 2 {
-		t.Fatal(nci)
-	}
-	// the next match is returned only after we cross the previous match
-	if nci := _findNewerCommitIndex(2, 1); nci != 2 {
+	// the highest match is returned
+	if nci := _findNewerCommitIndex(2, 0); nci != 4 {
 		t.Fatal(nci)
 	}
 	if nci := _findNewerCommitIndex(2, 3); nci != 4 {
 		t.Fatal(nci)
 	}
+	if nci := _findNewerCommitIndex(3, 1); nci != 6 {
+		t.Fatal(nci)
+	}
 
+	// returns 0 if current commitIndex is the highest match
 	if nci := _findNewerCommitIndex(2, 4); nci != 0 {
 		t.Fatal(nci)
 	}
-	if nci := _findNewerCommitIndex(3, 1); nci != 5 {
-		t.Fatal(nci)
-	}
+
 }

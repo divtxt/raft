@@ -348,6 +348,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// another reply - can advance commitIndex with majority
+	// commitIndex will advance to the highest match possible
 	err = mcm.pcm.rpcReply_RpcAppendEntriesReply(
 		"s4",
 		expectedRpc,
@@ -356,7 +357,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ci := mcm.pcm.getCommitIndex(); ci != 11 {
+	if ci := mcm.pcm.getCommitIndex(); ci != 12 {
 		t.Fatal(ci)
 	}
 

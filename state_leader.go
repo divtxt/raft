@@ -78,6 +78,7 @@ func (lvs *leaderVolatileState) setMatchIndexAndNextIndex(peerId ServerId, match
 }
 
 // Helper method to find potential new commitIndex.
+// Returns the highest N possible that is higher than currentCommitIndex.
 // Returns 0 if no match found.
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
@@ -87,16 +88,17 @@ func findNewerCommitIndex(
 	lvs *leaderVolatileState,
 	lasm LogAndStateMachine,
 	currentTerm TermNo,
-	commitIndex LogIndex,
+	currentCommitIndex LogIndex,
 ) (LogIndex, error) {
 	indexOfLastEntry, err := lasm.GetIndexOfLastEntry()
 	if err != nil {
 		return 0, err
 	}
 	requiredMatches := ci.QuorumSizeForCluster()
-	// cover all N > commitIndex
+	var matchingN LogIndex = 0
+	// cover all N > currentCommitIndex
 	// stop when we pass the end of the log
-	for N := commitIndex + 1; N <= indexOfLastEntry; N++ {
+	for N := currentCommitIndex + 1; N <= indexOfLastEntry; N++ {
 		// check log[N].term
 		termAtN, err := lasm.GetTermAtIndex(N)
 		if err != nil {
@@ -105,7 +107,7 @@ func findNewerCommitIndex(
 		if termAtN > currentTerm {
 			// term has gone too high for log[N].term == currentTerm
 			// no point trying further
-			return 0, nil
+			break
 		}
 		if termAtN < currentTerm {
 			continue
@@ -118,9 +120,9 @@ func findNewerCommitIndex(
 			}
 		}
 		if foundMatches >= requiredMatches {
-			return N, nil
+			matchingN = N
 		}
 	}
 
-	return 0, nil
+	return matchingN, nil
 }

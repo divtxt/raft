@@ -729,19 +729,7 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		t.Fatal()
 	}
 
-	// tick will advance commitIndex
-	// the test here captures the fact that first match is returned
-	err = mcm.tick()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if mcm.pcm.getCommitIndex() != 11 {
-		t.Fatal(mcm.pcm.getCommitIndex())
-	}
-	mrs.checkSentRpcs(t, []mockSentRpc{})
-
-	// tick will advance commitIndex
-	// the next match is returned only after we cross the previous match
+	// tick will advance commitIndex to the highest match possible
 	err = mcm.tick()
 	if err != nil {
 		t.Fatal(err)
@@ -749,6 +737,7 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.getCommitIndex() != 12 {
 		t.Fatal(mcm.pcm.getCommitIndex())
 	}
+	mrs.checkSentRpcs(t, []mockSentRpc{})
 }
 
 func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
