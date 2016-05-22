@@ -32,6 +32,29 @@ func setupConsensusModuleR3(
 	return cm, imle
 }
 
+func setupConsensusModuleR3_SOLO(
+	t *testing.T,
+	electionTimeoutLow time.Duration,
+	logTerms []TermNo,
+	imrsc *inMemoryRpcServiceConnector,
+) (*ConsensusModule, *inMemoryLog) {
+	ps := newIMPSWithCurrentTerm(0)
+	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
+	ts := TimeSettings{testTickerDuration, electionTimeoutLow}
+	ci, err := NewClusterInfo([]ServerId{"_SOLO_"}, "_SOLO_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cm, err := NewConsensusModule(ps, imle, imrsc, ci, ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cm == nil {
+		t.Fatal()
+	}
+	return cm, imle
+}
+
 func TestCluster_ElectsLeader(t *testing.T) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	setupCMR3 := func(thisServerId ServerId) *ConsensusModule {
@@ -125,6 +148,29 @@ func testSetupClusterWithLeader(
 	return imrsh, cm1, imle1, cm2, imle2, cm3, imle3
 }
 
+func testSetup_SOLO_Leader(t *testing.T) (*ConsensusModule, *inMemoryLog) {
+	imrsh := &inMemoryRpcServiceHub{nil}
+	cm, imle := setupConsensusModuleR3_SOLO(
+		t,
+		testElectionTimeoutLow,
+		nil,
+		imrsh.getRpcService("_SOLO_"),
+	)
+	imrsh.cms = map[ServerId]*ConsensusModule{
+		"_SOLO_": cm,
+	}
+
+	// -- Election timeout results in cm electing itself leader
+	time.Sleep(testElectionTimeoutLow*2 + testSleepJustMoreThanATick)
+
+	if cm.GetServerState() != LEADER {
+		defer cm.StopAsync()
+		t.Fatal()
+	}
+
+	return cm, imle
+}
+
 func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	imrsh, cm1, imle1, cm2, imle2, cm3, _ := testSetupClusterWithLeader(t)
 	defer cm1.StopAsync()
@@ -212,6 +258,44 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 		t.Fatal(le)
 	}
 	if imle3b._commitIndex != 1 {
+		t.Fatal()
+	}
+}
+
+func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
+	cm, imle := testSetup_SOLO_Leader(t)
+	defer cm.StopAsync()
+
+	// Apply a command on the leader
+	command := Command("c101")
+	replyChan := cm.AppendCommandAsync(command)
+
+	// FIXME: sleep just enough!
+	time.Sleep(testSleepToLetGoroutineRun)
+	select {
+	case reply := <-replyChan:
+		if !reflect.DeepEqual(reply, AppendCommandResult{1, nil}) {
+			t.Fatal(reply)
+		}
+	default:
+		t.Fatal()
+	}
+
+	expectedLe := LogEntry{1, Command("c101")}
+
+	// Command is in the leader's log
+	le := testHelper_GetLogEntryAtIndex(imle, 1)
+	if !reflect.DeepEqual(le, expectedLe) {
+		t.Fatal(le)
+	}
+	// but not yet committed
+	if imle._commitIndex != 0 {
+		t.Fatal()
+	}
+
+	// A tick allows command to be committed
+	time.Sleep(testTickerDuration)
+	if imle._commitIndex != 1 {
 		t.Fatal()
 	}
 }
