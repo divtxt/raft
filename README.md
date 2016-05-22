@@ -23,7 +23,7 @@ Basics:
 - [x] Move Log interface to interfaces.go
 - [x] Rename Log to LogAndStateMachine
 - [x] Support for single-node cluster
-- [ ] findNewerCommitIndex advances as far as possible
+- [x] findNewerCommitIndex advances as far as possible
 - [ ] ProcessRpc... & AppendCommandAsync can return errors and/or not reply
 - [ ] Test for RPCs from senders not in cluster
 - [ ] Fix TODOs
