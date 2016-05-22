@@ -343,3 +343,51 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	}
 
 }
+
+func TestFindNewerCommitIndex_SOLO(t *testing.T) {
+	ci, err := NewClusterInfo([]ServerId{"s1"}, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	terms := []TermNo{1, 2, 2, 2, 3, 3}
+	imle := newIMLEWithDummyCommands(terms, testMaxEntriesPerAppendEntry)
+	lvs, err := newLeaderVolatileState(ci, LogIndex(len(terms)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
+		nci, err := findNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return nci
+	}
+
+	if nci := _findNewerCommitIndex(1, 0); nci != 1 {
+		t.Fatal(nci)
+	}
+	if nci := _findNewerCommitIndex(1, 1); nci != 0 {
+		t.Fatal(nci)
+	}
+
+	// the test here captures the fact that first match is returned
+	if nci := _findNewerCommitIndex(2, 0); nci != 2 {
+		t.Fatal(nci)
+	}
+	// the next match is returned only after we cross the previous match
+	if nci := _findNewerCommitIndex(2, 1); nci != 2 {
+		t.Fatal(nci)
+	}
+	if nci := _findNewerCommitIndex(2, 3); nci != 4 {
+		t.Fatal(nci)
+	}
+
+	if nci := _findNewerCommitIndex(2, 4); nci != 0 {
+		t.Fatal(nci)
+	}
+	if nci := _findNewerCommitIndex(3, 1); nci != 5 {
+		t.Fatal(nci)
+	}
+}

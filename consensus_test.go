@@ -689,6 +689,68 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 }
 
+func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
+	var err error
+	mcm, mrs := testSetupMCM_SOLO_Leader_WithTerms(t, makeLogTerms_Figure7LeaderLine())
+
+	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+
+	// pre checks
+	if serverTerm != 8 {
+		t.Fatal()
+	}
+	if mcm.pcm.getCommitIndex() != 0 {
+		t.Fatal()
+	}
+	mrs.checkSentRpcs(t, []mockSentRpc{})
+
+	// tick should try to advance commitIndex but nothing should happen
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mcm.pcm.getCommitIndex() != 0 {
+		t.Fatal()
+	}
+	mrs.checkSentRpcs(t, []mockSentRpc{})
+
+	// let's make some new log entries
+	li, err := mcm.pcm.appendCommand(Command("c11"))
+	if li != 11 || err != nil {
+		t.Fatal()
+	}
+	li, err = mcm.pcm.appendCommand(Command("c12"))
+	if li != 12 || err != nil {
+		t.Fatal()
+	}
+
+	// commitIndex does not advance immediately
+	if mcm.pcm.getCommitIndex() != 0 {
+		t.Fatal()
+	}
+
+	// tick will advance commitIndex
+	// the test here captures the fact that first match is returned
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mcm.pcm.getCommitIndex() != 11 {
+		t.Fatal(mcm.pcm.getCommitIndex())
+	}
+	mrs.checkSentRpcs(t, []mockSentRpc{})
+
+	// tick will advance commitIndex
+	// the next match is returned only after we cross the previous match
+	err = mcm.tick()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mcm.pcm.getCommitIndex() != 12 {
+		t.Fatal(mcm.pcm.getCommitIndex())
+	}
+}
+
 func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
@@ -730,6 +792,17 @@ func testSetupMCM_Follower_WithTerms(
 	return mcm, mrs
 }
 
+func testSetupMCM_SOLO_Follower_WithTerms(
+	t *testing.T,
+	terms []TermNo,
+) (*managedConsensusModule, *mockRpcSender) {
+	mcm, mrs := setupManagedConsensusModuleR2(t, terms, true)
+	if mcm.pcm.getServerState() != FOLLOWER {
+		t.Fatal()
+	}
+	return mcm, mrs
+}
+
 func testSetupMCM_Candidate_WithTerms(
 	t *testing.T,
 	terms []TermNo,
@@ -761,6 +834,18 @@ func testSetupMCM_Leader_WithTerms(
 		t.Fatal()
 	}
 	mrs.clearSentRpcs()
+	return mcm, mrs
+}
+
+func testSetupMCM_SOLO_Leader_WithTerms(
+	t *testing.T,
+	terms []TermNo,
+) (*managedConsensusModule, *mockRpcSender) {
+	mcm, mrs := testSetupMCM_SOLO_Follower_WithTerms(t, terms)
+	testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(t, mcm, mrs)
+	if mcm.pcm.getServerState() != LEADER {
+		t.Fatal()
+	}
 	return mcm, mrs
 }
 
