@@ -289,18 +289,6 @@ func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRe
 func (cm *ConsensusModule) processor() {
 	var stopErr error = nil
 
-	defer func() {
-		// Save error if needed
-		if stopErr != nil {
-			cm.stopError.Store(stopErr)
-		}
-		// Mark the server as stopped
-		atomic.StoreInt32(&cm.stopped, 1)
-		// Clean up things
-		cm.runnableChannel = nil // don't close channel - avoids sender panics (rpc callbacks)
-		cm.ticker.Stop()
-	}()
-
 loop:
 	for {
 		select {
@@ -333,6 +321,17 @@ loop:
 			break loop
 		}
 	}
+
+	// Save error if needed
+	if stopErr != nil {
+		cm.stopError.Store(stopErr)
+	}
+	// Mark the server as stopped
+	atomic.StoreInt32(&cm.stopped, 1)
+	// Clean up things
+	cm.runnableChannel = nil // don't close channel - avoids sender panics (rpc callbacks)
+	cm.ticker.Stop()
+
 }
 
 type rpcTuple struct {
