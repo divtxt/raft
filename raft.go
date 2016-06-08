@@ -138,6 +138,7 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 //
 // This method sends the RPC message to the ConsensusModule's goroutine.
 // The RPC reply will be sent later on the returned channel.
+// No reply will be sent if the ConsensusModule is stopped.
 //
 // See RpcSender (in interfaces.go) for outgoing RPC.
 //
@@ -147,7 +148,7 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 	rpc *RpcAppendEntries,
 ) <-chan *RpcAppendEntriesReply {
 	replyChan := make(chan *RpcAppendEntriesReply, 1)
-	cm.runnableChannel <- func() error {
+	f := func() error {
 		now := time.Now()
 
 		rpcReply, err := cm.passiveConsensusModule.rpc_RpcAppendEntries(from, rpc, now)
@@ -164,6 +165,10 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
+	select {
+	case cm.runnableChannel <- f:
+	default:
+	}
 	return replyChan
 }
 
@@ -172,6 +177,7 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 //
 // This method sends the RPC message to the ConsensusModule's goroutine.
 // The RPC reply will be sent later on the returned channel.
+// No reply will be sent if the ConsensusModule is stopped.
 //
 // See RpcSender (in interfaces.go) for outgoing RPC.
 //
@@ -181,7 +187,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 	rpc *RpcRequestVote,
 ) <-chan *RpcRequestVoteReply {
 	replyChan := make(chan *RpcRequestVoteReply, 1)
-	cm.runnableChannel <- func() error {
+	f := func() error {
 		now := time.Now()
 
 		rpcReply, err := cm.passiveConsensusModule.rpc_RpcRequestVote(from, rpc, now)
@@ -197,6 +203,10 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 			// capacity 1 and this is the one send to it
 			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
+	}
+	select {
+	case cm.runnableChannel <- f:
+	default:
 	}
 	return replyChan
 }

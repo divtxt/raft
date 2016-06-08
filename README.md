@@ -24,7 +24,8 @@ Basics:
 - [x] Rename Log to LogAndStateMachine
 - [x] Support for single-node cluster
 - [x] findNewerCommitIndex advances as far as possible
-- [ ] ProcessRpc... & AppendCommandAsync can return errors and/or not reply
+- [x] ProcessRpc... methods do not reply if ConsensusModule is stopped
+- [ ] AppendCommandAsync can return errors and/or not reply
 - [ ] Test for RPCs from senders not in cluster
 - [ ] Fix TODOs
 - [ ] Code review & cleanup
