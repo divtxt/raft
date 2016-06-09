@@ -140,7 +140,7 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 // The RPC reply will be sent later on the returned channel.
 // No reply will be sent if the ConsensusModule is stopped.
 //
-// See RpcSender (in interfaces.go) for outgoing RPC.
+// See the RpcService interface for outgoing RPC.
 //
 // TODO: behavior when channel full?
 func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
@@ -179,7 +179,7 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 // The RPC reply will be sent later on the returned channel.
 // No reply will be sent if the ConsensusModule is stopped.
 //
-// See RpcSender (in interfaces.go) for outgoing RPC.
+// See the RpcService interface for outgoing RPC.
 //
 // TODO: behavior when channel full?
 func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
@@ -231,7 +231,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 //
 // We choose not to deal with the client directly. You must implement the
 // interaction with clients and waiting the entry to be applied to the state
-// machine. (see delegation of lastApplied to raft.Log)
+// machine. (see delegation of lastApplied to the Log interface)
 //
 // TODO: behavior when channel full?
 func (cm *ConsensusModule) AppendCommandAsync(
