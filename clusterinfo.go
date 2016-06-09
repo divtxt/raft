@@ -25,7 +25,7 @@ type ClusterInfo struct {
 //  - allServerIds should list all the servers in the cluster.
 //  - thisServerId is the ServerId of "this" server.
 //  - allServerIds must include thisServerId.
-//  - allServerIds must contain at least 2 elements.
+//  - allServerIds must contain at least 1 element.
 //
 func NewClusterInfo(
 	allServerIds []ServerId,
@@ -99,12 +99,14 @@ func (ci *ClusterInfo) GetClusterSize() uint {
 
 // Get the quorum size for this ClusterInfo.
 //
-// Same as QuorumSizeForClusterSize with the cluster size of this ClusterInfo.
+// Same as QuorumSizeForClusterSize() for the cluster size of this ClusterInfo.
 func (ci *ClusterInfo) QuorumSizeForCluster() uint {
 	return ci.quorumSizeForCluster
 }
 
-// Get the quorum size for a cluster of given size.
+// Helper function to calculate the quorum size for a given cluster size.
+//
+// For example, a cluster of 5 nodes requires 3 nodes for quorum.
 func QuorumSizeForClusterSize(clusterSize uint) uint {
 	return (clusterSize / 2) + 1
 }
