@@ -27,6 +27,10 @@ import (
 	"time"
 )
 
+const (
+	RPC_CHANNEL_BUFFER_SIZE = 100
+)
+
 // A ConsensusModule is an active Raft consensus module implementation.
 type ConsensusModule struct {
 	passiveConsensusModule *passiveConsensusModule
@@ -49,9 +53,24 @@ type ConsensusModule struct {
 // Allocate and initialize a ConsensusModule with the given components and
 // settings.
 //
-// A goroutine that handles consensus processing is created.
 // All parameters are required.
 // timeSettings is checked using ValidateTimeSettings().
+//
+// A goroutine that handles consensus processing is created. All processing is done by this
+// goroutine. The various ...Async() methods send their work to this goroutine via an internal
+// channel of size RPC_CHANNEL_BUFFER_SIZE.
+//
+// The various ...Async() methods follow these conventions:
+//
+//  - Each call immediately returns a single-use channel. The result will be sent later via this
+//    channel when the actual processing of that request is complete.
+//  - If the processing encounters an error, the ConsensusModule will stop. No reply will be sent
+//    on the reply channel.
+//  - If the internal processing channel is full, the ...Async() method call will pretend to
+//    succeed but no reply will be sent on the returned reply channel.
+//  - If the ConsensusModule is stopped, the ...Async() method call will pretend to succeed but
+//    no reply will be sent on the reply channel.
+//
 func NewConsensusModule(
 	persistentState PersistentState,
 	lasm LogAndStateMachine,
@@ -140,11 +159,10 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 //
 // This method sends the RPC message to the ConsensusModule's goroutine.
 // The RPC reply will be sent later on the returned channel.
-// No reply will be sent if the ConsensusModule is stopped.
 //
 // See the RpcService interface for outgoing RPC.
 //
-// TODO: behavior when channel full?
+// See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 	from ServerId,
 	rpc *RpcAppendEntries,
@@ -167,10 +185,7 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
-	select {
-	case cm.runnableChannel <- f:
-	default:
-	}
+	cm.runInProcessor(f)
 	return replyChan
 }
 
@@ -179,11 +194,10 @@ func (cm *ConsensusModule) ProcessRpcAppendEntriesAsync(
 //
 // This method sends the RPC message to the ConsensusModule's goroutine.
 // The RPC reply will be sent later on the returned channel.
-// No reply will be sent if the ConsensusModule is stopped.
 //
 // See the RpcService interface for outgoing RPC.
 //
-// TODO: behavior when channel full?
+// See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 	from ServerId,
 	rpc *RpcRequestVote,
@@ -206,10 +220,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
-	select {
-	case cm.runnableChannel <- f:
-	default:
-	}
+	cm.runInProcessor(f)
 	return replyChan
 }
 
@@ -236,7 +247,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 // interaction with clients and waiting the entry to be applied to the state
 // machine. (see delegation of lastApplied to the Log interface)
 //
-// TODO: behavior when channel full?
+// See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) AppendCommandAsync(
 	command Command,
 ) <-chan AppendCommandResult {
@@ -253,10 +264,7 @@ func (cm *ConsensusModule) AppendCommandAsync(
 			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
 	}
-	select {
-	case cm.runnableChannel <- f:
-	default:
-	}
+	cm.runInProcessor(f)
 	return replyChan
 }
 
@@ -273,14 +281,14 @@ func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *Rpc
 	replyAsync := func(rpcReply *RpcAppendEntriesReply) {
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
-		// TODO: behavior when channel full?
-		cm.runnableChannel <- func() error {
+		f := func() error {
 			err := cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
 			if err != nil {
 				return err
 			}
 			return nil
 		}
+		cm.runInProcessor(f)
 	}
 	return cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, replyAsync)
 }
@@ -291,14 +299,14 @@ func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRe
 	replyAsync := func(rpcReply *RpcRequestVoteReply) {
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
-		// TODO: behavior when channel full?
-		cm.runnableChannel <- func() error {
+		f := func() error {
 			err := cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
 			if err != nil {
 				return err
 			}
 			return nil
 		}
+		cm.runInProcessor(f)
 	}
 	return cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, replyAsync)
 }
@@ -355,4 +363,11 @@ type rpcTuple struct {
 	from      ServerId
 	rpc       interface{}
 	replyChan chan interface{}
+}
+
+func (cm *ConsensusModule) runInProcessor(f func() error) {
+	select {
+	case cm.runnableChannel <- f:
+	default:
+	}
 }
