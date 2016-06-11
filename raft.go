@@ -77,7 +77,7 @@ func NewConsensusModule(
 		ticker,
 
 		// -- Control
-		make(chan struct{}),
+		make(chan struct{}, 1),
 		&atomic.Value{},
 	}
 
@@ -109,11 +109,13 @@ func (cm *ConsensusModule) IsStopped() bool {
 
 // Stop the ConsensusModule asynchronously.
 //
-// This will stop the goroutine that does the processing.
-// This is safe to call even if the goroutine has already stopped, but it
-// will panic if called more than once.
+// This will effectively stop the goroutine that does the processing.
+// This is safe to call multiple times, even if the goroutine has already stopped.
 func (cm *ConsensusModule) StopAsync() {
-	close(cm.stopSignal)
+	select {
+	case cm.stopSignal <- struct{}{}:
+	default:
+	}
 }
 
 // Get the error that stopped the ConsensusModule goroutine.
