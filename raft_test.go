@@ -327,3 +327,19 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		t.Fatal()
 	}
 }
+
+func TestConsensusModule_AppendCommandAsync_Follower_StoppedCM(t *testing.T) {
+	cm, _ := setupConsensusModuleR2(t, makeLogTerms_Figure7LeaderLine())
+	cm.StopAsync()
+	time.Sleep(testSleepToLetGoroutineRun)
+
+	command := Command("c11x")
+	replyChan := cm.AppendCommandAsync(command)
+	time.Sleep(testSleepToLetGoroutineRun)
+
+	select {
+	case <-replyChan:
+		t.Fatal()
+	default:
+	}
+}

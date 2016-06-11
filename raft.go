@@ -222,6 +222,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 // This method sends the RPC message to the ConsensusModule's goroutine.
 // The reply will be sent later on the returned channel when the append is
 // processed. The reply will contain the index of the new entry or an error.
+// No reply will be sent if the ConsensusModule is stopped.
 //
 // Here, we intentionally punt on some of the leader details, specifically
 // most of:
@@ -238,7 +239,7 @@ func (cm *ConsensusModule) AppendCommandAsync(
 	command Command,
 ) <-chan AppendCommandResult {
 	replyChan := make(chan AppendCommandResult, 1)
-	cm.runnableChannel <- func() error {
+	f := func() error {
 		logIndex, err := cm.passiveConsensusModule.appendCommand(command)
 		appendCommandResult := AppendCommandResult{logIndex, err}
 		select {
@@ -249,6 +250,10 @@ func (cm *ConsensusModule) AppendCommandAsync(
 			// capacity 1 and this is the one send to it
 			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
+	}
+	select {
+	case cm.runnableChannel <- f:
+	default:
 	}
 	return replyChan
 }
