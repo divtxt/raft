@@ -25,7 +25,7 @@ Basics:
 - [x] Support for single-node cluster
 - [x] findNewerCommitIndex advances as far as possible
 - [x] ProcessRpc... methods do not reply if ConsensusModule is stopped
-- [ ] AppendCommandAsync can return errors and/or not reply
+- [x] AppendCommandAsync does not reply if ConsensusModule is stopped
 - [ ] Test for RPCs from senders not in cluster
 - [ ] Fix TODOs
 - [ ] Code review & cleanup
