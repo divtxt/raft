@@ -67,6 +67,28 @@ func TestConsensusModule_StartStateAndStop(t *testing.T) {
 	}
 }
 
+func TestConsensusModule_CallStopAsyncMultipleTimes(t *testing.T) {
+	cm := setupConsensusModule(t, nil)
+
+	time.Sleep(testSleepJustMoreThanATick)
+	if cm.IsStopped() {
+		t.Error()
+	}
+
+	cm.StopAsync()
+	cm.StopAsync()
+	time.Sleep(testSleepToLetGoroutineRun)
+
+	if !cm.IsStopped() {
+		t.Error()
+	}
+	if cm.GetStopError() != nil {
+		t.Error()
+	}
+
+	cm.StopAsync()
+}
+
 func TestConsensusModule_ProcessRpcAppendEntriesAsync(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 	defer cm.StopAsync()
