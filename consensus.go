@@ -7,10 +7,6 @@ import (
 	"time"
 )
 
-const (
-	RPC_CHANNEL_BUFFER_SIZE = 100
-)
-
 type passiveConsensusModule struct {
 	// ===== the following fields meant to be immutable
 

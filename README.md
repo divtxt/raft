@@ -27,7 +27,6 @@ Basics:
 - [x] ProcessRpc... methods do not reply if ConsensusModule is stopped
 - [x] AppendCommandAsync does not reply if ConsensusModule is stopped
 - [ ] Test for RPCs from senders not in cluster
-- [ ] Fix TODOs
 - [ ] Code review & cleanup
 - [ ] Simplify/shorten names
 - [ ] Expose raft details e.g. leader, term
