@@ -20,17 +20,6 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 		}
 	}
 
-	serverState := cm.getServerState()
-
-	switch serverState {
-	case FOLLOWER:
-		// Pass through to main logic below
-	case CANDIDATE:
-		// Pass through to main logic below
-	case LEADER:
-		// Pass through to main logic below
-	}
-
 	serverTerm := cm.persistentState.GetCurrentTerm()
 	senderCurrentTerm := rpcRequestVote.Term
 

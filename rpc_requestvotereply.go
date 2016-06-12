@@ -30,10 +30,7 @@ func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 		}
 	}
 
-	switch serverState {
-	case FOLLOWER:
-		// Ignore - not a candidate
-	case CANDIDATE:
+	if serverState == CANDIDATE {
 		// #RFS-C2: If votes received from majority of servers: become leader
 		// #5.2-p3s1: A candidate wins an election if it receives votes from a
 		// majority of the servers in the full cluster for the same term.
@@ -49,9 +46,7 @@ func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 				}
 			}
 		}
-	case LEADER:
-		// Ignore - not a candidate
-	}
+	} // else: Ignore - not a candidate
 
 	return nil
 }
