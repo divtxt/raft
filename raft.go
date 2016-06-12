@@ -255,6 +255,7 @@ func (cm *ConsensusModule) AppendCommandAsync(
 	replyChan := make(chan AppendCommandResult, 1)
 	f := func() error {
 		logIndex, err := cm.passiveConsensusModule.appendCommand(command)
+		// FIXME: err should be returned to processor
 		appendCommandResult := AppendCommandResult{logIndex, err}
 		select {
 		case replyChan <- appendCommandResult:
