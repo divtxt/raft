@@ -213,12 +213,13 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 
 		select {
 		case replyChan <- rpcReply:
-			return nil
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
 			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
+
+		return nil
 	}
 	cm.runInProcessor(f)
 	return replyChan
@@ -257,12 +258,13 @@ func (cm *ConsensusModule) AppendCommandAsync(
 		appendCommandResult := AppendCommandResult{logIndex, err}
 		select {
 		case replyChan <- appendCommandResult:
-			return nil
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
 			return errors.New("FATAL: replyChan is nil or wants to block")
 		}
+
+		return nil
 	}
 	cm.runInProcessor(f)
 	return replyChan
@@ -356,7 +358,6 @@ loop:
 	// Clean up things
 	cm.runnableChannel = nil // don't close channel - avoids sender panics (rpc callbacks)
 	cm.ticker.Stop()
-
 }
 
 type rpcTuple struct {

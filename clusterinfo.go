@@ -8,13 +8,8 @@ import (
 // A ClusterInfo holds the ServerIds of the servers in the Raft cluster and
 // provides useful functions to work with this list.
 type ClusterInfo struct {
-	//
-	thisServerId ServerId
-
-	// Excludes thisServerId
-	peerServerIds []ServerId
-
-	//
+	thisServerId         ServerId
+	peerServerIds        []ServerId // Excludes thisServerId
 	clusterSize          uint
 	quorumSizeForCluster uint
 }
