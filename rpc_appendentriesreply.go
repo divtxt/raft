@@ -20,19 +20,13 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 		return nil
 	}
 
-	switch serverState {
-	case FOLLOWER:
-		// Extra: raft violation - only leader should get AppendEntriesReply
-		fallthrough
-	case CANDIDATE:
-		// Extra: raft violation - only leader should get AppendEntriesReply
+	// Extra: raft violation - only leader should get AppendEntriesReply
+	if serverState != LEADER {
 		return fmt.Errorf(
 			"FATAL: non-leader got AppendEntriesReply from: %v with term: %v",
 			from,
 			serverTerm,
 		)
-	case LEADER:
-		// Pass through to main logic below
 	}
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:

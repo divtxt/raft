@@ -23,17 +23,6 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 		}
 	}
 
-	serverState := cm.getServerState()
-
-	switch serverState {
-	case FOLLOWER:
-		// Pass through to main logic below
-	case CANDIDATE:
-		// Pass through to main logic below
-	case LEADER:
-		// Pass through to main logic below
-	}
-
 	serverTerm := cm.persistentState.GetCurrentTerm()
 	leaderCurrentTerm := appendEntries.Term
 	prevLogIndex := appendEntries.PrevLogIndex
@@ -45,7 +34,7 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 	}
 
 	// Extra: raft violation - two leaders with same term
-	if serverState == LEADER && leaderCurrentTerm == serverTerm {
+	if cm.getServerState() == LEADER && leaderCurrentTerm == serverTerm {
 		return nil, fmt.Errorf(
 			"FATAL: two leaders with same term - got AppendEntries from: %v with term: %v",
 			from,
