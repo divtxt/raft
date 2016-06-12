@@ -26,16 +26,12 @@ Basics:
 - [x] findNewerCommitIndex advances as far as possible
 - [x] ProcessRpc... methods do not reply if ConsensusModule is stopped
 - [x] AppendCommandAsync does not reply if ConsensusModule is stopped
-- [ ] Test for RPCs from senders not in cluster
 - [ ] Code review & cleanup
-- [ ] Simplify/shorten names
 - [ ] Expose raft details e.g. leader, term
-- [ ] Add metrics & logging
-- [ ] Assembling AppendEntries RPC should not block
-- [ ] Isolated server should not increment term (similar to #6p8)
 
 Misc/Maybe:
 
+- [ ] Simplify/shorten names
 - [ ] Tests have theoretical concurrency issues
 - [ ] Change to actor model / library
 - [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
@@ -45,6 +41,10 @@ Misc/Maybe:
 
 Later:
 
+- [ ] Isolated server should not increment term (similar to #6p8)
+- [ ] Add metrics & logging
+- [ ] Test for RPCs from senders not in cluster
+- [ ] Assembling AppendEntries RPC should not block
 - [ ] Add errcheck to Travis build
 - [ ] Add support for snapshotting & InstallSnapshot RPC
 - [ ] Split SetEntriesAfterIndex for leader and follower
