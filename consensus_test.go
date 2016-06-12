@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -952,8 +951,8 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		if li != 0 {
 			t.Fatal()
 		}
-		if !reflect.DeepEqual(err, errors.New("raft: state != LEADER - cannot append command to log")) {
-			t.Fatal()
+		if err != nil {
+			t.Fatal(err)
 		}
 
 		iole, err = mcm.pcm.lasm.GetIndexOfLastEntry()
