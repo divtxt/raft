@@ -136,31 +136,30 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 func (cm *passiveConsensusModule) appendCommand(
 	command Command,
 ) (LogIndex, error) {
-	serverState := cm.getServerState()
-	if serverState == LEADER {
-		iole, err := cm.lasm.GetIndexOfLastEntry()
-		if err != nil {
-			return 0, err
-		}
-		logEntries := []LogEntry{
-			{cm.persistentState.GetCurrentTerm(), command},
-		}
-		err = cm.lasm.SetEntriesAfterIndex(iole, logEntries)
-		if err != nil {
-			return 0, err
-		}
-		var newIole LogIndex
-		newIole, err = cm.lasm.GetIndexOfLastEntry()
-		if err != nil {
-			return 0, err
-		}
-		if newIole != iole+1 {
-			return 0, fmt.Errorf("newIole=%v != %v + 1", newIole, iole)
-		}
-		return newIole, nil
-	} else {
+	if cm.getServerState() != LEADER {
 		return 0, errors.New("raft: state != LEADER - cannot append command to log")
 	}
+
+	iole, err := cm.lasm.GetIndexOfLastEntry()
+	if err != nil {
+		return 0, err
+	}
+	logEntries := []LogEntry{
+		{cm.persistentState.GetCurrentTerm(), command},
+	}
+	err = cm.lasm.SetEntriesAfterIndex(iole, logEntries)
+	if err != nil {
+		return 0, err
+	}
+	var newIole LogIndex
+	newIole, err = cm.lasm.GetIndexOfLastEntry()
+	if err != nil {
+		return 0, err
+	}
+	if newIole != iole+1 {
+		return 0, fmt.Errorf("newIole=%v != %v + 1", newIole, iole)
+	}
+	return newIole, nil
 }
 
 // Iterate
