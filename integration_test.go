@@ -189,7 +189,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	time.Sleep(testSleepToLetGoroutineRun)
 	select {
 	case reply := <-replyChan:
-		if !reflect.DeepEqual(reply, AppendCommandResult{1, nil}) {
+		if reply != 1 {
 			t.Fatal(reply)
 		}
 	default:
@@ -274,7 +274,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	time.Sleep(testSleepToLetGoroutineRun)
 	select {
 	case reply := <-replyChan:
-		if !reflect.DeepEqual(reply, AppendCommandResult{1, nil}) {
+		if reply != 1 {
 			t.Fatal(reply)
 		}
 	default:

@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -280,8 +279,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		if cm.IsStopped() {
 			t.Error(cm.GetStopError())
 		}
-		expectedReply := AppendCommandResult{11, nil}
-		if !reflect.DeepEqual(reply, expectedReply) {
+		if reply != 11 {
 			t.Fatal(reply)
 		}
 		iole, err = cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
@@ -331,11 +329,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		if cm.IsStopped() {
 			t.Error(cm.GetStopError())
 		}
-		expectedReply := AppendCommandResult{
-			0,
-			errors.New("raft: state != LEADER - cannot append command to log"),
-		}
-		if !reflect.DeepEqual(reply, expectedReply) {
+		if reply != 0 {
 			t.Fatal(reply)
 		}
 		iole, err := cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()

@@ -133,11 +133,13 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 
 // Append the given command as an entry in the log.
 // #RFS-L2a: If command received from client: append entry to local log
+//
+// Returns log index of new entry or 0 if not currently the leader
 func (cm *passiveConsensusModule) appendCommand(
 	command Command,
 ) (LogIndex, error) {
 	if cm.getServerState() != LEADER {
-		return 0, errors.New("raft: state != LEADER - cannot append command to log")
+		return 0, nil
 	}
 
 	iole, err := cm.lasm.GetIndexOfLastEntry()

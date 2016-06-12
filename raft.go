@@ -233,10 +233,9 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 // it will succeed when applied to the state machine.
 // (both internal contents and other context/state checks)
 //
-// This method sends the RPC message to the ConsensusModule's goroutine.
-// The reply will be sent later on the returned channel when the append is
-// processed. The reply will contain the index of the new entry or an error.
-// No reply will be sent if the ConsensusModule is stopped.
+// This method sends the command to the ConsensusModule's goroutine.
+// The reply will be sent later on the returned channel when the command has been appended.
+// The reply will contain the index of the new entry or 0 if this ConsensusModule is the leader.
 //
 // Here, we intentionally punt on some of the leader details, specifically
 // most of:
@@ -251,14 +250,16 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 // See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) AppendCommandAsync(
 	command Command,
-) <-chan AppendCommandResult {
-	replyChan := make(chan AppendCommandResult, 1)
+) <-chan LogIndex {
+	replyChan := make(chan LogIndex, 1)
 	f := func() error {
 		logIndex, err := cm.passiveConsensusModule.appendCommand(command)
-		// FIXME: err should be returned to processor
-		appendCommandResult := AppendCommandResult{logIndex, err}
+		if err != nil {
+			return err
+		}
+
 		select {
-		case replyChan <- appendCommandResult:
+		case replyChan <- logIndex:
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
@@ -269,11 +270,6 @@ func (cm *ConsensusModule) AppendCommandAsync(
 	}
 	cm.runInProcessor(f)
 	return replyChan
-}
-
-type AppendCommandResult struct {
-	LogIndex
-	error
 }
 
 // -- protected methods
