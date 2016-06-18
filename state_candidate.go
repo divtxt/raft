@@ -15,11 +15,11 @@ type candidateVolatileState struct {
 func newCandidateVolatileState(
 	clusterInfo *ClusterInfo,
 ) (*candidateVolatileState, error) {
-	cvs := &candidateVolatileState{}
-
-	cvs.receivedVotes = 1 // assumes we always vote for ourself
-	cvs.requiredVotes = clusterInfo.QuorumSizeForCluster()
-	cvs.votedPeers = make(map[ServerId]bool)
+	cvs := &candidateVolatileState{
+		1, // assumes we always vote for ourself
+		clusterInfo.QuorumSizeForCluster(),
+		make(map[ServerId]bool),
+	}
 
 	err := clusterInfo.ForEachPeer(
 		func(peerId ServerId) error {
