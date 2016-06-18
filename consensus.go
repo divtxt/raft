@@ -299,11 +299,7 @@ func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 func (cm *passiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error {
 	return cm.clusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
-			err := cm.sendAppendEntriesToPeer(serverId, empty)
-			if err != nil {
-				return err
-			}
-			return nil
+			return cm.sendAppendEntriesToPeer(serverId, empty)
 		},
 	)
 }

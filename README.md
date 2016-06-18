@@ -26,8 +26,7 @@ Basics:
 - [x] findNewerCommitIndex advances as far as possible
 - [x] ProcessRpc... methods do not reply if ConsensusModule is stopped
 - [x] AppendCommandAsync does not reply if ConsensusModule is stopped
-- [ ] Code review & cleanup
-- [ ] Expose raft details e.g. leader, term
+- [x] Code review & cleanup
 
 Misc/Maybe:
 
@@ -43,6 +42,7 @@ Later:
 
 - [ ] Isolated server should not increment term (similar to #6p8)
 - [ ] Add metrics & logging
+- [ ] Expose raft details e.g. leader, term
 - [ ] Test for RPCs from senders not in cluster
 - [ ] Assembling AppendEntries RPC should not block
 - [ ] Add errcheck to Travis build

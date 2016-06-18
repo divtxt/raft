@@ -281,11 +281,7 @@ func (cm *ConsensusModule) sendRpcAppendEntriesAsync(toServer ServerId, rpc *Rpc
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
 		f := func() error {
-			err := cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
-			if err != nil {
-				return err
-			}
-			return nil
+			return cm.passiveConsensusModule.rpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
 		}
 		cm.runInProcessor(f)
 	}
@@ -299,11 +295,7 @@ func (cm *ConsensusModule) sendRpcRequestVoteAsync(toServer ServerId, rpc *RpcRe
 		// Process the given RPC reply message from the given peer
 		// asynchronously.
 		f := func() error {
-			err := cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
-			if err != nil {
-				return err
-			}
-			return nil
+			return cm.passiveConsensusModule.rpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
 		}
 		cm.runInProcessor(f)
 	}
@@ -355,12 +347,6 @@ loop:
 	// Clean up things
 	cm.runnableChannel = nil // don't close channel - avoids sender panics (rpc callbacks)
 	cm.ticker.Stop()
-}
-
-type rpcTuple struct {
-	from      ServerId
-	rpc       interface{}
-	replyChan chan interface{}
 }
 
 func (cm *ConsensusModule) runInProcessor(f func() error) {
