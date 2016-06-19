@@ -11,9 +11,9 @@ type passiveConsensusModule struct {
 	// ===== the following fields meant to be immutable
 
 	// -- External components
-	persistentState PersistentState
-	lasm            LogAndStateMachine
-	rpcSender       rpcSender
+	raftPersistentState RaftPersistentState
+	lasm                LogAndStateMachine
+	rpcSender           rpcSender
 
 	// -- Config
 	clusterInfo *ClusterInfo
@@ -39,7 +39,7 @@ type passiveConsensusModule struct {
 }
 
 func newPassiveConsensusModule(
-	persistentState PersistentState,
+	raftPersistentState RaftPersistentState,
 	lasm LogAndStateMachine,
 	rpcSender rpcSender,
 	clusterInfo *ClusterInfo,
@@ -47,8 +47,8 @@ func newPassiveConsensusModule(
 	now time.Time,
 ) (*passiveConsensusModule, error) {
 	// Param checks
-	if persistentState == nil {
-		return nil, errors.New("'persistentState' cannot be nil")
+	if raftPersistentState == nil {
+		return nil, errors.New("'raftPersistentState' cannot be nil")
 	}
 	if lasm == nil {
 		return nil, errors.New("'log' cannot be nil")
@@ -65,7 +65,7 @@ func newPassiveConsensusModule(
 
 	pcm := &passiveConsensusModule{
 		// -- External components
-		persistentState,
+		raftPersistentState,
 		lasm,
 		rpcSender,
 
@@ -147,7 +147,7 @@ func (cm *passiveConsensusModule) appendCommand(
 		return 0, err
 	}
 	logEntries := []LogEntry{
-		{cm.persistentState.GetCurrentTerm(), command},
+		{cm.raftPersistentState.GetCurrentTerm(), command},
 	}
 	err = cm.lasm.SetEntriesAfterIndex(iole, logEntries)
 	if err != nil {
@@ -223,8 +223,8 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	// to all other servers; Reset election timer
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
-	newTerm := cm.persistentState.GetCurrentTerm() + 1
-	err := cm.persistentState.SetCurrentTerm(newTerm)
+	newTerm := cm.raftPersistentState.GetCurrentTerm() + 1
+	err := cm.raftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (cm *passiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	}
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
-	err = cm.persistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
+	err = cm.raftPersistentState.SetVotedFor(cm.clusterInfo.GetThisServerId())
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ func (cm *passiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 	if err != nil {
 		return err
 	}
-	err = cm.persistentState.SetCurrentTerm(newTerm)
+	err = cm.raftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ func (cm *passiveConsensusModule) sendAppendEntriesToPeer(
 	peerId ServerId,
 	empty bool,
 ) error {
-	serverTerm := cm.persistentState.GetCurrentTerm()
+	serverTerm := cm.raftPersistentState.GetCurrentTerm()
 	//
 	peerNextIndex, err := cm.leaderVolatileState.getNextIndex(peerId)
 	if err != nil {
@@ -355,7 +355,7 @@ func (cm *passiveConsensusModule) advanceCommitIndexIfPossible() error {
 		cm.clusterInfo,
 		cm.leaderVolatileState,
 		cm.lasm,
-		cm.persistentState.GetCurrentTerm(),
+		cm.raftPersistentState.GetCurrentTerm(),
 		cm.getCommitIndex(),
 	)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		requestVote := &RpcRequestVote{7, 9, 6}
@@ -47,12 +47,12 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		beforeState := mcm.pcm.getServerState()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity check
-		votedFor := mcm.pcm.persistentState.GetVotedFor()
+		votedFor := mcm.pcm.raftPersistentState.GetVotedFor()
 		if votedFor != "s1" && votedFor != "s2" {
 			t.Fatal(votedFor)
 		}
@@ -67,7 +67,7 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
-		if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+		if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm {
 			t.Fatal()
 		}
 
@@ -96,11 +96,11 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity check
-		votedFor := mcm.pcm.persistentState.GetVotedFor()
+		votedFor := mcm.pcm.raftPersistentState.GetVotedFor()
 		if votedFor != "" && votedFor != "s2" {
 			t.Fatal(votedFor)
 		}
@@ -137,11 +137,11 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity check
-		votedFor := mcm.pcm.persistentState.GetVotedFor()
+		votedFor := mcm.pcm.raftPersistentState.GetVotedFor()
 		if votedFor != "s1" {
 			t.Fatal(votedFor)
 		}
@@ -179,11 +179,11 @@ func testSetupMCM_FollowerThatVotedForS2_Figure7LeaderLine(
 	mcm, mrs := testSetupMCM_Follower_WithTerms(t, makeLogTerms_Figure7LeaderLine())
 
 	// sanity check
-	if mcm.pcm.persistentState.GetVotedFor() != "" {
+	if mcm.pcm.raftPersistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
 	// pretend server voted
-	err := mcm.pcm.persistentState.SetVotedFor("s2")
+	err := mcm.pcm.raftPersistentState.SetVotedFor("s2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,14 +251,14 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 ) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		// sanity checks
 		if serverTerm != 8 {
 			t.Fatal(serverTerm)
 		}
-		votedFor := mcm.pcm.persistentState.GetVotedFor()
+		votedFor := mcm.pcm.raftPersistentState.GetVotedFor()
 		if votedFor != "" && votedFor != "s1" {
 			t.Fatal(votedFor)
 		}
@@ -279,14 +279,14 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 		if mcm.pcm.getServerState() != FOLLOWER {
 			t.Fatal()
 		}
-		if mcm.pcm.persistentState.GetCurrentTerm() != 10 {
-			t.Fatal(mcm.pcm.persistentState.GetCurrentTerm())
+		if mcm.pcm.raftPersistentState.GetCurrentTerm() != 10 {
+			t.Fatal(mcm.pcm.raftPersistentState.GetCurrentTerm())
 		}
 		var expectedVotedFor ServerId = ""
 		if expectedVote {
 			expectedVotedFor = "s5"
 		}
-		actualVotedFor := mcm.pcm.persistentState.GetVotedFor()
+		actualVotedFor := mcm.pcm.raftPersistentState.GetVotedFor()
 		if actualVotedFor != expectedVotedFor {
 			t.Fatal(actualVotedFor)
 		}
@@ -316,14 +316,14 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 
 func testSetupMCM_FollowerTerm8_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := testSetupMCM_Follower_WithTerms(t, makeLogTerms_Figure7LeaderLine())
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 
 	// sanity check
 	if serverTerm != 7 {
 		t.Fatal(serverTerm)
 	}
 	// pretend server was pushed to term 8
-	err := mcm.pcm.persistentState.SetCurrentTerm(8)
+	err := mcm.pcm.raftPersistentState.SetCurrentTerm(8)
 	if err != nil {
 		t.Fatal(err)
 	}

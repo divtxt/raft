@@ -18,7 +18,7 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender),
 	) (*managedConsensusModule, *mockRpcSender) {
 		mcm, mrs := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		appendEntries := makeAEWithTerm(serverTerm - 1)
@@ -82,7 +82,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 		expectedErr string,
 	) {
 		mcm, _ := setup(t, []TermNo{1, 1, 1, 4})
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		senderTerm := serverTerm
@@ -128,7 +128,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 				t.Fatal()
 			}
 		}
-		if mcm.pcm.persistentState.GetCurrentTerm() != senderTerm {
+		if mcm.pcm.raftPersistentState.GetCurrentTerm() != senderTerm {
 			t.Fatal()
 		}
 
@@ -181,7 +181,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		senderTerm := serverTerm
@@ -278,7 +278,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.electionTimeoutTracker.electionTimeoutTime
 
 		senderTerm := serverTerm
@@ -333,7 +333,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			t.Error()
 		}
 
-		if mcm.pcm.persistentState.GetVotedFor() != expectedVotedFor {
+		if mcm.pcm.raftPersistentState.GetVotedFor() != expectedVotedFor {
 			t.Fatal()
 		}
 

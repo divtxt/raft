@@ -15,12 +15,12 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 ) (*RpcRequestVoteReply, error) {
 	makeReply := func(voteGranted bool) *RpcRequestVoteReply {
 		return &RpcRequestVoteReply{
-			cm.persistentState.GetCurrentTerm(), // refetch in case it has changed!
+			cm.raftPersistentState.GetCurrentTerm(), // refetch in case it has changed!
 			voteGranted,
 		}
 	}
 
-	serverTerm := cm.persistentState.GetCurrentTerm()
+	serverTerm := cm.raftPersistentState.GetCurrentTerm()
 	senderCurrentTerm := rpcRequestVote.Term
 
 	// 1. Reply false if term < currentTerm (#5.1)
@@ -39,7 +39,7 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 		if err != nil {
 			return nil, err
 		}
-		serverTerm = cm.persistentState.GetCurrentTerm()
+		serverTerm = cm.raftPersistentState.GetCurrentTerm()
 	}
 
 	// #5.4.1-p3s1: Raft determines which of two logs is more up-to-date by
@@ -67,10 +67,10 @@ func (cm *passiveConsensusModule) rpc_RpcRequestVote(
 
 	// 2. If votedFor is null or candidateId, and candidate's log is at least as
 	// up-to-date as receiver's log, grant vote (#5.2, #5.4)
-	votedFor := cm.persistentState.GetVotedFor()
+	votedFor := cm.raftPersistentState.GetVotedFor()
 	if (votedFor == "" || votedFor == fromPeer) && senderIsAtLeastAsUpToDate {
 		if votedFor == "" {
-			err = cm.persistentState.SetVotedFor(fromPeer)
+			err = cm.raftPersistentState.SetVotedFor(fromPeer)
 			if err != nil {
 				return nil, err
 			}

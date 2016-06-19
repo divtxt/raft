@@ -131,7 +131,7 @@ func TestConsensusModule_ProcessRpcRequestVoteAsync(t *testing.T) {
 
 	select {
 	case reply := <-replyChan:
-		serverTerm := cm.passiveConsensusModule.persistentState.GetCurrentTerm()
+		serverTerm := cm.passiveConsensusModule.raftPersistentState.GetCurrentTerm()
 		expectedRpc := RpcRequestVoteReply{serverTerm, false}
 		if *reply != expectedRpc {
 			t.Fatal(reply)
@@ -193,7 +193,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// reply true for all votes
-	serverTerm := cm.passiveConsensusModule.persistentState.GetCurrentTerm()
+	serverTerm := cm.passiveConsensusModule.raftPersistentState.GetCurrentTerm()
 	if mrs.sendReplies(&RpcRequestVoteReply{serverTerm, true}) != 4 {
 		t.Fatal()
 	}

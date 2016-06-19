@@ -18,12 +18,12 @@ func (cm *passiveConsensusModule) rpc_RpcAppendEntries(
 ) (*RpcAppendEntriesReply, error) {
 	makeReply := func(success bool) *RpcAppendEntriesReply {
 		return &RpcAppendEntriesReply{
-			cm.persistentState.GetCurrentTerm(), // refetch in case it has changed!
+			cm.raftPersistentState.GetCurrentTerm(), // refetch in case it has changed!
 			success,
 		}
 	}
 
-	serverTerm := cm.persistentState.GetCurrentTerm()
+	serverTerm := cm.raftPersistentState.GetCurrentTerm()
 	leaderCurrentTerm := appendEntries.Term
 	prevLogIndex := appendEntries.PrevLogIndex
 	lasm := cm.lasm

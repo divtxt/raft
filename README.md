@@ -36,7 +36,7 @@ Misc/Maybe:
 - [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
 - [ ] Servers check that they agree on cluster info
 - [ ] Election timeout based on ping times to bias selection of lower latency leader
-- [ ] Make in-memory Log & PersistentState implementations public?
+- [ ] Make in-memory Log & RaftPersistentState implementations public?
 
 Later:
 
