@@ -7,7 +7,7 @@
 // You will have to provide implementations of the following interfaces:
 //
 //  - raft.PersistentState
-//  - raft.Log
+//  - raft.LogAndStateMachine
 //  - raft.RpcService
 //
 // Notes for implementers of these interfaces:
@@ -235,7 +235,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 //
 // This method sends the command to the ConsensusModule's goroutine.
 // The reply will be sent later on the returned channel when the command has been appended.
-// The reply will contain the index of the new entry or 0 if this ConsensusModule is the leader.
+// The reply will contain the index of the new entry or 0 if this ConsensusModule is not the leader.
 //
 // Here, we intentionally punt on some of the leader details, specifically
 // most of:
