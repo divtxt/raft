@@ -78,6 +78,8 @@ type LogAndStateMachine interface {
 
 	// Set the entries after the given index.
 	//
+	// This method will only be called when this ConsensusModule is a follower.
+	//
 	// It is an error if commands after the given index have already been
 	// applied to the state machine.
 	// (i.e. the given index is less than commitIndex)
@@ -102,6 +104,12 @@ type LogAndStateMachine interface {
 	// A zero length slice and nil both indicate no new entries to be added
 	// after deleting.
 	SetEntriesAfterIndex(LogIndex, []LogEntry) error
+
+	// Append the given entry after the current last entry.
+	//
+	// This method will only be called when this ConsensusModule is the leader.
+	//
+	AppendEntry(LogEntry) error
 
 	// Notify the Log that the commitIndex has changed to the given value.
 	//

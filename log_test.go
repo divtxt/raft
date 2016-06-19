@@ -93,6 +93,24 @@ func PartialTest_Log_BlackboxTest(t *testing.T, lasm LogAndStateMachine) {
 		t.Fatal(le)
 	}
 
+	// append test
+	logEntry := LogEntry{8, Command("c14")}
+	err = lasm.AppendEntry(logEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	iole, err = lasm.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 14 {
+		t.Fatal()
+	}
+	le = testHelper_GetLogEntryAtIndex(lasm, 14)
+	if !reflect.DeepEqual(le, LogEntry{8, Command("c14")}) {
+		t.Fatal(le)
+	}
+
 	// commitIndex tests
 	err = lasm.CommitIndexChanged(1)
 	if err != nil {
@@ -185,6 +203,11 @@ func (imle *inMemoryLog) SetEntriesAfterIndex(
 	}
 	// append entries
 	imle.entries = append(imle.entries, entries...)
+	return nil
+}
+
+func (imle *inMemoryLog) AppendEntry(entry LogEntry) error {
+	imle.entries = append(imle.entries, entry)
 	return nil
 }
 
