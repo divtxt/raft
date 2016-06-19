@@ -47,7 +47,7 @@ Later:
 - [ ] Assembling AppendEntries RPC should not block
 - [ ] Add errcheck to Travis build
 - [ ] Add support for snapshotting & InstallSnapshot RPC
-- [ ] Split SetEntriesAfterIndex for leader and follower
+- [x] Leader uses AppendEntry instead of SetEntriesAfterIndex
 - [ ] Allow leader LogAndStateMachine to reject new log entry
 - [ ] Documentation
 - [ ] Live cluster membership changes
