@@ -275,12 +275,12 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 	time.Sleep(testSleepToLetGoroutineRun)
 
 	select {
-	case reply := <-replyChan:
+	case appended := <-replyChan:
 		if cm.IsStopped() {
 			t.Error(cm.GetStopError())
 		}
-		if reply != 11 {
-			t.Fatal(reply)
+		if !appended {
+			t.Fatal()
 		}
 		iole, err = cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 		if err != nil {
@@ -325,12 +325,12 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 	time.Sleep(testSleepToLetGoroutineRun)
 
 	select {
-	case reply := <-replyChan:
+	case appended := <-replyChan:
 		if cm.IsStopped() {
 			t.Error(cm.GetStopError())
 		}
-		if reply != 0 {
-			t.Fatal(reply)
+		if appended {
+			t.Fatal()
 		}
 		iole, err := cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 		if err != nil {

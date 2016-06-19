@@ -188,9 +188,12 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	// FIXME: sleep just enough!
 	time.Sleep(testSleepToLetGoroutineRun)
 	select {
-	case reply := <-replyChan:
-		if reply != 1 {
-			t.Fatal(reply)
+	case appended := <-replyChan:
+		if !appended {
+			t.Fatal()
+		}
+		if iole, err := imle1.GetIndexOfLastEntry(); err != nil || iole != 1 {
+			t.Fatal()
 		}
 	default:
 		t.Fatal()
@@ -273,9 +276,12 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	// FIXME: sleep just enough!
 	time.Sleep(testSleepToLetGoroutineRun)
 	select {
-	case reply := <-replyChan:
-		if reply != 1 {
-			t.Fatal(reply)
+	case appended := <-replyChan:
+		if !appended {
+			t.Fatal()
+		}
+		if iole, err := imle.GetIndexOfLastEntry(); err != nil || iole != 1 {
+			t.Fatal()
 		}
 	default:
 		t.Fatal()
