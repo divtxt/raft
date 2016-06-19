@@ -134,32 +134,20 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 // Append the given command as an entry in the log.
 // #RFS-L2a: If command received from client: append entry to local log
 //
-// Returns log index of new entry or (0, nil) if not currently the leader
+// Returns true if entry was appended or false if not currently the leader
 func (cm *passiveConsensusModule) appendCommand(
 	command Command,
-) (LogIndex, error) {
+) (bool, error) {
 	if cm.getServerState() != LEADER {
-		return 0, nil
+		return false, nil
 	}
 
-	iole, err := cm.lasm.GetIndexOfLastEntry()
-	if err != nil {
-		return 0, err
-	}
 	logEntry := LogEntry{cm.raftPersistentState.GetCurrentTerm(), command}
-	err = cm.lasm.AppendEntry(logEntry)
+	err := cm.lasm.AppendEntry(logEntry)
 	if err != nil {
-		return 0, err
+		return false, err
 	}
-	var newIole LogIndex
-	newIole, err = cm.lasm.GetIndexOfLastEntry()
-	if err != nil {
-		return 0, err
-	}
-	if newIole != iole+1 {
-		return 0, fmt.Errorf("newIole=%v != %v + 1", newIole, iole)
-	}
-	return newIole, nil
+	return true, nil
 }
 
 // Iterate
