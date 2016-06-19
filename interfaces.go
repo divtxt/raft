@@ -152,7 +152,7 @@ type LogIndex uint64
 // No one else should modify these values, and the ConsensusModule does not
 // cache these values, so it is recommended that implementations cache the
 // values for getter performance.
-type PersistentState interface {
+type RaftPersistentState interface {
 	// Get the latest term server has seen.
 	// (initialized to 0, increases monotonically)
 	GetCurrentTerm() TermNo

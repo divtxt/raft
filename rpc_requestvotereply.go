@@ -9,7 +9,7 @@ func (cm *passiveConsensusModule) rpcReply_RpcRequestVoteReply(
 	rpcRequestVoteReply *RpcRequestVoteReply,
 ) error {
 	serverState := cm.getServerState()
-	serverTerm := cm.persistentState.GetCurrentTerm()
+	serverTerm := cm.raftPersistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc
 	if rpcRequestVote.Term != serverTerm {

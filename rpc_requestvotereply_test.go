@@ -12,7 +12,7 @@ import (
 // to each server;
 func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	err := mcm.pcm.setCommitIndex(3)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +68,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
 }
@@ -82,7 +82,7 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
 
@@ -126,7 +126,7 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 // another round of RequestVote RPCs.
 func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 
 	// s2 grants vote - should stay as candidate
@@ -163,7 +163,7 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, mrs := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 		beforeState := mcm.pcm.getServerState()
 
@@ -227,7 +227,7 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 		sendMajorityVote bool,
 	) {
 		mcm, mrs := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		err := mcm.pcm.setCommitIndex(2)
 		if err != nil {
 			t.Fatal(err)
@@ -293,10 +293,10 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 		if mcm.pcm.getServerState() != FOLLOWER {
 			t.Fatal()
 		}
-		if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm+1 {
+		if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm+1 {
 			t.Fatal()
 		}
-		if mcm.pcm.persistentState.GetVotedFor() != "" {
+		if mcm.pcm.raftPersistentState.GetVotedFor() != "" {
 			t.Fatal()
 		}
 	}

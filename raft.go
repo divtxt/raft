@@ -6,7 +6,7 @@
 //
 // You will have to provide implementations of the following interfaces:
 //
-//  - raft.PersistentState
+//  - raft.RaftPersistentState
 //  - raft.LogAndStateMachine
 //  - raft.RpcService
 //
@@ -72,7 +72,7 @@ type ConsensusModule struct {
 //    no reply will be sent on the reply channel.
 //
 func NewConsensusModule(
-	persistentState PersistentState,
+	raftPersistentState RaftPersistentState,
 	lasm LogAndStateMachine,
 	rpcService RpcService,
 	clusterInfo *ClusterInfo,
@@ -101,7 +101,7 @@ func NewConsensusModule(
 	}
 
 	pcm, err := newPassiveConsensusModule(
-		persistentState,
+		raftPersistentState,
 		lasm,
 		cm,
 		clusterInfo,

@@ -13,7 +13,7 @@ func (cm *passiveConsensusModule) rpcReply_RpcAppendEntriesReply(
 	appendEntriesReply *RpcAppendEntriesReply,
 ) error {
 	serverState := cm.getServerState()
-	serverTerm := cm.persistentState.GetCurrentTerm()
+	serverTerm := cm.raftPersistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc
 	if appendEntries.Term != serverTerm {

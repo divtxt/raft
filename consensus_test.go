@@ -114,7 +114,7 @@ func testCM_Follower_StartsElectionOnElectionTimeout(
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetVotedFor() != "" {
+	if mcm.pcm.raftPersistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
 
@@ -123,7 +123,7 @@ func testCM_Follower_StartsElectionOnElectionTimeout(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != testCurrentTerm {
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != testCurrentTerm {
 		t.Fatal()
 	}
 	if mcm.pcm.getServerState() != FOLLOWER {
@@ -142,14 +142,14 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	timeout1 := mcm.pcm.electionTimeoutTracker.currentElectionTimeout
 	// Test that election timeout causes a new election
 	mcm.tickTilElectionTimeout(t)
-	if mcm.pcm.persistentState.GetCurrentTerm() != expectedNewTerm {
-		t.Fatal(expectedNewTerm, mcm.pcm.persistentState.GetCurrentTerm())
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != expectedNewTerm {
+		t.Fatal(expectedNewTerm, mcm.pcm.raftPersistentState.GetCurrentTerm())
 	}
 	if mcm.pcm.getServerState() != CANDIDATE {
 		t.Fatal()
 	}
 	// candidate has voted for itself
-	if mcm.pcm.persistentState.GetVotedFor() != testThisServerId {
+	if mcm.pcm.raftPersistentState.GetVotedFor() != testThisServerId {
 		t.Fatal()
 	}
 	// a new election timeout was chosen
@@ -191,7 +191,7 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetVotedFor() != "" {
+	if mcm.pcm.raftPersistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
 
@@ -200,7 +200,7 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != testCurrentTerm {
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != testCurrentTerm {
 		t.Fatal()
 	}
 	if mcm.pcm.getServerState() != FOLLOWER {
@@ -212,15 +212,15 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 	timeout1 := mcm.pcm.electionTimeoutTracker.currentElectionTimeout
 	// Test that election timeout causes a new election
 	mcm.tickTilElectionTimeout(t)
-	if mcm.pcm.persistentState.GetCurrentTerm() != expectedNewTerm {
-		t.Fatal(expectedNewTerm, mcm.pcm.persistentState.GetCurrentTerm())
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != expectedNewTerm {
+		t.Fatal(expectedNewTerm, mcm.pcm.raftPersistentState.GetCurrentTerm())
 	}
 	// Single node should immediately elect itself as leader
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
 	// candidate has voted for itself
-	if mcm.pcm.persistentState.GetVotedFor() != testThisServerId {
+	if mcm.pcm.raftPersistentState.GetVotedFor() != testThisServerId {
 		t.Fatal()
 	}
 	// a new election timeout was chosen
@@ -253,7 +253,7 @@ func TestCM_SOLO_Follower_ElectsSelfOnElectionTimeout_EmptyLog(t *testing.T) {
 // #RFS-L1b: repeat during idle periods to prevent election timeout (#5.2)
 func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	err := mcm.pcm.setCommitIndex(6)
 	if err != nil {
 		t.Fatal(err)
@@ -273,7 +273,7 @@ func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 // AppendEntries RPC with log entries starting at nextIndex
 func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	err := mcm.pcm.setCommitIndex(5)
 	if err != nil {
 		t.Fatal(err)
@@ -333,7 +333,7 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 
 func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	err := mcm.pcm.setCommitIndex(4)
 	if err != nil {
 		t.Fatal(err)
@@ -513,7 +513,7 @@ func TestCM_getEntriesAfterLogIndex(t *testing.T) {
 // Note: test based on Figure 7; server is leader line; peers are other cases
 func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 
 	// pre checks
 	if serverTerm != 8 {
@@ -692,7 +692,7 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	var err error
 	mcm, mrs := testSetupMCM_SOLO_Leader_WithTerms(t, makeLogTerms_Figure7LeaderLine())
 
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 
 	// pre checks
 	if serverTerm != 8 {
@@ -808,7 +808,7 @@ func testSetupMCM_Leader_WithTerms(
 	terms []TermNo,
 ) (*managedConsensusModule, *mockRpcSender) {
 	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
 	err := mcm.pcm.rpcReply_RpcRequestVoteReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if err != nil {

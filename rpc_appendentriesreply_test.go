@@ -10,7 +10,7 @@ import (
 func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, mrs := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		sentRpc := makeAEWithTerm(serverTerm - 1)
 		beforeState := mcm.pcm.getServerState()
 
@@ -25,7 +25,7 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 		if mcm.pcm.getServerState() != beforeState {
 			t.Fatal()
 		}
-		if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+		if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm {
 			t.Fatal()
 		}
 		if beforeState == LEADER {
@@ -50,7 +50,7 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 func TestCM_RpcAER_FollowerOrCandidate_ReturnsErrorForSameTermReply(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *mockRpcSender)) {
 		mcm, _ := setup(t)
-		serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+		serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 		sentRpc := makeAEWithTerm(serverTerm)
 
 		err := mcm.pcm.rpcReply_RpcAppendEntriesReply(
@@ -79,7 +79,7 @@ func TestCM_RpcAER_FollowerOrCandidate_ReturnsErrorForSameTermReply(t *testing.T
 // date, it immediately reverts to follower state.
 func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	sentRpc := makeAEWithTerm(serverTerm)
 
 	// sanity check
@@ -103,10 +103,10 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	if mcm.pcm.getServerState() != FOLLOWER {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm+1 {
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm+1 {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetVotedFor() != "" {
+	if mcm.pcm.raftPersistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
 
@@ -128,7 +128,7 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 // Note: test based on Figure 7; server is leader line; peer is case (a)
 func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	err := mcm.pcm.setCommitIndex(3)
 	if err != nil {
 		t.Fatal(err)
@@ -163,7 +163,7 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
 	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 10, "s4": 11, "s5": 11}
@@ -195,7 +195,7 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 // Note: test based on Figure 7; server is leader line; peer is the same
 func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	err := mcm.pcm.setCommitIndex(3)
 	if err != nil {
 		t.Fatal(err)
@@ -230,7 +230,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
 	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
@@ -254,7 +254,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 // Note: test based on Figure 7; server is leader line; peer is case (a)
 func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
-	serverTerm := mcm.pcm.persistentState.GetCurrentTerm()
+	serverTerm := mcm.pcm.raftPersistentState.GetCurrentTerm()
 	err := mcm.pcm.setCommitIndex(3)
 	if err != nil {
 		t.Fatal(err)
@@ -292,7 +292,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	if mcm.pcm.getServerState() != LEADER {
 		t.Fatal()
 	}
-	if mcm.pcm.persistentState.GetCurrentTerm() != serverTerm {
+	if mcm.pcm.raftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
 	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}

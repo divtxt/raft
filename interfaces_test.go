@@ -9,127 +9,127 @@ import (
 	"testing"
 )
 
-// -- PersistentState
+// -- RaftPersistentState
 
-// PersistentState blackbox test.
-// Send a PersistentState in new / reset state.
-func PartialTest_PersistentState_BlackboxTest(t *testing.T, persistentState PersistentState) {
+// RaftPersistentState blackbox test.
+// Send a RaftPersistentState in new / reset state.
+func PartialTest_RaftPersistentState_BlackboxTest(t *testing.T, raftPersistentState RaftPersistentState) {
 	// Initial data tests
-	if persistentState.GetCurrentTerm() != 0 {
+	if raftPersistentState.GetCurrentTerm() != 0 {
 		t.Fatal()
 	}
-	if persistentState.GetVotedFor() != "" {
+	if raftPersistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
 
 	// Set currentTerm to 0 is an error
-	err := persistentState.SetCurrentTerm(0)
+	err := raftPersistentState.SetCurrentTerm(0)
 	if err.Error() != "FATAL: attempt to set currentTerm to 0" {
 		t.Fatal(err)
 	}
-	if persistentState.GetCurrentTerm() != 0 {
+	if raftPersistentState.GetCurrentTerm() != 0 {
 		t.Fatal()
 	}
 	// Set votedFor while currentTerm is 0 is an error
-	err = persistentState.SetVotedFor("s1")
+	err = raftPersistentState.SetVotedFor("s1")
 	if err.Error() != "FATAL: attempt to set votedFor while currentTerm is 0" {
 		t.Fatal(err)
 	}
-	if persistentState.GetCurrentTerm() != 0 {
+	if raftPersistentState.GetCurrentTerm() != 0 {
 		t.Fatal()
 	}
 	// Set currentTerm greater is ok, clears votedFor
-	err = persistentState.SetCurrentTerm(1)
+	err = raftPersistentState.SetCurrentTerm(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if persistentState.GetCurrentTerm() != 1 {
+	if raftPersistentState.GetCurrentTerm() != 1 {
 		t.Fatal()
 	}
 	// Set votedFor of blank is an error
-	err = persistentState.SetVotedFor("")
+	err = raftPersistentState.SetVotedFor("")
 	if err.Error() != "FATAL: attempt to set blank votedFor" {
 		t.Fatal(err)
 	}
-	if persistentState.GetVotedFor() != "" {
+	if raftPersistentState.GetVotedFor() != "" {
 		t.Fatal()
 	}
 	// Set votedFor is ok
-	err = persistentState.SetVotedFor("s1")
+	err = raftPersistentState.SetVotedFor("s1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if persistentState.GetVotedFor() != "s1" {
+	if raftPersistentState.GetVotedFor() != "s1" {
 		t.Fatal()
 	}
 	// Set currentTerm greater is ok, clears votedFor
-	err = persistentState.SetCurrentTerm(4)
+	err = raftPersistentState.SetCurrentTerm(4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if persistentState.GetCurrentTerm() != 4 {
+	if raftPersistentState.GetCurrentTerm() != 4 {
 		t.Fatal()
 	}
-	if persistentState.GetVotedFor() != "" {
-		t.Fatal(persistentState.GetVotedFor())
+	if raftPersistentState.GetVotedFor() != "" {
+		t.Fatal(raftPersistentState.GetVotedFor())
 	}
 	// Set votedFor while blank is ok
-	err = persistentState.SetVotedFor("s2")
+	err = raftPersistentState.SetVotedFor("s2")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if persistentState.GetVotedFor() != "s2" {
+	if raftPersistentState.GetVotedFor() != "s2" {
 		t.Fatal()
 	}
 	// Set currentTerm same is ok, does not affect votedFor
-	err = persistentState.SetCurrentTerm(4)
+	err = raftPersistentState.SetCurrentTerm(4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if persistentState.GetCurrentTerm() != 4 {
+	if raftPersistentState.GetCurrentTerm() != 4 {
 		t.Fatal()
 	}
-	if persistentState.GetVotedFor() != "s2" {
+	if raftPersistentState.GetVotedFor() != "s2" {
 		t.Fatal()
 	}
 	// Set currentTerm less is an error
-	err = persistentState.SetCurrentTerm(3)
+	err = raftPersistentState.SetCurrentTerm(3)
 	if err.Error() != "FATAL: attempt to decrease currentTerm: 4 to 3" {
 		t.Fatal(err)
 	}
-	if persistentState.GetCurrentTerm() != 4 {
+	if raftPersistentState.GetCurrentTerm() != 4 {
 		t.Fatal()
 	}
 	// Set votedFor while not blank is an error
-	err = persistentState.SetVotedFor("s3")
+	err = raftPersistentState.SetVotedFor("s3")
 	if err.Error() != "FATAL: attempt to change non-blank votedFor: s2 to s3" {
 		t.Fatal(err)
 	}
-	if persistentState.GetVotedFor() != "s2" {
+	if raftPersistentState.GetVotedFor() != "s2" {
 		t.Fatal()
 	}
 }
 
-// In-memory implementation of PersistentState - meant only for tests
-type inMemoryPersistentState struct {
+// In-memory implementation of RaftPersistentState - meant only for tests
+type inMemoryRaftPersistentState struct {
 	mutex       *sync.Mutex
 	currentTerm TermNo
 	votedFor    ServerId
 }
 
-func (imps *inMemoryPersistentState) GetCurrentTerm() TermNo {
+func (imps *inMemoryRaftPersistentState) GetCurrentTerm() TermNo {
 	imps.mutex.Lock()
 	defer imps.mutex.Unlock()
 	return imps.currentTerm
 }
 
-func (imps *inMemoryPersistentState) GetVotedFor() ServerId {
+func (imps *inMemoryRaftPersistentState) GetVotedFor() ServerId {
 	imps.mutex.Lock()
 	defer imps.mutex.Unlock()
 	return imps.votedFor
 }
 
-func (imps *inMemoryPersistentState) SetCurrentTerm(currentTerm TermNo) error {
+func (imps *inMemoryRaftPersistentState) SetCurrentTerm(currentTerm TermNo) error {
 	imps.mutex.Lock()
 	defer imps.mutex.Unlock()
 	if currentTerm == 0 {
@@ -145,7 +145,7 @@ func (imps *inMemoryPersistentState) SetCurrentTerm(currentTerm TermNo) error {
 	return nil
 }
 
-func (imps *inMemoryPersistentState) SetVotedFor(votedFor ServerId) error {
+func (imps *inMemoryRaftPersistentState) SetVotedFor(votedFor ServerId) error {
 	imps.mutex.Lock()
 	defer imps.mutex.Unlock()
 	if imps.currentTerm == 0 {
@@ -161,14 +161,14 @@ func (imps *inMemoryPersistentState) SetVotedFor(votedFor ServerId) error {
 	return nil
 }
 
-func newIMPSWithCurrentTerm(currentTerm TermNo) *inMemoryPersistentState {
-	return &inMemoryPersistentState{&sync.Mutex{}, currentTerm, ""}
+func newIMPSWithCurrentTerm(currentTerm TermNo) *inMemoryRaftPersistentState {
+	return &inMemoryRaftPersistentState{&sync.Mutex{}, currentTerm, ""}
 }
 
-// Run the blackbox test on inMemoryPersistentState
-func TestInMemoryPersistentState(t *testing.T) {
+// Run the blackbox test on inMemoryRaftPersistentState
+func TestInMemoryRaftPersistentState(t *testing.T) {
 	imps := newIMPSWithCurrentTerm(0)
-	PartialTest_PersistentState_BlackboxTest(t, imps)
+	PartialTest_RaftPersistentState_BlackboxTest(t, imps)
 }
 
 // -- rpcSender
