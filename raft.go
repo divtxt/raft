@@ -229,6 +229,9 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 //
 // This can only be done if the ConsensusModule is in LEADER state.
 //
+// The command is considered to be in unserialized form, and will be sent as is to
+// LogAndStateMachine.AppendEntry().
+//
 // The command should already have been validated by this point to ensure that
 // it will succeed when applied to the state machine.
 // (both internal contents and other context/state checks)
@@ -249,11 +252,11 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 //
 // See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) AppendCommandAsync(
-	command Command,
+	rawCommand interface{},
 ) <-chan bool {
 	replyChan := make(chan bool, 1)
 	f := func() error {
-		appended, err := cm.passiveConsensusModule.appendCommand(command)
+		appended, err := cm.passiveConsensusModule.appendCommand(rawCommand)
 		if err != nil {
 			return err
 		}

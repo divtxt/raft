@@ -80,6 +80,8 @@ type LogAndStateMachine interface {
 	//
 	// This method will only be called when this ConsensusModule is a follower.
 	//
+	// The commands in the given entries are in serialized form.
+	//
 	// It is an error if commands after the given index have already been
 	// applied to the state machine.
 	// (i.e. the given index is less than commitIndex)
@@ -105,11 +107,14 @@ type LogAndStateMachine interface {
 	// after deleting.
 	SetEntriesAfterIndex(LogIndex, []LogEntry) error
 
-	// Append the given entry after the current last entry.
+	// Append a new entry with the given term and given raw command.
 	//
 	// This method will only be called when this ConsensusModule is the leader.
 	//
-	AppendEntry(LogEntry) error
+	// The command is considered to be in unserialized form, and this method is responsible
+	// for serializing it.
+	// The command is opaque to the ConsensusModule, and is as sent to AppendCommandAsync().
+	AppendEntry(termNo TermNo, rawCommand interface{}) error
 
 	// Notify the Log that the commitIndex has changed to the given value.
 	//

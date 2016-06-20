@@ -136,14 +136,13 @@ func (cm *passiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 //
 // Returns true if entry was appended or false if not currently the leader
 func (cm *passiveConsensusModule) appendCommand(
-	command Command,
+	rawCommand interface{},
 ) (bool, error) {
 	if cm.getServerState() != LEADER {
 		return false, nil
 	}
 
-	logEntry := LogEntry{cm.raftPersistentState.GetCurrentTerm(), command}
-	err := cm.lasm.AppendEntry(logEntry)
+	err := cm.lasm.AppendEntry(cm.raftPersistentState.GetCurrentTerm(), rawCommand)
 	if err != nil {
 		return false, err
 	}

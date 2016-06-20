@@ -48,7 +48,8 @@ Later:
 - [ ] Add errcheck to Travis build
 - [ ] Add support for snapshotting & InstallSnapshot RPC
 - [x] Leader uses AppendEntry instead of SetEntriesAfterIndex
-- [ ] Allow leader LogAndStateMachine to reject new log entry
+- [x] AppendCommandAsync takes unserialized command
+- [ ] AppendEntry can reject command
 - [ ] Documentation
 - [ ] Live cluster membership changes
 - [ ] Read-only nodes (replication)

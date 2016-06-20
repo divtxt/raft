@@ -182,8 +182,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	cm3 = nil
 
 	// Apply a command on the leader
-	command := Command("c101")
-	replyChan := cm1.AppendCommandAsync(command)
+	replyChan := cm1.AppendCommandAsync("c101")
 
 	// FIXME: sleep just enough!
 	time.Sleep(testSleepToLetGoroutineRun)
@@ -270,8 +269,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	defer cm.StopAsync()
 
 	// Apply a command on the leader
-	command := Command("c101")
-	replyChan := cm.AppendCommandAsync(command)
+	replyChan := cm.AppendCommandAsync("c101")
 
 	// FIXME: sleep just enough!
 	time.Sleep(testSleepToLetGoroutineRun)

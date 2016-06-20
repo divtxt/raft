@@ -305,11 +305,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// let's make some new log entries
-	appended, err := mcm.pcm.appendCommand(Command("c11"))
+	appended, err := mcm.pcm.appendCommand("c11")
 	if !appended || err != nil {
 		t.Fatal()
 	}
-	appended, err = mcm.pcm.appendCommand(Command("c12"))
+	appended, err = mcm.pcm.appendCommand("c12")
 	if !appended || err != nil {
 		t.Fatal()
 	}

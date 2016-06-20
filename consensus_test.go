@@ -578,11 +578,11 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, expectedRpcs)
 
 	// let's make some new log entries
-	appended, err := mcm.pcm.appendCommand(Command("c11"))
+	appended, err := mcm.pcm.appendCommand("c11")
 	if !appended || err != nil {
 		t.Fatal()
 	}
-	appended, err = mcm.pcm.appendCommand(Command("c12"))
+	appended, err = mcm.pcm.appendCommand("c12")
 	if !appended || err != nil {
 		t.Fatal()
 	}
@@ -714,11 +714,11 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.checkSentRpcs(t, []mockSentRpc{})
 
 	// let's make some new log entries
-	appended, err := mcm.pcm.appendCommand(Command("c11"))
+	appended, err := mcm.pcm.appendCommand("c11")
 	if !appended || err != nil {
 		t.Fatal()
 	}
-	appended, err = mcm.pcm.appendCommand(Command("c12"))
+	appended, err = mcm.pcm.appendCommand("c12")
 	if !appended || err != nil {
 		t.Fatal()
 	}
@@ -910,8 +910,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	command := Command("c11x")
-	appended, err := mcm.pcm.appendCommand(command)
+	appended, err := mcm.pcm.appendCommand("c11x")
 
 	if !appended || err != nil {
 		t.Fatal()
@@ -945,8 +944,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		command := Command("c11x")
-		appended, err := mcm.pcm.appendCommand(command)
+		appended, err := mcm.pcm.appendCommand("c11x")
 
 		if appended {
 			t.Fatal()
