@@ -94,8 +94,7 @@ func PartialTest_Log_BlackboxTest(t *testing.T, lasm LogAndStateMachine) {
 	}
 
 	// append test
-	logEntry := LogEntry{8, Command("c14")}
-	err = lasm.AppendEntry(logEntry)
+	err = lasm.AppendEntry(8, "c14")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,8 +205,14 @@ func (imle *inMemoryLog) SetEntriesAfterIndex(
 	return nil
 }
 
-func (imle *inMemoryLog) AppendEntry(entry LogEntry) error {
-	imle.entries = append(imle.entries, entry)
+func (imle *inMemoryLog) AppendEntry(termNo TermNo, rawCommand interface{}) error {
+	switch rawCommand := rawCommand.(type) {
+	case string:
+		entry := LogEntry{termNo, []byte(rawCommand)}
+		imle.entries = append(imle.entries, entry)
+	default:
+		panic(fmt.Sprintf("oops! rawCommand %#v of unknown type: %T", rawCommand, rawCommand))
+	}
 	return nil
 }
 

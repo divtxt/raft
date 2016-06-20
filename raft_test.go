@@ -261,8 +261,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		t.Fatal()
 	}
 
-	command := Command("c11x")
-	replyChan := cm.AppendCommandAsync(command)
+	replyChan := cm.AppendCommandAsync("c11x")
 
 	iole, err = cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -311,8 +310,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		t.Fatal()
 	}
 
-	command := Command("c11x")
-	replyChan := cm.AppendCommandAsync(command)
+	replyChan := cm.AppendCommandAsync("c11x")
 
 	iole, err = cm.passiveConsensusModule.lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -349,8 +347,7 @@ func TestConsensusModule_AppendCommandAsync_Follower_StoppedCM(t *testing.T) {
 	cm.StopAsync()
 	time.Sleep(testSleepToLetGoroutineRun)
 
-	command := Command("c11x")
-	replyChan := cm.AppendCommandAsync(command)
+	replyChan := cm.AppendCommandAsync("c11x")
 	time.Sleep(testSleepToLetGoroutineRun)
 
 	select {
