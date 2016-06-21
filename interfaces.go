@@ -113,8 +113,15 @@ type LogAndStateMachine interface {
 	//
 	// The command is considered to be in unserialized form, and this method is responsible
 	// for serializing it.
-	// The command is opaque to the ConsensusModule, and is as sent to AppendCommandAsync().
-	AppendEntry(termNo TermNo, rawCommand interface{}) error
+	//
+	// This method can reject the given command if it cannot be applied given the current
+	// state of the Log and state machine, or if the command itself is bad in some way.
+	//
+	// The method should return a non-nil value to indicate the result.
+	// A nil result is considered an error and will shutdown the ConsensusModule.
+	// All other values are opaque to ConsensusModule and will be returned as the result
+	// of AppendCommandAsync.
+	AppendEntry(termNo TermNo, rawCommand interface{}) (interface{}, error)
 
 	// Notify the Log that the commitIndex has changed to the given value.
 	//
