@@ -305,12 +305,12 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// let's make some new log entries
-	appended, err := mcm.pcm.appendCommand("c11")
-	if !appended || err != nil {
+	result, err := mcm.pcm.appendCommand("c11")
+	if result != inMemoryLog_AppendEntry_Ok || err != nil {
 		t.Fatal()
 	}
-	appended, err = mcm.pcm.appendCommand("c12")
-	if !appended || err != nil {
+	result, err = mcm.pcm.appendCommand("c12")
+	if result != inMemoryLog_AppendEntry_Ok || err != nil {
 		t.Fatal()
 	}
 	// we currently do not expect appendCommand() to send AppendEntries

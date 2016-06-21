@@ -94,9 +94,15 @@ func PartialTest_Log_BlackboxTest(t *testing.T, lasm LogAndStateMachine) {
 	}
 
 	// append test
-	err = lasm.AppendEntry(8, "c14")
+	result, err := lasm.AppendEntry(8, "c14")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if result != inMemoryLog_AppendEntry_Ok {
+		t.Fatal(result)
+	}
+	if !reflect.DeepEqual(result, inMemoryLog_AppendEntry_Ok) {
+		t.Fatal(result)
 	}
 	iole, err = lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -205,16 +211,21 @@ func (imle *inMemoryLog) SetEntriesAfterIndex(
 	return nil
 }
 
-func (imle *inMemoryLog) AppendEntry(termNo TermNo, rawCommand interface{}) error {
+func (imle *inMemoryLog) AppendEntry(termNo TermNo, rawCommand interface{}) (interface{}, error) {
 	switch rawCommand := rawCommand.(type) {
 	case string:
 		entry := LogEntry{termNo, []byte(rawCommand)}
 		imle.entries = append(imle.entries, entry)
 	default:
-		panic(fmt.Sprintf("oops! rawCommand %#v of unknown type: %T", rawCommand, rawCommand))
+		// FIXME: test
+		return fmt.Errorf("oops! rawCommand %#v of unknown type: %T", rawCommand, rawCommand), nil
 	}
-	return nil
+	return inMemoryLog_AppendEntry_Ok, nil
 }
+
+const (
+	inMemoryLog_AppendEntry_Ok = "We accept your offering!"
+)
 
 func (imle *inMemoryLog) GetEntriesAfterIndex(
 	afterLogIndex LogIndex,

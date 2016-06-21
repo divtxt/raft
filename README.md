@@ -49,7 +49,7 @@ Later:
 - [ ] Add support for snapshotting & InstallSnapshot RPC
 - [x] Leader uses AppendEntry instead of SetEntriesAfterIndex
 - [x] AppendCommandAsync takes unserialized command
-- [ ] AppendEntry can reject command
+- [x] AppendEntry can provide a result value and can reject command
 - [ ] Documentation
 - [ ] Live cluster membership changes
 - [ ] Read-only nodes (replication)
