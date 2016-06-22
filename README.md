@@ -30,13 +30,11 @@ Basics:
 
 Misc/Maybe:
 
-- [ ] Simplify/shorten names
 - [ ] Tests have theoretical concurrency issues
 - [ ] Change to actor model / library
 - [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
 - [ ] Servers check that they agree on cluster info
 - [ ] Election timeout based on ping times to bias selection of lower latency leader
-- [ ] Make in-memory LogAndStateMachine & RaftPersistentState implementations public?
 
 Later:
 
