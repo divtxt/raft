@@ -15,7 +15,7 @@ func setupConsensusModuleR3(
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
 ) (*ConsensusModule, *inMemoryLog) {
-	ps := newIMPSWithCurrentTerm(0)
+	ps := NewIMPSWithCurrentTerm(0)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	ts := TimeSettings{testTickerDuration, electionTimeoutLow}
 	ci, err := NewClusterInfo(testClusterServerIds, thisServerId)
@@ -38,7 +38,7 @@ func setupConsensusModuleR3_SOLO(
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
 ) (*ConsensusModule, *inMemoryLog) {
-	ps := newIMPSWithCurrentTerm(0)
+	ps := NewIMPSWithCurrentTerm(0)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	ts := TimeSettings{testTickerDuration, electionTimeoutLow}
 	ci, err := NewClusterInfo([]ServerId{"_SOLO_"}, "_SOLO_")
