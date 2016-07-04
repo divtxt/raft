@@ -15,7 +15,7 @@ func setupConsensusModuleR2(
 	t *testing.T,
 	logTerms []TermNo,
 ) (*ConsensusModule, *mockRpcSender) {
-	ps := newIMPSWithCurrentTerm(testCurrentTerm)
+	ps := NewIMPSWithCurrentTerm(testCurrentTerm)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	mrs := newMockRpcSender()
 	ts := TimeSettings{testTickerDuration, testElectionTimeoutLow}

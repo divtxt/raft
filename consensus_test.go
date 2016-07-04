@@ -34,7 +34,7 @@ func setupManagedConsensusModuleR2(
 	logTerms []TermNo,
 	solo bool,
 ) (*managedConsensusModule, *mockRpcSender) {
-	ps := newIMPSWithCurrentTerm(testCurrentTerm)
+	ps := NewIMPSWithCurrentTerm(testCurrentTerm)
 	imle := newIMLEWithDummyCommands(logTerms, testMaxEntriesPerAppendEntry)
 	mrs := newMockRpcSender()
 	var allServerIds []ServerId
