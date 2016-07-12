@@ -148,19 +148,6 @@ type LogAndStateMachine interface {
 	CommitIndexChanged(LogIndex) error
 }
 
-// A state machine command.
-// The contents of the slice are opaque to the ConsensusModule.
-type Command []byte
-
-// An entry in the Raft Log
-type LogEntry struct {
-	TermNo
-	Command
-}
-
-// Log entry index. First index is 1.
-type LogIndex uint64
-
 // Raft persistent state on all servers.
 //
 // You must implement this interface!
