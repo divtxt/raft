@@ -13,6 +13,19 @@ const (
 // Initialized to 0 on first boot, increases monotonically.
 type TermNo uint64
 
+// A state machine command (in serialized form).
+// The contents of the byte slice are opaque to the ConsensusModule.
+type Command []byte
+
+// An entry in the Raft Log
+type LogEntry struct {
+	TermNo
+	Command
+}
+
+// Log entry index. First index is 1.
+type LogIndex uint64
+
 // A string identifying a server in a Raft cluster.
 //
 // The contents of the string is opaque to this package.
