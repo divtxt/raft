@@ -16,26 +16,6 @@ See [lockd](https://github.com/divtxt/lockd) for a example of how to use this mo
 ## TODO
 
 
-Basics:
-
-- [x] Rename repo from `raft-consensus` to `raft`
-- [x] Change error handling from `panic()` to returning `error`.
-- [x] Move Log interface to interfaces.go
-- [x] Rename Log to LogAndStateMachine
-- [x] Support for single-node cluster
-- [x] findNewerCommitIndex advances as far as possible
-- [x] ProcessRpc... methods do not reply if ConsensusModule is stopped
-- [x] AppendCommandAsync does not reply if ConsensusModule is stopped
-- [x] Code review & cleanup
-
-Misc/Maybe:
-
-- [ ] Tests have theoretical concurrency issues
-- [ ] Change to actor model / library
-- [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
-- [ ] Servers check that they agree on cluster info
-- [ ] Election timeout based on ping times to bias selection of lower latency leader
-
 Later:
 
 - [ ] Isolated server should not increment term (similar to #6p8)
@@ -51,3 +31,11 @@ Later:
 - [ ] Documentation
 - [ ] Live cluster membership changes
 - [ ] Read-only nodes (replication)
+
+Misc/Maybe:
+
+- [ ] Tests have theoretical concurrency issues
+- [ ] Change to actor model / library
+- [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
+- [ ] Servers check that they agree on cluster info
+- [ ] Election timeout based on ping times to bias selection of lower latency leader
