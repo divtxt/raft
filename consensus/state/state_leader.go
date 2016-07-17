@@ -1,0 +1,131 @@
+package consensus_state
+
+import (
+	"fmt"
+	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/config"
+)
+
+// Volatile state on leaders
+// (Reinitialized after election)
+type LeaderVolatileState struct {
+	// for each server, index of the next log entry to send to that server
+	// (initialized to leader last log index + 1)
+	NextIndex map[ServerId]LogIndex
+
+	// for each server, index of highest log entry known to be replicated
+	// on server
+	// (initialized to 0, increases monotonically)
+	MatchIndex map[ServerId]LogIndex
+}
+
+// New instance set up for a fresh leader
+func NewLeaderVolatileState(
+	clusterInfo *config.ClusterInfo,
+	indexOfLastEntry LogIndex,
+) (*LeaderVolatileState, error) {
+	lvs := &LeaderVolatileState{
+		make(map[ServerId]LogIndex),
+		make(map[ServerId]LogIndex),
+	}
+
+	err := clusterInfo.ForEachPeer(
+		func(peerId ServerId) error {
+			// #5.3-p8s4: When a leader first comes to power, it initializes
+			// all nextIndex values to the index just after the last one in
+			// its log (11 in Figure 7).
+			lvs.NextIndex[peerId] = indexOfLastEntry + 1
+			//
+			lvs.MatchIndex[peerId] = 0
+
+			return nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return lvs, nil
+}
+
+// Get nextIndex for the given peer
+func (lvs *LeaderVolatileState) GetNextIndex(peerId ServerId) (LogIndex, error) {
+	nextIndex, ok := lvs.NextIndex[peerId]
+	if !ok {
+		return 0, fmt.Errorf("LeaderVolatileState.GetNextIndex(): unknown peer: %v", peerId)
+	}
+	return nextIndex, nil
+}
+
+// Decrement nextIndex for the given peer
+func (lvs *LeaderVolatileState) DecrementNextIndex(peerId ServerId) error {
+	nextIndex, ok := lvs.NextIndex[peerId]
+	if !ok {
+		return fmt.Errorf("LeaderVolatileState.DecrementNextIndex(): unknown peer: %v", peerId)
+	}
+	if nextIndex <= 1 {
+		return fmt.Errorf("LeaderVolatileState.DecrementNextIndex(): nextIndex <=1 for peer: %v", peerId)
+	}
+	lvs.NextIndex[peerId] = nextIndex - 1
+	return nil
+}
+
+// Set matchIndex for the given peer and update nextIndex to matchIndex+1
+func (lvs *LeaderVolatileState) SetMatchIndexAndNextIndex(peerId ServerId, matchIndex LogIndex) error {
+	if _, ok := lvs.NextIndex[peerId]; !ok {
+		return fmt.Errorf("LeaderVolatileState.SetMatchIndexAndNextIndex(): unknown peer: %v", peerId)
+	}
+	lvs.NextIndex[peerId] = matchIndex + 1
+	lvs.MatchIndex[peerId] = matchIndex
+	return nil
+}
+
+// Helper method to find potential new commitIndex.
+// Returns the highest N possible that is higher than currentCommitIndex.
+// Returns 0 if no match found.
+// #RFS-L4: If there exists an N such that N > commitIndex, a majority
+// of matchIndex[i] >= N, and log[N].term == currentTerm:
+// set commitIndex = N (#5.3, #5.4)
+func FindNewerCommitIndex(
+	ci *config.ClusterInfo,
+	lvs *LeaderVolatileState,
+	lasm LogAndStateMachine,
+	currentTerm TermNo,
+	currentCommitIndex LogIndex,
+) (LogIndex, error) {
+	indexOfLastEntry, err := lasm.GetIndexOfLastEntry()
+	if err != nil {
+		return 0, err
+	}
+	requiredMatches := ci.QuorumSizeForCluster()
+	var matchingN LogIndex = 0
+	// cover all N > currentCommitIndex
+	// stop when we pass the end of the log
+	for N := currentCommitIndex + 1; N <= indexOfLastEntry; N++ {
+		// check log[N].term
+		termAtN, err := lasm.GetTermAtIndex(N)
+		if err != nil {
+			return 0, err
+		}
+		if termAtN > currentTerm {
+			// term has gone too high for log[N].term == currentTerm
+			// no point trying further
+			break
+		}
+		if termAtN < currentTerm {
+			continue
+		}
+		// finally, check for majority of matchIndex
+		var foundMatches uint = 1 // 1 because we already match!
+		for _, peerMatchIndex := range lvs.MatchIndex {
+			if peerMatchIndex >= N {
+				foundMatches++
+			}
+		}
+		if foundMatches >= requiredMatches {
+			matchingN = N
+		}
+	}
+
+	return matchingN, nil
+}
