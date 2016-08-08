@@ -121,23 +121,27 @@ loop:
 
 	sort.Sort(MockRpcSenderSlice(rpcs))
 
-	if len(rpcs) != len(expectedRpcs) {
-		t.Fatal(fmt.Sprintf("Expected len: %v; got len: %v", len(expectedRpcs), len(rpcs)))
-	}
 	diffs := false
-	for i := 0; i < len(rpcs); i++ {
-		if !reflect.DeepEqual(rpcs[i], expectedRpcs[i]) {
-			t.Error(fmt.Sprintf(
-				"diff at [%v] - expected: [{%v %v}]; got: [{%v %v}]",
-				i,
-				expectedRpcs[i].ToServer, expectedRpcs[i].Rpc,
-				rpcs[i].ToServer, rpcs[i].Rpc,
-			))
-			diffs = true
+	if len(rpcs) == len(expectedRpcs) {
+		for i := 0; i < len(rpcs); i++ {
+			if !reflect.DeepEqual(rpcs[i], expectedRpcs[i]) {
+				t.Error(fmt.Sprintf(
+					"diff at [%v] - expected: [{%v %v}]; got: [{%v %v}]",
+					i,
+					expectedRpcs[i].ToServer, expectedRpcs[i].Rpc,
+					rpcs[i].ToServer, rpcs[i].Rpc,
+				))
+				diffs = true
+			}
 		}
+	} else {
+		t.Error(fmt.Sprintf("Expected len: %v; got len: %v", len(expectedRpcs), len(rpcs)))
+		diffs = true
 	}
 	if diffs {
-		t.Fatal(fmt.Sprintf("Expected: %v; got: %v", expectedRpcs, rpcs))
+		t.Error(fmt.Sprintf("Expected: %#v", expectedRpcs))
+		t.Error(fmt.Sprintf("Got: %#v", rpcs))
+		t.Fatal("Sadness :P")
 	}
 }
 
