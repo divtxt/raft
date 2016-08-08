@@ -130,9 +130,9 @@ func testSetupClusterWithLeader(
 			imrsh.getRpcService(thisServerId),
 		)
 	}
-	cm1, diml1 := setupCMR3("s1", testdata.ElectionTimeoutLow/2)
-	cm2, diml2 := setupCMR3("s2", testdata.ElectionTimeoutLow)
-	cm3, diml3 := setupCMR3("s3", testdata.ElectionTimeoutLow)
+	cm1, diml1 := setupCMR3("s1", testdata.ElectionTimeoutLow)
+	cm2, diml2 := setupCMR3("s2", testdata.ElectionTimeoutLow*3)
+	cm3, diml3 := setupCMR3("s3", testdata.ElectionTimeoutLow*3)
 	imrsh.cms = map[ServerId]*ConsensusModule{
 		"s1": cm1,
 		"s2": cm2,
@@ -140,7 +140,7 @@ func testSetupClusterWithLeader(
 	}
 
 	// -- Election timeout results in cm1 leader being elected
-	time.Sleep(testdata.ElectionTimeoutLow + testdata.SleepJustMoreThanATick)
+	time.Sleep(testdata.ElectionTimeoutLow*2 + testdata.SleepJustMoreThanATick)
 
 	if cm1.GetServerState() != 2 || cm2.GetServerState() != 0 || cm3.GetServerState() != 0 {
 		defer cm1.StopAsync()
