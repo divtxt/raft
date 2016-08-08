@@ -185,8 +185,15 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 ) {
 	// FIXME: multiple unsafe concurrent accesses
 
+	// Sleep till election starts
 	ett := cm.passiveConsensusModule.ElectionTimeoutTracker
-	time.Sleep(ett.GetCurrentElectionTimeout() + testdata.SleepJustMoreThanATick)
+	max_ticks := (ett.GetCurrentElectionTimeout().Nanoseconds() / testdata.TickerDuration.Nanoseconds()) + 2
+	for i := int64(0); i < max_ticks; i++ {
+		time.Sleep(testdata.TickerDuration)
+		if cm.GetServerState() != FOLLOWER {
+			break
+		}
+	}
 
 	if cm.GetServerState() != CANDIDATE {
 		t.Fatal()
