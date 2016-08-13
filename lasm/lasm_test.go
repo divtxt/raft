@@ -1,30 +1,19 @@
-package lasm
+package lasm_test
 
 import (
-	"bytes"
 	. "github.com/divtxt/raft"
+	raft_lasm "github.com/divtxt/raft/lasm"
+	raft_log "github.com/divtxt/raft/log"
 	"reflect"
 	"testing"
 )
 
-// Log with 10 entries with terms as shown in Figure 7, leader line
-func BlackboxTest_MakeFigure7LeaderLineTerms() []TermNo {
-	return []TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6, 6}
-}
+// Run the blackbox test on inMemoryLog
+func TestLogAndStateMachineImpl_A(t *testing.T) {
+	iml := raft_log.TestUtil_NewInMemoryLog_WithFigure7LeaderLine(10)
+	dsm := raft_lasm.NewDummyStateMachine()
+	lasm := raft_lasm.NewLogAndStateMachineImpl(iml, dsm)
 
-// Helper
-func TestCommandEquals(c Command, s string) bool {
-	return bytes.Equal(c, Command(s))
-}
-
-// Blackbox test.
-// Send a Log with 10 entries with terms as shown in Figure 7, leader line.
-// No commands should have been applied yet.
-func BlackboxTest_LogAndStateMachine(
-	t *testing.T,
-	lasm LogAndStateMachine,
-	appendEntryOkValue interface{},
-) {
 	// Initial data tests
 	iole, err := lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -42,11 +31,11 @@ func BlackboxTest_LogAndStateMachine(
 	}
 
 	// get entries test
-	le := TestHelper_GetLogEntryAtIndex(lasm, 10)
+	le := Helper_GetLogEntryAtIndex(lasm, 10)
 	if le.TermNo != 6 {
 		t.Fatal(le.TermNo)
 	}
-	if !TestCommandEquals(le.Command, "c10") {
+	if !raft_lasm.DummyCommandEquals(le.Command, 10) {
 		t.Fatal(le.Command)
 	}
 
@@ -72,7 +61,7 @@ func BlackboxTest_LogAndStateMachine(
 	if iole != 12 {
 		t.Fatal()
 	}
-	le = TestHelper_GetLogEntryAtIndex(lasm, 12)
+	le = Helper_GetLogEntryAtIndex(lasm, 12)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c12")}) {
 		t.Fatal(le)
 	}
@@ -90,21 +79,18 @@ func BlackboxTest_LogAndStateMachine(
 	if iole != 13 {
 		t.Fatal()
 	}
-	le = TestHelper_GetLogEntryAtIndex(lasm, 12)
+	le = Helper_GetLogEntryAtIndex(lasm, 12)
 	if !reflect.DeepEqual(le, LogEntry{9, Command("c12")}) {
 		t.Fatal(le)
 	}
 
 	// append test
-	result, err := lasm.AppendEntry(8, "c14")
+	reply, err := lasm.AppendEntry(8, raft_lasm.DummyCommand{14, false})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result != appendEntryOkValue {
-		t.Fatal(result)
-	}
-	if !reflect.DeepEqual(result, appendEntryOkValue) {
-		t.Fatal(result)
+	if reply != raft_lasm.DummyCommand_Reply_Ok {
+		t.Fatal(reply)
 	}
 	iole, err = lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -113,7 +99,21 @@ func BlackboxTest_LogAndStateMachine(
 	if iole != 14 {
 		t.Fatal()
 	}
-	le = TestHelper_GetLogEntryAtIndex(lasm, 14)
+	le = Helper_GetLogEntryAtIndex(lasm, 14)
+	if !reflect.DeepEqual(le, LogEntry{8, Command("c14")}) {
+		t.Fatal(le)
+	}
+
+	// append test - rejected entry
+	reply, err = lasm.AppendEntry(8, raft_lasm.DummyCommand{15, true})
+	if err != nil || reply != raft_lasm.DummyCommand_Reply_Reject {
+		t.Fatal()
+	}
+	iole, err = lasm.GetIndexOfLastEntry()
+	if err != nil || iole != 14 {
+		t.Fatal()
+	}
+	le = Helper_GetLogEntryAtIndex(lasm, 14)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c14")}) {
 		t.Fatal(le)
 	}
@@ -145,7 +145,7 @@ func BlackboxTest_LogAndStateMachine(
 	if iole != 3 {
 		t.Fatal()
 	}
-	le = TestHelper_GetLogEntryAtIndex(lasm, 3)
+	le = Helper_GetLogEntryAtIndex(lasm, 3)
 	if !reflect.DeepEqual(le, LogEntry{1, Command("c3")}) {
 		t.Fatal(le)
 	}
@@ -161,10 +161,11 @@ func BlackboxTest_LogAndStateMachine(
 	if err == nil {
 		t.Fatal()
 	}
+
 }
 
 // Helper
-func TestHelper_GetLogEntryAtIndex(lasm LogAndStateMachine, li LogIndex) LogEntry {
+func Helper_GetLogEntryAtIndex(lasm LogAndStateMachine, li LogIndex) LogEntry {
 	if li == 0 {
 		panic("oops!")
 	}
