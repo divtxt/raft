@@ -308,12 +308,12 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// let's make some new log entries
-	result, err := mcm.pcm.AppendCommand("c11")
-	if result != lasm.DummyInMemoryLasm_AppendEntry_Ok || err != nil {
+	result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{11, false})
+	if result != lasm.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
-	result, err = mcm.pcm.AppendCommand("c12")
-	if result != lasm.DummyInMemoryLasm_AppendEntry_Ok || err != nil {
+	result, err = mcm.pcm.AppendCommand(lasm.DummyCommand{12, false})
+	if result != lasm.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
 	// we currently do not expect appendCommand() to send AppendEntries

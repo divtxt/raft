@@ -2,7 +2,7 @@ package consensus
 
 import (
 	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/lasm"
+	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
 	"testing"
 )
@@ -179,7 +179,7 @@ func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 func testSetupMCM_FollowerThatVotedForS2_Figure7LeaderLine(
 	t *testing.T,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
-	mcm, mrs := testSetupMCM_Follower_WithTerms(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	mcm, mrs := testSetupMCM_Follower_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 
 	// sanity check
 	if mcm.pcm.RaftPersistentState.GetVotedFor() != "" {
@@ -318,7 +318,7 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 }
 
 func testSetupMCM_FollowerTerm8_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
-	mcm, mrs := testSetupMCM_Follower_WithTerms(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	mcm, mrs := testSetupMCM_Follower_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 
 	// sanity check

@@ -31,7 +31,7 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	}
 
 	// get entries test
-	le := Helper_GetLogEntryAtIndex(lasm, 10)
+	le := raft_lasm.TestHelper_GetLogEntryAtIndex(lasm, 10)
 	if le.TermNo != 6 {
 		t.Fatal(le.TermNo)
 	}
@@ -61,7 +61,7 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	if iole != 12 {
 		t.Fatal()
 	}
-	le = Helper_GetLogEntryAtIndex(lasm, 12)
+	le = raft_lasm.TestHelper_GetLogEntryAtIndex(lasm, 12)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c12")}) {
 		t.Fatal(le)
 	}
@@ -79,7 +79,7 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	if iole != 13 {
 		t.Fatal()
 	}
-	le = Helper_GetLogEntryAtIndex(lasm, 12)
+	le = raft_lasm.TestHelper_GetLogEntryAtIndex(lasm, 12)
 	if !reflect.DeepEqual(le, LogEntry{9, Command("c12")}) {
 		t.Fatal(le)
 	}
@@ -99,7 +99,7 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	if iole != 14 {
 		t.Fatal()
 	}
-	le = Helper_GetLogEntryAtIndex(lasm, 14)
+	le = raft_lasm.TestHelper_GetLogEntryAtIndex(lasm, 14)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c14")}) {
 		t.Fatal(le)
 	}
@@ -113,7 +113,7 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	if err != nil || iole != 14 {
 		t.Fatal()
 	}
-	le = Helper_GetLogEntryAtIndex(lasm, 14)
+	le = raft_lasm.TestHelper_GetLogEntryAtIndex(lasm, 14)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c14")}) {
 		t.Fatal(le)
 	}
@@ -145,7 +145,7 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	if iole != 3 {
 		t.Fatal()
 	}
-	le = Helper_GetLogEntryAtIndex(lasm, 3)
+	le = raft_lasm.TestHelper_GetLogEntryAtIndex(lasm, 3)
 	if !reflect.DeepEqual(le, LogEntry{1, Command("c3")}) {
 		t.Fatal(le)
 	}
@@ -162,16 +162,4 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 		t.Fatal()
 	}
 
-}
-
-// Helper
-func Helper_GetLogEntryAtIndex(lasm LogAndStateMachine, li LogIndex) LogEntry {
-	if li == 0 {
-		panic("oops!")
-	}
-	entries, err := lasm.GetEntriesAfterIndex(li - 1)
-	if err != nil {
-		panic(err)
-	}
-	return entries[0]
 }

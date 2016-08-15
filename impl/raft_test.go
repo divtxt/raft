@@ -27,7 +27,7 @@ func setupConsensusModuleR2(
 	logTerms []TermNo,
 ) (*ConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	imle := lasm.NewDummyInMemoryLasmWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
+	imle := lasm.TestUtil_NewLasmiWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo(testdata.AllServerIds, testdata.ThisServerId)
@@ -268,7 +268,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 }
 
 func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
-	cm, mrs := setupConsensusModuleR2(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	cm, mrs := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	defer cm.StopAsync()
 
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
@@ -282,7 +282,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		t.Fatal()
 	}
 
-	replyChan := cm.AppendCommandAsync("c11x")
+	replyChan := cm.AppendCommandAsync(lasm.DummyCommand{1101, false})
 
 	iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -299,7 +299,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		if cm.IsStopped() {
 			t.Error(cm.GetStopError())
 		}
-		if result != lasm.DummyInMemoryLasm_AppendEntry_Ok {
+		if result != lasm.DummyCommand_Reply_Ok {
 			t.Fatal()
 		}
 		iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
@@ -310,7 +310,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 			t.Fatal()
 		}
 		le := lasm.TestHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.Lasm, 11)
-		if !reflect.DeepEqual(le, LogEntry{8, Command("c11x")}) {
+		if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 			t.Fatal(le)
 		}
 	default:
@@ -319,7 +319,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 }
 
 func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
-	cm, _ := setupConsensusModuleR2(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	cm, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	defer cm.StopAsync()
 
 	// pre check
@@ -331,7 +331,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		t.Fatal()
 	}
 
-	replyChan := cm.AppendCommandAsync("c11x")
+	replyChan := cm.AppendCommandAsync(lasm.DummyCommand{1101, false})
 
 	iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -364,11 +364,11 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 }
 
 func TestConsensusModule_AppendCommandAsync_Follower_StoppedCM(t *testing.T) {
-	cm, _ := setupConsensusModuleR2(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	cm, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	cm.StopAsync()
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
-	replyChan := cm.AppendCommandAsync("c11x")
+	replyChan := cm.AppendCommandAsync(lasm.DummyCommand{1101, false})
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
 	select {
