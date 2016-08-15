@@ -22,3 +22,8 @@ const (
 )
 
 var AllServerIds = []ServerId{ThisServerId, "s2", "s3", "s4", "s5"}
+
+// Log with 10 entries with terms as shown in Figure 7, leader line
+func TestUtil_MakeFigure7LeaderLineTerms() []TermNo {
+	return []TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6, 6}
+}

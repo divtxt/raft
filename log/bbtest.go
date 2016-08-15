@@ -7,11 +7,6 @@ import (
 	"testing"
 )
 
-// Log with 10 entries with terms as shown in Figure 7, leader line
-func BlackboxTest_MakeFigure7LeaderLineTerms() []TermNo {
-	return []TermNo{1, 1, 1, 4, 4, 5, 5, 6, 6, 6}
-}
-
 // Helper
 func TestCommandEquals(c Command, s string) bool {
 	return bytes.Equal(c, Command(s))
