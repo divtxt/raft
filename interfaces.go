@@ -321,11 +321,10 @@ type LogAndStateMachine interface {
 	// This method can reject the given command if it cannot be applied given the current
 	// state of the Log and state machine, or if the command itself is bad in some way.
 	//
-	// The method should return a non-nil value to indicate the result.
-	// A nil result is considered an error and will shutdown the ConsensusModule.
-	// All other values are opaque to ConsensusModule and will be returned as the result
-	// of AppendCommandAsync.
-	AppendEntry(termNo TermNo, rawCommand interface{}) (interface{}, error)
+	// Should return (<appended>, <reply>, nil) where <appended> is a boolean indicating whether or
+	// not the command was accepted and appended to the log, and <reply> is an appropriate
+	// unserialized reply.
+	AppendEntry(termNo TermNo, rawCommand interface{}) (bool, interface{}, error)
 
 	// Notify the Log that the commitIndex has changed to the given value.
 	//
