@@ -2,11 +2,12 @@ package consensus
 
 import (
 	. "github.com/divtxt/raft"
+	raft_lasm "github.com/divtxt/raft/lasm"
 )
 
 // Helper function
 func GetIndexAndTermOfLastEntry(
-	lasm LogAndStateMachine,
+	lasm raft_lasm.LogAndStateMachine,
 ) (LogIndex, TermNo, error) {
 	lastLogIndex, err := lasm.GetIndexOfLastEntry()
 	if err != nil {

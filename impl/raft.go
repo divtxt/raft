@@ -26,6 +26,7 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
+	raft_lasm "github.com/divtxt/raft/lasm"
 	"sync/atomic"
 	"time"
 )
@@ -76,7 +77,7 @@ type ConsensusModule struct {
 //
 func NewConsensusModule(
 	raftPersistentState RaftPersistentState,
-	lasm LogAndStateMachine,
+	lasm raft_lasm.LogAndStateMachine,
 	rpcService RpcService,
 	clusterInfo *config.ClusterInfo,
 	timeSettings config.TimeSettings,

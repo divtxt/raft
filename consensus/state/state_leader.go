@@ -4,6 +4,7 @@ import (
 	"fmt"
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
+	raft_lasm "github.com/divtxt/raft/lasm"
 )
 
 // Volatile state on leaders
@@ -89,7 +90,7 @@ func (lvs *LeaderVolatileState) SetMatchIndexAndNextIndex(peerId ServerId, match
 func FindNewerCommitIndex(
 	ci *config.ClusterInfo,
 	lvs *LeaderVolatileState,
-	lasm LogAndStateMachine,
+	lasm raft_lasm.LogAndStateMachine,
 	currentTerm TermNo,
 	currentCommitIndex LogIndex,
 ) (LogIndex, error) {
