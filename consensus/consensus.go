@@ -139,7 +139,9 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 // Append the given command as an entry in the log.
 // #RFS-L2a: If command received from client: append entry to local log
 //
-// Returns true if entry was appended or false if not currently the leader
+// The command may not actually be appended to the log by LogAndStateMachine.AppendEntry()
+//
+// Returns the reply from StateMachine.ReviewAppendCommand() or nil if not currently the leader.
 func (cm *PassiveConsensusModule) AppendCommand(
 	rawCommand interface{},
 ) (interface{}, error) {
