@@ -85,11 +85,11 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	}
 
 	// append test
-	reply, err := lasm.AppendEntry(8, raft_lasm.DummyCommand{14, false})
+	appended, reply, err := lasm.AppendEntry(8, raft_lasm.DummyCommand{14, false})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reply != raft_lasm.DummyCommand_Reply_Ok {
+	if !appended || reply != raft_lasm.DummyCommand_Reply_Ok {
 		t.Fatal(reply)
 	}
 	iole, err = lasm.GetIndexOfLastEntry()
@@ -105,8 +105,8 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	}
 
 	// append test - rejected entry
-	reply, err = lasm.AppendEntry(8, raft_lasm.DummyCommand{15, true})
-	if err != nil || reply != raft_lasm.DummyCommand_Reply_Reject {
+	appended, reply, err = lasm.AppendEntry(8, raft_lasm.DummyCommand{15, true})
+	if err != nil || appended || reply != raft_lasm.DummyCommand_Reply_Reject {
 		t.Fatal()
 	}
 	iole, err = lasm.GetIndexOfLastEntry()

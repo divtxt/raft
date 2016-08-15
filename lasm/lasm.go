@@ -40,25 +40,25 @@ func (lasmi *LogAndStateMachineImpl) SetEntriesAfterIndex(li LogIndex, entries [
 func (lasmi *LogAndStateMachineImpl) AppendEntry(
 	termNo TermNo,
 	rawCommand interface{},
-) (interface{}, error) {
+) (bool, interface{}, error) {
 	// Get the command checked and serialized
 	command, reply, err := lasmi.stateMachine.ReviewAppendCommand(rawCommand)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
 	// If command rejected, return without appending to the log immediately.
 	if command == nil {
-		return reply, nil
+		return false, reply, nil
 	}
 
 	// Append serialized command to the log.
 	err = lasmi.log.AppendEntry(termNo, command)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
-	return reply, nil
+	return true, reply, nil
 }
 
 func (lasmi *LogAndStateMachineImpl) GetEntriesAfterIndex(
