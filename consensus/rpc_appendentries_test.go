@@ -196,14 +196,14 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !lasm.TestCommandEquals(lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 6).Command, "c6") {
+		if !lasm.DummyCommandEquals(lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 6).Command, 6) {
 			t.Error()
 		}
 
 		sentLogEntries := []LogEntry{
-			{5, Command("c6'")},
-			{5, Command("c7'")},
-			{6, Command("c8'")},
+			{5, Command("c601")},
+			{5, Command("c701")},
+			{6, Command("c801")},
 		}
 
 		appendEntries := &RpcAppendEntries{senderTerm, 5, 4, sentLogEntries, 7}
@@ -236,7 +236,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
-		if !lasm.TestCommandEquals(addedLogEntry.Command, "c6'") {
+		if !lasm.DummyCommandEquals(addedLogEntry.Command, 601) {
 			t.Error()
 		}
 
@@ -293,13 +293,13 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !lasm.TestCommandEquals(lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 4).Command, "c4") {
+		if !lasm.DummyCommandEquals(lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 4).Command, 4) {
 			t.Error()
 		}
 
 		sentLogEntries := []LogEntry{
-			{4, Command("c5'")},
-			{5, Command("c6'")},
+			{4, Command("c501")},
+			{5, Command("c601")},
 		}
 
 		appendEntries := &RpcAppendEntries{senderTerm, 4, 4, sentLogEntries, 7}
@@ -332,7 +332,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
-		if !lasm.TestCommandEquals(addedLogEntry.Command, "c6'") {
+		if !lasm.DummyCommandEquals(addedLogEntry.Command, 601) {
 			t.Error()
 		}
 

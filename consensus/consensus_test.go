@@ -24,7 +24,7 @@ func setupManagedConsensusModuleR2(
 	solo bool,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	imle := lasm.NewDummyInMemoryLasmWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
+	imle := lasm.TestUtil_NewLasmiWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
 	if solo {
@@ -567,12 +567,12 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.CheckSentRpcs(t, expectedRpcs)
 
 	// let's make some new log entries
-	result, err := mcm.pcm.AppendCommand("c11")
-	if result != lasm.DummyInMemoryLasm_AppendEntry_Ok || err != nil {
-		t.Fatal()
+	result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{11, false})
+	if result != lasm.DummyCommand_Reply_Ok || err != nil {
+		t.Fatal(err)
 	}
-	result, err = mcm.pcm.AppendCommand("c12")
-	if result != lasm.DummyInMemoryLasm_AppendEntry_Ok || err != nil {
+	result, err = mcm.pcm.AppendCommand(lasm.DummyCommand{12, false})
+	if result != lasm.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
 
@@ -679,7 +679,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 
 func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	var err error
-	mcm, mrs := testSetupMCM_SOLO_Leader_WithTerms(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	mcm, mrs := testSetupMCM_SOLO_Leader_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 
 	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 
@@ -703,12 +703,12 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
 
 	// let's make some new log entries
-	result, err := mcm.pcm.AppendCommand("c11")
-	if result != lasm.DummyInMemoryLasm_AppendEntry_Ok || err != nil {
+	result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{11, false})
+	if result != lasm.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
-	result, err = mcm.pcm.AppendCommand("c12")
-	if result != lasm.DummyInMemoryLasm_AppendEntry_Ok || err != nil {
+	result, err = mcm.pcm.AppendCommand(lasm.DummyCommand{12, false})
+	if result != lasm.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
 
@@ -827,19 +827,19 @@ func testSetupMCM_SOLO_Leader_WithTerms(
 }
 
 func testSetupMCM_Follower_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
-	return testSetupMCM_Follower_WithTerms(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	return testSetupMCM_Follower_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 }
 
 func testSetupMCM_Candidate_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
-	return testSetupMCM_Candidate_WithTerms(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	return testSetupMCM_Candidate_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 }
 
 func testSetupMCM_Leader_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
-	return testSetupMCM_Leader_WithTerms(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	return testSetupMCM_Leader_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 }
 
 func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
-	mcm, mrs := testSetupMCM_Leader_WithTerms(t, lasm.BlackboxTest_MakeFigure7LeaderLineTerms())
+	mcm, mrs := testSetupMCM_Leader_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 
 	// sanity check - before
 	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
@@ -899,9 +899,9 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	result, err := mcm.pcm.AppendCommand("c11x")
+	result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{1101, false})
 
-	if result != lasm.DummyInMemoryLasm_AppendEntry_Ok || err != nil {
+	if result != lasm.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
 	iole, err = mcm.pcm.Lasm.GetIndexOfLastEntry()
@@ -912,7 +912,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 	le := lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 11)
-	if !reflect.DeepEqual(le, LogEntry{8, Command("c11x")}) {
+	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
 	}
 }
@@ -933,7 +933,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		result, err := mcm.pcm.AppendCommand("c11x")
+		result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{1101, false})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -960,7 +960,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 type managedConsensusModule struct {
 	pcm  *PassiveConsensusModule
 	now  time.Time
-	diml *lasm.DummyInMemoryLasm
+	diml *lasm.LogAndStateMachineImpl
 }
 
 func (mcm *managedConsensusModule) Tick() error {

@@ -19,9 +19,9 @@ func setupConsensusModuleR3(
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
-) (*ConsensusModule, *lasm.DummyInMemoryLasm) {
+) (*ConsensusModule, *lasm.LogAndStateMachineImpl) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
-	diml := lasm.NewDummyInMemoryLasmWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
+	diml := lasm.TestUtil_NewLasmiWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
 	ts := config.TimeSettings{testdata.TickerDuration, electionTimeoutLow}
 	ci, err := config.NewClusterInfo(testClusterServerIds, thisServerId)
 	if err != nil {
@@ -42,9 +42,9 @@ func setupConsensusModuleR3_SOLO(
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
-) (*ConsensusModule, *lasm.DummyInMemoryLasm) {
+) (*ConsensusModule, *lasm.LogAndStateMachineImpl) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
-	diml := lasm.NewDummyInMemoryLasmWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
+	diml := lasm.TestUtil_NewLasmiWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo([]ServerId{"_SOLO_"}, "_SOLO_")
 	if err != nil {
@@ -114,14 +114,14 @@ func testSetupClusterWithLeader(
 	t *testing.T,
 ) (
 	*inMemoryRpcServiceHub,
-	*ConsensusModule, *lasm.DummyInMemoryLasm,
-	*ConsensusModule, *lasm.DummyInMemoryLasm,
-	*ConsensusModule, *lasm.DummyInMemoryLasm,
+	*ConsensusModule, *lasm.LogAndStateMachineImpl,
+	*ConsensusModule, *lasm.LogAndStateMachineImpl,
+	*ConsensusModule, *lasm.LogAndStateMachineImpl,
 ) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	setupCMR3 := func(
 		thisServerId ServerId, electionTimeoutLow time.Duration,
-	) (*ConsensusModule, *lasm.DummyInMemoryLasm) {
+	) (*ConsensusModule, *lasm.LogAndStateMachineImpl) {
 		return setupConsensusModuleR3(
 			t,
 			thisServerId,
@@ -152,7 +152,7 @@ func testSetupClusterWithLeader(
 	return imrsh, cm1, diml1, cm2, diml2, cm3, diml3
 }
 
-func testSetup_SOLO_Leader(t *testing.T) (*ConsensusModule, *lasm.DummyInMemoryLasm) {
+func testSetup_SOLO_Leader(t *testing.T) (*ConsensusModule, *lasm.LogAndStateMachineImpl) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	cm, diml := setupConsensusModuleR3_SOLO(
 		t,
@@ -186,13 +186,13 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	cm3 = nil
 
 	// Apply a command on the leader
-	replyChan := cm1.AppendCommandAsync("c101")
+	replyChan := cm1.AppendCommandAsync(lasm.DummyCommand{101, false})
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 	select {
 	case result := <-replyChan:
-		if result != lasm.DummyInMemoryLasm_AppendEntry_Ok {
+		if result != lasm.DummyCommand_Reply_Ok {
 			t.Fatal()
 		}
 		if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
@@ -273,13 +273,13 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	defer cm.StopAsync()
 
 	// Apply a command on the leader
-	replyChan := cm.AppendCommandAsync("c101")
+	replyChan := cm.AppendCommandAsync(lasm.DummyCommand{101, false})
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 	select {
 	case result := <-replyChan:
-		if result != lasm.DummyInMemoryLasm_AppendEntry_Ok {
+		if result != lasm.DummyCommand_Reply_Ok {
 			t.Fatal()
 		}
 		if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {
