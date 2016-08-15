@@ -237,10 +237,13 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 // ConsensusModule and will be sent as is to LogAndStateMachine.AppendEntry()
 //
 // This method sends the command to the ConsensusModule's goroutine.
-// The reply will be sent later on the returned channel when the command has been appended.
+// The reply will be sent later on the returned channel when the command has been processed.
+// The command will may or may not actually be appended to the log at the discretion of the
+// StateMachine
 //
-// The reply will be the value returned by AppendEntry(), or nil if this ConsensusModule is
-// not the leader.
+// The reply will be the value returned by AppendEntry(), and this value should carry
+//
+// The reply will be nil if this ConsensusModule is not the leader.
 //
 // Here, we intentionally punt on some of the leader details, specifically
 // most of:
