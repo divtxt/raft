@@ -6,6 +6,7 @@ import (
 	. "github.com/divtxt/raft"
 	config "github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
+	raft_lasm "github.com/divtxt/raft/lasm"
 	util "github.com/divtxt/raft/util"
 	"sync/atomic"
 	"time"
@@ -16,7 +17,7 @@ type PassiveConsensusModule struct {
 
 	// -- External components
 	RaftPersistentState RaftPersistentState
-	Lasm                LogAndStateMachine
+	Lasm                raft_lasm.LogAndStateMachine
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
@@ -44,7 +45,7 @@ type PassiveConsensusModule struct {
 
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
-	lasm LogAndStateMachine,
+	lasm raft_lasm.LogAndStateMachine,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	electionTimeoutLow time.Duration,
@@ -146,7 +147,7 @@ func (cm *PassiveConsensusModule) AppendCommand(
 		return nil, nil
 	}
 
-	result, err := cm.Lasm.AppendEntry(cm.RaftPersistentState.GetCurrentTerm(), rawCommand)
+	_, result, err := cm.Lasm.AppendEntry(cm.RaftPersistentState.GetCurrentTerm(), rawCommand)
 	if err != nil {
 		return nil, err
 	}
