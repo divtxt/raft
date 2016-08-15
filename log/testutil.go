@@ -7,8 +7,8 @@ import (
 )
 
 // Make an InMemoryLog with 10 entries with terms as shown in Figure 7, leader line.
-func TestUtil_NewInMemoryLog_WithFigure7LeaderLine() *InMemoryLog {
-	inmem_log := NewInMemoryLog(10)
+func TestUtil_NewInMemoryLog_WithFigure7LeaderLine(maxEntriesPerAppendEntry uint64) *InMemoryLog {
+	inmem_log := NewInMemoryLog(maxEntriesPerAppendEntry)
 
 	figure7LeaderLine := testdata.TestUtil_MakeFigure7LeaderLineTerms()
 	for i, term := range figure7LeaderLine {
