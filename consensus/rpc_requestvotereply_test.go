@@ -99,7 +99,7 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 	}
 
 	// leader setup
-	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(mcm.pcm.Lasm)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(mcm.pcm.LogRO)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -17,7 +17,8 @@ type PassiveConsensusModule struct {
 
 	// -- External components
 	RaftPersistentState RaftPersistentState
-	Lasm                raft_lasm.LogAndStateMachine
+	LogRO               LogReadOnly
+	_lasm               raft_lasm.LogAndStateMachine
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
@@ -71,6 +72,7 @@ func NewPassiveConsensusModule(
 	pcm := &PassiveConsensusModule{
 		// -- External components
 		raftPersistentState,
+		lasm,
 		lasm,
 		rpcSendOnly,
 
@@ -129,7 +131,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	err := cm.Lasm.CommitIndexChanged(commitIndex)
+	err := cm._lasm.CommitIndexChanged(commitIndex)
 	if err != nil {
 		return err
 	}
@@ -149,7 +151,7 @@ func (cm *PassiveConsensusModule) AppendCommand(
 		return nil, nil
 	}
 
-	_, result, err := cm.Lasm.AppendEntry(cm.RaftPersistentState.GetCurrentTerm(), rawCommand)
+	_, result, err := cm._lasm.AppendEntry(cm.RaftPersistentState.GetCurrentTerm(), rawCommand)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +241,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	if err != nil {
 		return err
 	}
-	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.Lasm)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.LogRO)
 	if err != nil {
 		return err
 	}
@@ -258,7 +260,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 }
 
 func (cm *PassiveConsensusModule) becomeLeader() error {
-	iole, err := cm.Lasm.GetIndexOfLastEntry()
+	iole, err := cm.LogRO.GetIndexOfLastEntry()
 	if err != nil {
 		return err
 	}
@@ -317,7 +319,7 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(
 		peerLastLogTerm = 0
 	} else {
 		var err error
-		peerLastLogTerm, err = cm.Lasm.GetTermAtIndex(peerLastLogIndex)
+		peerLastLogTerm, err = cm.LogRO.GetTermAtIndex(peerLastLogIndex)
 		if err != nil {
 			return err
 		}
@@ -328,7 +330,7 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(
 		entriesToSend = []LogEntry{}
 	} else {
 		var err error
-		entriesToSend, err = cm.Lasm.GetEntriesAfterIndex(peerLastLogIndex)
+		entriesToSend, err = cm.LogRO.GetEntriesAfterIndex(peerLastLogIndex)
 		if err != nil {
 			return err
 		}
@@ -351,7 +353,7 @@ func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
 	newerCommitIndex, err := consensus_state.FindNewerCommitIndex(
 		cm.ClusterInfo,
 		cm.LeaderVolatileState,
-		cm.Lasm,
+		cm.LogRO,
 		cm.RaftPersistentState.GetCurrentTerm(),
 		cm.GetCommitIndex(),
 	)
