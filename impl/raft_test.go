@@ -201,7 +201,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex, lastLogTerm, err := consensus.GetIndexAndTermOfLastEntry(cm.passiveConsensusModule.Lasm)
+	lastLogIndex, lastLogTerm, err := consensus.GetIndexAndTermOfLastEntry(cm.passiveConsensusModule.LogRO)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,7 +275,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
 
 	// pre check
-	iole, err := cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
+	iole, err := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -285,7 +285,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 
 	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand{1101, false})
 
-	iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
+	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -303,14 +303,14 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		if result != testhelpers.DummyCommand_Reply_Ok {
 			t.Fatal()
 		}
-		iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
+		iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}
 		if iole != 11 {
 			t.Fatal()
 		}
-		le := log.TestHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.Lasm, 11)
+		le := log.TestHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.LogRO, 11)
 		if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 			t.Fatal(le)
 		}
@@ -324,7 +324,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 	defer cm.StopAsync()
 
 	// pre check
-	iole, err := cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
+	iole, err := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -334,7 +334,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 
 	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand{1101, false})
 
-	iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
+	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -352,7 +352,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		if result != nil {
 			t.Fatal()
 		}
-		iole, err := cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
+		iole, err := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}
