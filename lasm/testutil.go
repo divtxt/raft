@@ -23,15 +23,3 @@ func TestUtil_NewLasmiWithDummyCommands(
 
 	return NewLogAndStateMachineImpl(iml, dsm)
 }
-
-// Test Helper
-func TestHelper_GetLogEntryAtIndex(lasm LogAndStateMachine, li LogIndex) LogEntry {
-	if li == 0 {
-		panic("oops!")
-	}
-	entries, err := lasm.GetEntriesAfterIndex(li - 1)
-	if err != nil {
-		panic(err)
-	}
-	return entries[0]
-}

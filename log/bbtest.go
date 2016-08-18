@@ -121,15 +121,3 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 		t.Fatal(le)
 	}
 }
-
-// Helper
-func TestHelper_GetLogEntryAtIndex(log Log, li LogIndex) LogEntry {
-	if li == 0 {
-		panic("oops!")
-	}
-	entries, err := log.GetEntriesAfterIndex(li - 1)
-	if err != nil {
-		panic(err)
-	}
-	return entries[0]
-}
