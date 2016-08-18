@@ -46,7 +46,8 @@ type PassiveConsensusModule struct {
 
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
-	lasm raft_lasm.LogAndStateMachine,
+	log Log,
+	stateMachine StateMachine,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	electionTimeoutLow time.Duration,
@@ -56,8 +57,11 @@ func NewPassiveConsensusModule(
 	if raftPersistentState == nil {
 		return nil, errors.New("'raftPersistentState' cannot be nil")
 	}
-	if lasm == nil {
+	if log == nil {
 		return nil, errors.New("'log' cannot be nil")
+	}
+	if stateMachine == nil {
+		return nil, errors.New("'stateMachine' cannot be nil")
 	}
 	if rpcSendOnly == nil {
 		return nil, errors.New("'rpcSendOnly' cannot be nil")
@@ -68,6 +72,8 @@ func NewPassiveConsensusModule(
 	if electionTimeoutLow.Nanoseconds() <= 0 {
 		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
+
+	lasm := raft_lasm.NewLogAndStateMachineImpl(log, stateMachine)
 
 	pcm := &PassiveConsensusModule{
 		// -- External components

@@ -4,7 +4,6 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
-	"github.com/divtxt/raft/lasm"
 	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
@@ -25,7 +24,8 @@ func setupManagedConsensusModuleR2(
 	solo bool,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	imle := lasm.TestUtil_NewLasmiWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
+	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	dsm := testhelpers.NewDummyStateMachine()
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
 	if solo {
@@ -40,7 +40,8 @@ func setupManagedConsensusModuleR2(
 	now := time.Now()
 	cm, err := NewPassiveConsensusModule(
 		ps,
-		imle,
+		iml,
+		dsm,
 		mrs,
 		ci,
 		testdata.ElectionTimeoutLow,
@@ -54,7 +55,7 @@ func setupManagedConsensusModuleR2(
 	}
 	// Bias simulated clock to avoid exact time matches
 	now = now.Add(testdata.SleepToLetGoroutineRun)
-	mcm := &managedConsensusModule{cm, now, imle}
+	mcm := &managedConsensusModule{cm, now, iml, dsm}
 	return mcm, mrs
 }
 
@@ -733,7 +734,7 @@ func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 
-		if mcm.diml.GetCommitIndex() != 0 {
+		if mcm.dsm.GetCommitIndex() != 0 {
 			t.Fatal()
 		}
 
@@ -741,7 +742,7 @@ func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.diml.GetCommitIndex() != 2 {
+		if mcm.dsm.GetCommitIndex() != 2 {
 			t.Fatal()
 		}
 
@@ -749,7 +750,7 @@ func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.diml.GetCommitIndex() != 9 {
+		if mcm.dsm.GetCommitIndex() != 9 {
 			t.Fatal()
 		}
 	}
@@ -961,7 +962,8 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 type managedConsensusModule struct {
 	pcm  *PassiveConsensusModule
 	now  time.Time
-	diml *lasm.LogAndStateMachineImpl
+	diml LogReadOnly
+	dsm  *testhelpers.DummyStateMachine
 }
 
 func (mcm *managedConsensusModule) Tick() error {

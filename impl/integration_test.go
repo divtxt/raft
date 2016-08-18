@@ -3,7 +3,6 @@ package impl
 import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
-	"github.com/divtxt/raft/lasm"
 	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
@@ -21,22 +20,23 @@ func setupConsensusModuleR3(
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
-) (*ConsensusModule, *lasm.LogAndStateMachineImpl) {
+) (*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
-	diml := lasm.TestUtil_NewLasmiWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
+	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	dsm := testhelpers.NewDummyStateMachine()
 	ts := config.TimeSettings{testdata.TickerDuration, electionTimeoutLow}
 	ci, err := config.NewClusterInfo(testClusterServerIds, thisServerId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, diml, imrsc, ci, ts)
+	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cm == nil {
 		t.Fatal()
 	}
-	return cm, diml
+	return cm, iml, dsm
 }
 
 func setupConsensusModuleR3_SOLO(
@@ -44,28 +44,29 @@ func setupConsensusModuleR3_SOLO(
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
-) (*ConsensusModule, *lasm.LogAndStateMachineImpl) {
+) (*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
-	diml := lasm.TestUtil_NewLasmiWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
+	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	dsm := testhelpers.NewDummyStateMachine()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo([]ServerId{"_SOLO_"}, "_SOLO_")
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, diml, imrsc, ci, ts)
+	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cm == nil {
 		t.Fatal()
 	}
-	return cm, diml
+	return cm, iml, dsm
 }
 
 func TestCluster_ElectsLeader(t *testing.T) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	setupCMR3 := func(thisServerId ServerId) *ConsensusModule {
-		cm, _ := setupConsensusModuleR3(
+		cm, _, _ := setupConsensusModuleR3(
 			t,
 			thisServerId,
 			testdata.ElectionTimeoutLow,
@@ -116,14 +117,14 @@ func testSetupClusterWithLeader(
 	t *testing.T,
 ) (
 	*inMemoryRpcServiceHub,
-	*ConsensusModule, *lasm.LogAndStateMachineImpl,
-	*ConsensusModule, *lasm.LogAndStateMachineImpl,
-	*ConsensusModule, *lasm.LogAndStateMachineImpl,
+	*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
+	*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
+	*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
 ) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	setupCMR3 := func(
 		thisServerId ServerId, electionTimeoutLow time.Duration,
-	) (*ConsensusModule, *lasm.LogAndStateMachineImpl) {
+	) (*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 		return setupConsensusModuleR3(
 			t,
 			thisServerId,
@@ -132,9 +133,9 @@ func testSetupClusterWithLeader(
 			imrsh.getRpcService(thisServerId),
 		)
 	}
-	cm1, diml1 := setupCMR3("s1", testdata.ElectionTimeoutLow)
-	cm2, diml2 := setupCMR3("s2", testdata.ElectionTimeoutLow*3)
-	cm3, diml3 := setupCMR3("s3", testdata.ElectionTimeoutLow*3)
+	cm1, diml1, dsm1 := setupCMR3("s1", testdata.ElectionTimeoutLow)
+	cm2, diml2, dsm2 := setupCMR3("s2", testdata.ElectionTimeoutLow*3)
+	cm3, diml3, dsm3 := setupCMR3("s3", testdata.ElectionTimeoutLow*3)
 	imrsh.cms = map[ServerId]*ConsensusModule{
 		"s1": cm1,
 		"s2": cm2,
@@ -151,12 +152,14 @@ func testSetupClusterWithLeader(
 		t.Fatal(cm1.GetServerState()*100 + cm2.GetServerState()*10 + cm3.GetServerState())
 	}
 
-	return imrsh, cm1, diml1, cm2, diml2, cm3, diml3
+	return imrsh, cm1, diml1, dsm1, cm2, diml2, dsm2, cm3, diml3, dsm3
 }
 
-func testSetup_SOLO_Leader(t *testing.T) (*ConsensusModule, *lasm.LogAndStateMachineImpl) {
+func testSetup_SOLO_Leader(
+	t *testing.T,
+) (*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	imrsh := &inMemoryRpcServiceHub{nil}
-	cm, diml := setupConsensusModuleR3_SOLO(
+	cm, diml, dsm := setupConsensusModuleR3_SOLO(
 		t,
 		testdata.ElectionTimeoutLow,
 		nil,
@@ -174,11 +177,11 @@ func testSetup_SOLO_Leader(t *testing.T) (*ConsensusModule, *lasm.LogAndStateMac
 		t.Fatal()
 	}
 
-	return cm, diml
+	return cm, diml, dsm
 }
 
 func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
-	imrsh, cm1, diml1, cm2, diml2, cm3, _ := testSetupClusterWithLeader(t)
+	imrsh, cm1, diml1, dsm1, cm2, diml2, dsm2, cm3, _, _ := testSetupClusterWithLeader(t)
 	defer cm1.StopAsync()
 	defer cm2.StopAsync()
 
@@ -230,22 +233,22 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	}
 
 	// and committed on the leader
-	if diml1.GetCommitIndex() != 1 {
+	if dsm1.GetCommitIndex() != 1 {
 		t.Fatal()
 	}
 	// but not yet on the connected followers
-	if diml2.GetCommitIndex() != 0 {
+	if dsm2.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
 
 	// Another tick propagates the commit to the connected followers
 	time.Sleep(testdata.TickerDuration)
-	if diml2.GetCommitIndex() != 1 {
+	if dsm2.GetCommitIndex() != 1 {
 		t.Fatal()
 	}
 
 	// Crashed follower restarts
-	cm3b, diml3b := setupConsensusModuleR3(
+	cm3b, diml3b, dsm3b := setupConsensusModuleR3(
 		t,
 		"s3",
 		testdata.ElectionTimeoutLow,
@@ -254,7 +257,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	)
 	defer cm3b.StopAsync()
 	imrsh.cms["s3"] = cm3b
-	if diml3b.GetCommitIndex() != 0 {
+	if dsm3b.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
 
@@ -265,13 +268,13 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	if !reflect.DeepEqual(le, expectedLe) {
 		t.Fatal(le)
 	}
-	if diml3b.GetCommitIndex() != 1 {
+	if dsm3b.GetCommitIndex() != 1 {
 		t.Fatal()
 	}
 }
 
 func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
-	cm, diml := testSetup_SOLO_Leader(t)
+	cm, diml, dsm := testSetup_SOLO_Leader(t)
 	defer cm.StopAsync()
 
 	// Apply a command on the leader
@@ -299,13 +302,13 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 		t.Fatal(le)
 	}
 	// but not yet committed
-	if diml.GetCommitIndex() != 0 {
+	if dsm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
 
 	// A tick allows command to be committed
 	time.Sleep(testdata.TickerDuration)
-	if diml.GetCommitIndex() != 1 {
+	if dsm.GetCommitIndex() != 1 {
 		t.Fatal()
 	}
 }

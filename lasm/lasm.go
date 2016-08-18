@@ -87,6 +87,7 @@ func (lasmi *LogAndStateMachineImpl) CommitIndexChanged(commitIndex LogIndex) er
 		)
 	}
 	lasmi.commitIndex = commitIndex
+	lasmi.stateMachine.CommitIndexChanged(commitIndex)
 	return nil
 }
 
