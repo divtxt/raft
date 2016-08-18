@@ -1,4 +1,4 @@
-package lasm
+package testhelpers
 
 import (
 	"bytes"

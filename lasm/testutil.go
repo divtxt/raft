@@ -3,6 +3,7 @@ package lasm
 import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/log"
+	"github.com/divtxt/raft/testhelpers"
 	"strconv"
 )
 
@@ -18,7 +19,7 @@ func TestUtil_NewLasmiWithDummyCommands(
 		iml.AppendEntry(term, command)
 	}
 
-	dsm := NewDummyStateMachine()
+	dsm := testhelpers.NewDummyStateMachine()
 
 	return NewLogAndStateMachineImpl(iml, dsm)
 }

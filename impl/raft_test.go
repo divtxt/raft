@@ -282,7 +282,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		t.Fatal()
 	}
 
-	replyChan := cm.AppendCommandAsync(lasm.DummyCommand{1101, false})
+	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand{1101, false})
 
 	iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -299,7 +299,7 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		if cm.IsStopped() {
 			t.Error(cm.GetStopError())
 		}
-		if result != lasm.DummyCommand_Reply_Ok {
+		if result != testhelpers.DummyCommand_Reply_Ok {
 			t.Fatal()
 		}
 		iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
@@ -331,7 +331,7 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		t.Fatal()
 	}
 
-	replyChan := cm.AppendCommandAsync(lasm.DummyCommand{1101, false})
+	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand{1101, false})
 
 	iole, err = cm.passiveConsensusModule.Lasm.GetIndexOfLastEntry()
 	if err != nil {
@@ -368,7 +368,7 @@ func TestConsensusModule_AppendCommandAsync_Follower_StoppedCM(t *testing.T) {
 	cm.StopAsync()
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
-	replyChan := cm.AppendCommandAsync(lasm.DummyCommand{1101, false})
+	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand{1101, false})
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
 	select {

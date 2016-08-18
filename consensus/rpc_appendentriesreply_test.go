@@ -3,7 +3,6 @@ package consensus
 import (
 	"fmt"
 	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/lasm"
 	"github.com/divtxt/raft/testhelpers"
 	"reflect"
 	"testing"
@@ -308,12 +307,12 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// let's make some new log entries
-	result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{11, false})
-	if result != lasm.DummyCommand_Reply_Ok || err != nil {
+	result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{11, false})
+	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
-	result, err = mcm.pcm.AppendCommand(lasm.DummyCommand{12, false})
-	if result != lasm.DummyCommand_Reply_Ok || err != nil {
+	result, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand{12, false})
+	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
 	// we currently do not expect appendCommand() to send AppendEntries

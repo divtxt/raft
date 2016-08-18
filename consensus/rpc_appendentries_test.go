@@ -196,7 +196,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !lasm.DummyCommandEquals(lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 6).Command, 6) {
+		if !testhelpers.DummyCommandEquals(lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 6).Command, 6) {
 			t.Error()
 		}
 
@@ -236,7 +236,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
-		if !lasm.DummyCommandEquals(addedLogEntry.Command, 601) {
+		if !testhelpers.DummyCommandEquals(addedLogEntry.Command, 601) {
 			t.Error()
 		}
 
@@ -293,7 +293,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !lasm.DummyCommandEquals(lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 4).Command, 4) {
+		if !testhelpers.DummyCommandEquals(lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 4).Command, 4) {
 			t.Error()
 		}
 
@@ -332,7 +332,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
-		if !lasm.DummyCommandEquals(addedLogEntry.Command, 601) {
+		if !testhelpers.DummyCommandEquals(addedLogEntry.Command, 601) {
 			t.Error()
 		}
 
