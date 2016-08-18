@@ -5,6 +5,7 @@ import (
 	"github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
 	"github.com/divtxt/raft/lasm"
+	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
@@ -911,7 +912,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	if iole != 11 {
 		t.Fatal()
 	}
-	le := lasm.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 11)
+	le := log.TestHelper_GetLogEntryAtIndex(mcm.pcm.Lasm, 11)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
 	}

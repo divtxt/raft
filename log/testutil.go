@@ -28,3 +28,15 @@ func TestUtil_NewInMemoryLog_WithTerms(
 
 	return inmem_log
 }
+
+// Test Helper
+func TestHelper_GetLogEntryAtIndex(log LogReadOnly, li LogIndex) LogEntry {
+	if li == 0 {
+		panic("oops!")
+	}
+	entries, err := log.GetEntriesAfterIndex(li - 1)
+	if err != nil {
+		panic(err)
+	}
+	return entries[0]
+}

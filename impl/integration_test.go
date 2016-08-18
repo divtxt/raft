@@ -4,6 +4,7 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/lasm"
+	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
@@ -206,7 +207,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	expectedLe := LogEntry{1, Command("c101")}
 
 	// Command is in the leader's log
-	le := lasm.TestHelper_GetLogEntryAtIndex(diml1, 1)
+	le := log.TestHelper_GetLogEntryAtIndex(diml1, 1)
 	if !reflect.DeepEqual(le, expectedLe) {
 		t.Fatal(le)
 	}
@@ -223,7 +224,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	if err != nil || iole != 1 {
 		t.Fatal()
 	}
-	le = lasm.TestHelper_GetLogEntryAtIndex(diml2, 1)
+	le = log.TestHelper_GetLogEntryAtIndex(diml2, 1)
 	if !reflect.DeepEqual(le, expectedLe) {
 		t.Fatal(le)
 	}
@@ -260,7 +261,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	// A tick propagates the command and the commit to the recovered follower
 	time.Sleep(testdata.TickerDuration)
 	// FIXME: err if cm3b.GetLeader() != "s1"
-	le = lasm.TestHelper_GetLogEntryAtIndex(diml3b, 1)
+	le = log.TestHelper_GetLogEntryAtIndex(diml3b, 1)
 	if !reflect.DeepEqual(le, expectedLe) {
 		t.Fatal(le)
 	}
@@ -293,7 +294,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	expectedLe := LogEntry{1, Command("c101")}
 
 	// Command is in the leader's log
-	le := lasm.TestHelper_GetLogEntryAtIndex(diml, 1)
+	le := log.TestHelper_GetLogEntryAtIndex(diml, 1)
 	if !reflect.DeepEqual(le, expectedLe) {
 		t.Fatal(le)
 	}
