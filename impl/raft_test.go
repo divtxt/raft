@@ -4,7 +4,6 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
-	"github.com/divtxt/raft/lasm"
 	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
@@ -28,14 +27,15 @@ func setupConsensusModuleR2(
 	logTerms []TermNo,
 ) (*ConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	imle := lasm.TestUtil_NewLasmiWithDummyCommands(logTerms, testdata.MaxEntriesPerAppendEntry)
+	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	dsm := testhelpers.NewDummyStateMachine()
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo(testdata.AllServerIds, testdata.ThisServerId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, imle, mrs, ci, ts)
+	cm, err := NewConsensusModule(ps, iml, dsm, mrs, ci, ts)
 	if err != nil {
 		t.Fatal(err)
 	}

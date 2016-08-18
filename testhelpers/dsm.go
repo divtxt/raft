@@ -60,6 +60,10 @@ func (dsm *DummyStateMachine) CommitIndexChanged(commitIndex LogIndex) error {
 	return nil
 }
 
+func (dsm *DummyStateMachine) GetCommitIndex() LogIndex {
+	return dsm.commitIndex
+}
+
 // Helper
 func DummyCommandEquals(c Command, n int) bool {
 	cn := Command("c" + strconv.Itoa(n))
