@@ -82,7 +82,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	// but different terms), delete the existing entry and all that
 	// follow it (#5.3)
 	// 4. Append any new entries not already in the log
-	err = cm._lasm.SetEntriesAfterIndex(prevLogIndex, appendEntries.Entries)
+	err = cm.setEntriesAfterIndex(prevLogIndex, appendEntries.Entries)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,6 @@ import (
 	. "github.com/divtxt/raft"
 	config "github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
-	raft_lasm "github.com/divtxt/raft/lasm"
 	util "github.com/divtxt/raft/util"
 	"sync/atomic"
 	"time"
@@ -18,7 +17,8 @@ type PassiveConsensusModule struct {
 	// -- External components
 	RaftPersistentState RaftPersistentState
 	LogRO               LogReadOnly
-	_lasm               raft_lasm.LogAndStateMachine
+	_log                Log
+	_stateMachine       StateMachine
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
@@ -73,13 +73,12 @@ func NewPassiveConsensusModule(
 		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
 
-	lasm := raft_lasm.NewLogAndStateMachineImpl(log, stateMachine)
-
 	pcm := &PassiveConsensusModule{
 		// -- External components
 		raftPersistentState,
-		lasm,
-		lasm,
+		log,
+		log,
+		stateMachine,
 		rpcSendOnly,
 
 		// -- Config
@@ -137,7 +136,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	err := cm._lasm.CommitIndexChanged(commitIndex)
+	err := cm._stateMachine.CommitIndexChanged(commitIndex)
 	if err != nil {
 		return err
 	}
@@ -157,7 +156,7 @@ func (cm *PassiveConsensusModule) AppendCommand(
 		return nil, nil
 	}
 
-	_, result, err := cm._lasm.AppendEntry(cm.RaftPersistentState.GetCurrentTerm(), rawCommand)
+	_, result, err := cm.appendEntry(cm.RaftPersistentState.GetCurrentTerm(), rawCommand)
 	if err != nil {
 		return nil, err
 	}
@@ -373,6 +372,48 @@ func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
 		}
 	}
 	return nil
+}
+
+// Wrapper for the call to Log.SetEntriesAfterIndex()
+func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []LogEntry) error {
+	// Check that we're not trying to rewind past commitIndex
+	if li < cm._commitIndex {
+		return fmt.Errorf("setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
+	}
+	return cm._log.SetEntriesAfterIndex(li, entries)
+}
+
+// Append a new entry with the given term and given raw command.
+//
+// Wrapper around StateMachine.ReviewAppendCommand() and Log.AppendEntry().
+//
+// This method should only be called when this ConsensusModule is the leader.
+//
+// Should return (<appended>, <reply>, nil) where <appended> is a boolean indicating whether or
+// not the command was accepted and appended to the log, and <reply> is an appropriate
+// unserialized reply.
+func (cm *PassiveConsensusModule) appendEntry(
+	termNo TermNo,
+	rawCommand interface{},
+) (bool, interface{}, error) {
+	// Get the command checked and serialized
+	command, reply, err := cm._stateMachine.ReviewAppendCommand(rawCommand)
+	if err != nil {
+		return false, nil, err
+	}
+
+	// If command rejected, return without appending to the log immediately.
+	if command == nil {
+		return false, reply, nil
+	}
+
+	// Append serialized command to the log.
+	err = cm._log.AppendEntry(termNo, command)
+	if err != nil {
+		return false, nil, err
+	}
+
+	return true, reply, nil
 }
 
 // -- rpc bridging things

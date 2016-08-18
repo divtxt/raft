@@ -730,7 +730,7 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
 }
 
-func TestCM_SetCommitIndexNotifiesLog(t *testing.T) {
+func TestCM_SetCommitIndexNotifiesStateMachine(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 
