@@ -567,12 +567,12 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.CheckSentRpcs(t, expectedRpcs)
 
 	// let's make some new log entries
-	result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{11, false})
-	if result != lasm.DummyCommand_Reply_Ok || err != nil {
+	result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{11, false})
+	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal(err)
 	}
-	result, err = mcm.pcm.AppendCommand(lasm.DummyCommand{12, false})
-	if result != lasm.DummyCommand_Reply_Ok || err != nil {
+	result, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand{12, false})
+	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
 
@@ -703,12 +703,12 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
 
 	// let's make some new log entries
-	result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{11, false})
-	if result != lasm.DummyCommand_Reply_Ok || err != nil {
+	result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{11, false})
+	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
-	result, err = mcm.pcm.AppendCommand(lasm.DummyCommand{12, false})
-	if result != lasm.DummyCommand_Reply_Ok || err != nil {
+	result, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand{12, false})
+	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
 
@@ -899,9 +899,9 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{1101, false})
+	result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{1101, false})
 
-	if result != lasm.DummyCommand_Reply_Ok || err != nil {
+	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
 		t.Fatal()
 	}
 	iole, err = mcm.pcm.Lasm.GetIndexOfLastEntry()
@@ -933,7 +933,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		result, err := mcm.pcm.AppendCommand(lasm.DummyCommand{1101, false})
+		result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{1101, false})
 		if err != nil {
 			t.Fatal(err)
 		}

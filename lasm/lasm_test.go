@@ -4,6 +4,7 @@ import (
 	. "github.com/divtxt/raft"
 	raft_lasm "github.com/divtxt/raft/lasm"
 	raft_log "github.com/divtxt/raft/log"
+	"github.com/divtxt/raft/testhelpers"
 	"reflect"
 	"testing"
 )
@@ -11,7 +12,7 @@ import (
 // Run the blackbox test on inMemoryLog
 func TestLogAndStateMachineImpl_A(t *testing.T) {
 	iml := raft_log.TestUtil_NewInMemoryLog_WithFigure7LeaderLine(10)
-	dsm := raft_lasm.NewDummyStateMachine()
+	dsm := testhelpers.NewDummyStateMachine()
 	lasm := raft_lasm.NewLogAndStateMachineImpl(iml, dsm)
 
 	// Initial data tests
@@ -35,7 +36,7 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	if le.TermNo != 6 {
 		t.Fatal(le.TermNo)
 	}
-	if !raft_lasm.DummyCommandEquals(le.Command, 10) {
+	if !testhelpers.DummyCommandEquals(le.Command, 10) {
 		t.Fatal(le.Command)
 	}
 
@@ -85,11 +86,11 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	}
 
 	// append test
-	appended, reply, err := lasm.AppendEntry(8, raft_lasm.DummyCommand{14, false})
+	appended, reply, err := lasm.AppendEntry(8, testhelpers.DummyCommand{14, false})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !appended || reply != raft_lasm.DummyCommand_Reply_Ok {
+	if !appended || reply != testhelpers.DummyCommand_Reply_Ok {
 		t.Fatal(reply)
 	}
 	iole, err = lasm.GetIndexOfLastEntry()
@@ -105,8 +106,8 @@ func TestLogAndStateMachineImpl_A(t *testing.T) {
 	}
 
 	// append test - rejected entry
-	appended, reply, err = lasm.AppendEntry(8, raft_lasm.DummyCommand{15, true})
-	if err != nil || appended || reply != raft_lasm.DummyCommand_Reply_Reject {
+	appended, reply, err = lasm.AppendEntry(8, testhelpers.DummyCommand{15, true})
+	if err != nil || appended || reply != testhelpers.DummyCommand_Reply_Reject {
 		t.Fatal()
 	}
 	iole, err = lasm.GetIndexOfLastEntry()

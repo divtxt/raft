@@ -6,6 +6,7 @@ import (
 	"github.com/divtxt/raft/lasm"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
+	"github.com/divtxt/raft/testhelpers"
 	"reflect"
 	"testing"
 	"time"
@@ -186,13 +187,13 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	cm3 = nil
 
 	// Apply a command on the leader
-	replyChan := cm1.AppendCommandAsync(lasm.DummyCommand{101, false})
+	replyChan := cm1.AppendCommandAsync(testhelpers.DummyCommand{101, false})
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 	select {
 	case result := <-replyChan:
-		if result != lasm.DummyCommand_Reply_Ok {
+		if result != testhelpers.DummyCommand_Reply_Ok {
 			t.Fatal()
 		}
 		if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
@@ -273,13 +274,13 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	defer cm.StopAsync()
 
 	// Apply a command on the leader
-	replyChan := cm.AppendCommandAsync(lasm.DummyCommand{101, false})
+	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand{101, false})
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 	select {
 	case result := <-replyChan:
-		if result != lasm.DummyCommand_Reply_Ok {
+		if result != testhelpers.DummyCommand_Reply_Ok {
 			t.Fatal()
 		}
 		if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {
