@@ -1,2 +1,8 @@
 language: go
 
+install:
+  - go get -u github.com/kisielk/errcheck
+
+script:
+  - go test ./...
+  - errcheck ./...
