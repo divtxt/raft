@@ -162,10 +162,6 @@ func (cm *PassiveConsensusModule) AppendCommand(
 	if err != nil {
 		return nil, err
 	}
-	// FIXME: test coverage for this
-	if result == nil {
-		return nil, errors.New("AppendEntry() returned a nil result")
-	}
 
 	return result, nil
 }
