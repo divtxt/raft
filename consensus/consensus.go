@@ -380,7 +380,7 @@ func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
 func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []LogEntry) error {
 	// Check that we're not trying to rewind past commitIndex
 	if li < cm._commitIndex {
-		return fmt.Errorf("setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
+		return fmt.Errorf("FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
 	}
 	return cm._log.SetEntriesAfterIndex(li, entries)
 }

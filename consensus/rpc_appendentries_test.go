@@ -390,3 +390,35 @@ func TestCM_RpcAE_SameServerId(t *testing.T) {
 	f(testSetupMCM_Candidate_Figure7LeaderLine)
 	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
+
+// Test for append entries that tries to modify earlier than commitIndex
+func TestCM_RpcAE_LessThanCommitIndex(t *testing.T) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
+		mcm, _ := setup(t)
+		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
+		senderTerm := serverTerm
+
+		err := mcm.pcm.setCommitIndex(6)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		appendEntries := &RpcAppendEntries{
+			senderTerm,
+			5,
+			4,
+			[]LogEntry{{5, Command("c601")}, {5, Command("c701")}, {6, Command("c801")}},
+			7,
+		}
+
+		_, err = mcm.Rpc_RpcAppendEntries("s4", appendEntries)
+		if err.Error() != "FATAL: setEntriesAfterIndex(5, ...) but commitIndex=6" {
+			t.Fatal(err)
+		}
+	}
+
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
+}
