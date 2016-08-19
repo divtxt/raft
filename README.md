@@ -22,6 +22,7 @@ Later:
 - [ ] Add metrics & logging
 - [ ] Expose raft details e.g. leader, term
 - [ ] Test for RPCs from senders not in cluster
+- [ ] Review fatal errors to see if they can be non-fatal
 - [ ] Assembling AppendEntries RPC should not block
 - [ ] Add errcheck to Travis build
 - [ ] Add support for snapshotting & InstallSnapshot RPC
