@@ -7,7 +7,8 @@
 // You will have to provide implementations of the following interfaces:
 //
 //  - RaftPersistentState
-//  - LogAndStateMachine
+//  - Log
+//  - StateMachine
 //  - RpcService
 //
 // Notes for implementers of these interfaces:
@@ -234,17 +235,17 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 //
 // This can only be done if the ConsensusModule is in LEADER state.
 //
-// The command is considered to be in unserialized form.  The value is opaque to the
-// ConsensusModule and will be sent as is to LogAndStateMachine.AppendEntry()
+// The command is considered to be in unserialized form and the value is opaque to the
+// ConsensusModule.
+//
+// The unserialized command will be sent to StateMachine.ReviewAppendCommand() for review
+// and serialization. If StateMachine.ReviewAppendCommand() approves the command, the serialized
+// command is appended to the log using Log.AppendEntry().
+//
+// Returns the reply from StateMachine.ReviewAppendCommand() or nil if not currently the leader.
 //
 // This method sends the command to the ConsensusModule's goroutine.
 // The reply will be sent later on the returned channel when the command has been processed.
-// The command will may or may not actually be appended to the log at the discretion of the
-// StateMachine
-//
-// The reply will be the value returned by AppendEntry(), and this value should carry
-//
-// The reply will be nil if this ConsensusModule is not the leader.
 //
 // Here, we intentionally punt on some of the leader details, specifically
 // most of:
