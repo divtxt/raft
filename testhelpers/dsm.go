@@ -48,7 +48,6 @@ func (dsm *DummyStateMachine) ReviewAppendCommand(
 
 func (dsm *DummyStateMachine) CommitIndexChanged(commitIndex LogIndex) error {
 	if commitIndex < dsm.commitIndex {
-		// LogAndStateMachine should prevent this from happening!
 		// Panic instead of returning error here because we expect to never get here in tests.
 		panic(fmt.Sprintf(
 			"DummyStateMachine: CommitIndexChanged(%d) is < current commitIndex=%d",
