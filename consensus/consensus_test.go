@@ -842,6 +842,16 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
 	}
+
+	// Command rejected by ReviewAppendCommand() should not be appended to the log
+	result, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand{1201, true})
+	if result != testhelpers.DummyCommand_Reply_Reject || err != nil {
+		t.Fatal()
+	}
+	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
+	if err != nil || iole != 11 {
+		t.Fatal()
+	}
 }
 
 // #RFS-L2a: If Command received from client: append entry to local log
