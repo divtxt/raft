@@ -94,8 +94,8 @@ type Log interface {
 	// This method will only be called when this ConsensusModule is the leader.
 	//
 	// The raw command will have been approved and serialized by the
-	// StateMachine.ReviewAppendCommand() method.
-	AppendEntry(termNo TermNo, command Command) error
+	// StateMachine.ReviewAppendCommand() method before this method is called.
+	AppendEntry(LogEntry) error
 }
 
 // Read-only subset of the Raft Log.

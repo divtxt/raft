@@ -94,9 +94,7 @@ func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) er
 	return nil
 }
 
-func (iml *InMemoryLog) AppendEntry(termNo TermNo, command Command) error {
-	// FIXME: take one LogEntry param
-	entry := LogEntry{termNo, command}
-	iml.entries = append(iml.entries, entry)
+func (iml *InMemoryLog) AppendEntry(logEntry LogEntry) error {
+	iml.entries = append(iml.entries, logEntry)
 	return nil
 }
