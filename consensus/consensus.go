@@ -406,7 +406,8 @@ func (cm *PassiveConsensusModule) appendEntry(
 	}
 
 	// Append serialized command to the log.
-	err = cm._log.AppendEntry(termNo, command)
+	logEntry := LogEntry{termNo, command}
+	err = cm._log.AppendEntry(logEntry)
 	if err != nil {
 		return false, nil, err
 	}

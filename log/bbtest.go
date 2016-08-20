@@ -87,7 +87,8 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 	}
 
 	// append test
-	err = log.AppendEntry(8, Command("c14"))
+	logEntry := LogEntry{8, Command("c14")}
+	err = log.AppendEntry(logEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
