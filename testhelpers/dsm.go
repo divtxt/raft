@@ -14,36 +14,12 @@ type DummyStateMachine struct {
 }
 
 // Will serialize to Command("cN")
-type DummyCommand struct {
-	N              int
-	RejectMePlease bool
+func DummyCommand(N int) Command {
+	return Command("c" + strconv.Itoa(N))
 }
-
-const (
-	DummyCommand_Reply_Ok     = "We accept your offering!"
-	DummyCommand_Reply_Reject = "This is unacceptable!"
-)
 
 func NewDummyStateMachine() *DummyStateMachine {
 	return &DummyStateMachine{0}
-}
-
-func (dsm *DummyStateMachine) ReviewAppendCommand(
-	rawCommand interface{},
-) (Command, interface{}, error) {
-
-	switch rawCommand := rawCommand.(type) {
-	case DummyCommand:
-		if rawCommand.RejectMePlease {
-			return nil, DummyCommand_Reply_Reject, nil
-		} else {
-			command := Command("c" + strconv.Itoa(rawCommand.N))
-			return command, DummyCommand_Reply_Ok, nil
-		}
-	default:
-		err := fmt.Errorf("oops! rawCommand %#v of unknown type: %T", rawCommand, rawCommand)
-		return nil, nil, err
-	}
 }
 
 func (dsm *DummyStateMachine) CommitIndexChanged(commitIndex LogIndex) error {

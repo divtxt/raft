@@ -191,13 +191,13 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	cm3 = nil
 
 	// Apply a command on the leader
-	replyChan := cm1.AppendCommandAsync(testhelpers.DummyCommand{101, false})
+	replyChan := cm1.AppendCommandAsync(testhelpers.DummyCommand(101))
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 	select {
 	case result := <-replyChan:
-		if result != testhelpers.DummyCommand_Reply_Ok {
+		if result != nil {
 			t.Fatal()
 		}
 		if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
@@ -278,13 +278,13 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	defer cm.StopAsync()
 
 	// Apply a command on the leader
-	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand{101, false})
+	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand(101))
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 	select {
 	case result := <-replyChan:
-		if result != testhelpers.DummyCommand_Reply_Ok {
+		if result != nil {
 			t.Fatal()
 		}
 		if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {

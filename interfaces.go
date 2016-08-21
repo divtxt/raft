@@ -154,33 +154,6 @@ type LogReadOnly interface {
 //
 type StateMachine interface {
 
-	// Review a command and serialize it for entry in the Log.
-	//
-	// This method will only be called when this ConsensusModule is the leader.
-	//
-	// The command is considered to be in unserialized form, and this method is responsible
-	// for reviewing it, and serializing it if approved.
-	//
-	// This method can reject the given command if it cannot be applied given the current
-	// state of the StateMachine and Log, or if the command itself is bad in some way.
-	//
-	// The StateMachine is responsible for ensuring that the command cannot later fail when
-	// the commitIndex advances to the command's log index. This means that the StateMachine
-	// can either look ahead into uncommitted commands to verify this, or it can structure
-	// commands in a such a way that the "applying" the command always succeeds, even if the
-	// operation intended by the command may not.
-	//
-	// To indicate an approval, the command should return (<command>, <reply>, nil).
-	// If the command is approved, the ConsensusModule will call Log.AppendEntry()
-	//
-	// To indicate a rejection, the command should return (nil, <reply>, nil). In this case,
-	// the entry is not appended to the Log.
-	//
-	// In both cases, the <reply> value is returned to the originating
-	// ConsensusModule.AppendCommandAsync() call.
-	//
-	ReviewAppendCommand(rawCommand interface{}) (Command, interface{}, error)
-
 	// Notify the state machine that the commitIndex has changed to the given value.
 	//
 	// commitIndex is the index of highest log entry known to be committed

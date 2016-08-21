@@ -494,12 +494,12 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.CheckSentRpcs(t, expectedRpcs)
 
 	// let's make some new log entries
-	result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{11, false})
-	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil {
 		t.Fatal(err)
 	}
-	result, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand{12, false})
-	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil {
 		t.Fatal()
 	}
 
@@ -630,12 +630,12 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
 
 	// let's make some new log entries
-	result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{11, false})
-	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil {
 		t.Fatal()
 	}
-	result, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand{12, false})
-	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil {
 		t.Fatal()
 	}
 
@@ -826,11 +826,11 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{1101, false})
-
-	if result != testhelpers.DummyCommand_Reply_Ok || err != nil {
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+	if err != nil {
 		t.Fatal()
 	}
+
 	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
@@ -841,16 +841,6 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	le := log.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 11)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
-	}
-
-	// Command rejected by ReviewAppendCommand() should not be appended to the log
-	result, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand{1201, true})
-	if result != testhelpers.DummyCommand_Reply_Reject || err != nil {
-		t.Fatal()
-	}
-	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
-	if err != nil || iole != 11 {
-		t.Fatal()
 	}
 }
 
@@ -870,12 +860,9 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		result, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand{1101, false})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if result != nil {
-			t.Fatal(result)
+		err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+		if err != ErrNotLeader {
+			t.Fatal()
 		}
 
 		iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()

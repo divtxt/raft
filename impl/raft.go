@@ -235,14 +235,9 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 //
 // This can only be done if the ConsensusModule is in LEADER state.
 //
-// The command is considered to be in unserialized form and the value is opaque to the
-// ConsensusModule.
+// The command will be sent to Log.AppendEntry().
 //
-// The unserialized command will be sent to StateMachine.ReviewAppendCommand() for review
-// and serialization. If StateMachine.ReviewAppendCommand() approves the command, the serialized
-// command is appended to the log using Log.AppendEntry().
-//
-// Returns the reply from StateMachine.ReviewAppendCommand() or nil if not currently the leader.
+// Returns ErrNotLeader if not currently the leader.
 //
 // This method sends the command to the ConsensusModule's goroutine.
 // The reply will be sent later on the returned channel when the command has been processed.
@@ -259,17 +254,17 @@ func (cm *ConsensusModule) ProcessRpcRequestVoteAsync(
 //
 // See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) AppendCommandAsync(
-	rawCommand interface{},
-) <-chan interface{} {
-	replyChan := make(chan interface{}, 1)
+	command Command,
+) <-chan error {
+	replyChan := make(chan error, 1)
 	f := func() error {
-		result, err := cm.passiveConsensusModule.AppendCommand(rawCommand)
-		if err != nil {
+		err := cm.passiveConsensusModule.AppendCommand(command)
+		if err != nil && err != ErrNotLeader {
 			return err
 		}
 
 		select {
-		case replyChan <- result:
+		case replyChan <- err:
 		default:
 			// theoretically unreachable as we make a buffered channel of
 			// capacity 1 and this is the one send to it
