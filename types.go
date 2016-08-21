@@ -1,5 +1,9 @@
 package raft
 
+import (
+	"errors"
+)
+
 // Raft server states.
 type ServerState uint32
 
@@ -8,6 +12,8 @@ const (
 	CANDIDATE
 	LEADER
 )
+
+var ErrNotLeader = errors.New("Not currently in LEADER state")
 
 // Raft election term.
 // Initialized to 0 on first boot, increases monotonically.

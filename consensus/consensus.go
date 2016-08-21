@@ -146,24 +146,22 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 // Append the given command as an entry in the log.
 // #RFS-L2a: If command received from client: append entry to local log
 //
-// The unserialized command will be sent to StateMachine.ReviewAppendCommand() for review
-// and serialization. If StateMachine.ReviewAppendCommand() approves the command, the serialized
-// command is appended to the log using Log.AppendEntry().
+// The command will be sent to Log.AppendEntry().
 //
-// Returns the reply from StateMachine.ReviewAppendCommand() or nil if not currently the leader.
-func (cm *PassiveConsensusModule) AppendCommand(
-	rawCommand interface{},
-) (interface{}, error) {
+// Returns ErrNotLeader if not currently the leader.
+func (cm *PassiveConsensusModule) AppendCommand(command Command) error {
 	if cm.GetServerState() != LEADER {
-		return nil, nil
+		return ErrNotLeader
 	}
 
-	_, result, err := cm.appendEntry(cm.RaftPersistentState.GetCurrentTerm(), rawCommand)
+	termNo := cm.RaftPersistentState.GetCurrentTerm()
+	logEntry := LogEntry{termNo, command}
+	err := cm._log.AppendEntry(logEntry)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return result, nil
+	return nil
 }
 
 // Iterate
@@ -379,40 +377,6 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 		return fmt.Errorf("FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
 	}
 	return cm._log.SetEntriesAfterIndex(li, entries)
-}
-
-// Append a new entry with the given term and given raw command.
-//
-// Wrapper around StateMachine.ReviewAppendCommand() and Log.AppendEntry().
-//
-// This method should only be called when this ConsensusModule is the leader.
-//
-// Should return (<appended>, <reply>, nil) where <appended> is a boolean indicating whether or
-// not the command was accepted and appended to the log, and <reply> is an appropriate
-// unserialized reply.
-func (cm *PassiveConsensusModule) appendEntry(
-	termNo TermNo,
-	rawCommand interface{},
-) (bool, interface{}, error) {
-	// Get the command checked and serialized
-	command, reply, err := cm._stateMachine.ReviewAppendCommand(rawCommand)
-	if err != nil {
-		return false, nil, err
-	}
-
-	// If command rejected, return without appending to the log immediately.
-	if command == nil {
-		return false, reply, nil
-	}
-
-	// Append serialized command to the log.
-	logEntry := LogEntry{termNo, command}
-	err = cm._log.AppendEntry(logEntry)
-	if err != nil {
-		return false, nil, err
-	}
-
-	return true, reply, nil
 }
 
 // -- rpc bridging things
