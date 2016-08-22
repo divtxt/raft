@@ -76,11 +76,11 @@ func TestCluster_ElectsLeader(t *testing.T) {
 		return cm
 	}
 	cm1 := setupCMR3("s1")
-	defer cm1.StopAsync()
+	defer cm1.Stop()
 	cm2 := setupCMR3("s2")
-	defer cm2.StopAsync()
+	defer cm2.Stop()
 	cm3 := setupCMR3("s3")
-	defer cm3.StopAsync()
+	defer cm3.Stop()
 	imrsh.cms = map[ServerId]*ConsensusModule{
 		"s1": cm1,
 		"s2": cm2,
@@ -146,9 +146,9 @@ func testSetupClusterWithLeader(
 	time.Sleep(testdata.ElectionTimeoutLow*2 + testdata.SleepJustMoreThanATick)
 
 	if cm1.GetServerState() != 2 || cm2.GetServerState() != 0 || cm3.GetServerState() != 0 {
-		defer cm1.StopAsync()
-		defer cm2.StopAsync()
-		defer cm3.StopAsync()
+		defer cm1.Stop()
+		defer cm2.Stop()
+		defer cm3.Stop()
 		t.Fatal(cm1.GetServerState()*100 + cm2.GetServerState()*10 + cm3.GetServerState())
 	}
 
@@ -173,7 +173,7 @@ func testSetup_SOLO_Leader(
 	time.Sleep(testdata.ElectionTimeoutLow*2 + testdata.SleepJustMoreThanATick)
 
 	if cm.GetServerState() != LEADER {
-		defer cm.StopAsync()
+		defer cm.Stop()
 		t.Fatal()
 	}
 
@@ -182,28 +182,21 @@ func testSetup_SOLO_Leader(
 
 func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	imrsh, cm1, diml1, dsm1, cm2, diml2, dsm2, cm3, _, _ := testSetupClusterWithLeader(t)
-	defer cm1.StopAsync()
-	defer cm2.StopAsync()
+	defer cm1.Stop()
+	defer cm2.Stop()
 
 	// Simulate a follower crash
 	imrsh.cms["s3"] = nil
-	cm3.StopAsync()
+	cm3.Stop()
 	cm3 = nil
 
 	// Apply a command on the leader
-	replyChan := cm1.AppendCommandAsync(testhelpers.DummyCommand(101))
+	result := cm1.AppendCommand(testhelpers.DummyCommand(101))
 
-	// FIXME: sleep just enough!
-	time.Sleep(testdata.SleepToLetGoroutineRun)
-	select {
-	case result := <-replyChan:
-		if result != nil {
-			t.Fatal()
-		}
-		if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
-			t.Fatal()
-		}
-	default:
+	if result != nil {
+		t.Fatal()
+	}
+	if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
 		t.Fatal()
 	}
 
@@ -225,7 +218,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 
 	iole, err = diml2.GetIndexOfLastEntry()
 	if err != nil || iole != 1 {
-		t.Fatal()
+		t.Fatal(iole)
 	}
 	le = log.TestHelper_GetLogEntryAtIndex(diml2, 1)
 	if !reflect.DeepEqual(le, expectedLe) {
@@ -255,7 +248,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 		nil,
 		imrsh.getRpcService("s3"),
 	)
-	defer cm3b.StopAsync()
+	defer cm3b.Stop()
 	imrsh.cms["s3"] = cm3b
 	if dsm3b.GetCommitIndex() != 0 {
 		t.Fatal()
@@ -275,22 +268,18 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 
 func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	cm, diml, dsm := testSetup_SOLO_Leader(t)
-	defer cm.StopAsync()
+	defer cm.Stop()
 
 	// Apply a command on the leader
-	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand(101))
+	result := cm.AppendCommand(testhelpers.DummyCommand(101))
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
-	select {
-	case result := <-replyChan:
-		if result != nil {
-			t.Fatal()
-		}
-		if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {
-			t.Fatal()
-		}
-	default:
+
+	if result != nil {
+		t.Fatal()
+	}
+	if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {
 		t.Fatal()
 	}
 
@@ -333,13 +322,15 @@ func (imrsh *inMemoryRpcServiceHub) getRpcService(
 func (imrs *inMemoryRpcServiceConnector) SendRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
-	replyAsync func(*RpcAppendEntriesReply),
+	processReplyAsync func(*RpcAppendEntriesReply),
 ) error {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
-		replyChan := cm.ProcessRpcAppendEntriesAsync(imrs.from, rpc)
 		go func() {
-			replyAsync(<-replyChan)
+			result := cm.ProcessRpcAppendEntries(imrs.from, rpc)
+			if result != nil {
+				processReplyAsync(result)
+			}
 		}()
 	}
 	return nil
@@ -348,13 +339,15 @@ func (imrs *inMemoryRpcServiceConnector) SendRpcAppendEntriesAsync(
 func (imrs *inMemoryRpcServiceConnector) SendRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
-	replyAsync func(*RpcRequestVoteReply),
+	processReplyAsync func(*RpcRequestVoteReply),
 ) error {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
-		replyChan := cm.ProcessRpcRequestVoteAsync(imrs.from, rpc)
 		go func() {
-			replyAsync(<-replyChan)
+			result := cm.ProcessRpcRequestVote(imrs.from, rpc)
+			if result != nil {
+				processReplyAsync(result)
+			}
 		}()
 	}
 	return nil
