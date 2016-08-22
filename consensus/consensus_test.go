@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"fmt"
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
@@ -73,12 +74,30 @@ func TestCM_InitialState(t *testing.T) {
 	}
 }
 
-func TestCM_SetServerState_BadServerStateReturnsError(t *testing.T) {
+func test_ExpectPanic(t *testing.T, f func(), expectedRecover interface{}) {
+	skipRecover := false
+	defer func() {
+		if !skipRecover {
+			if r := recover(); r != expectedRecover {
+				t.Fatal(fmt.Sprintf("Expected panic: %v; got: %v", expectedRecover, r))
+			}
+		}
+	}()
+
+	f()
+	skipRecover = true
+	t.Fatal(fmt.Sprintf("Expected panic: %v; got nothing!", expectedRecover))
+}
+
+func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
-	err := mcm.pcm.setServerState(42)
-	if err.Error() != "FATAL: unknown ServerState: 42" {
-		t.Fatal(err)
-	}
+	test_ExpectPanic(
+		t,
+		func() {
+			mcm.pcm.setServerState(42)
+		},
+		"FATAL: unknown ServerState: 42",
+	)
 }
 
 // #RFS-F2: If election timeout elapses without receiving
