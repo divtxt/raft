@@ -45,14 +45,6 @@ func setupConsensusModuleR2(
 	return cm, mrs
 }
 
-func (cm *ConsensusModule) stopAsyncWithRecover() (e interface{}) {
-	defer func() {
-		e = recover()
-	}()
-	cm.StopAsync()
-	return nil
-}
-
 func TestConsensusModule_StartStateAndStop(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 
@@ -67,8 +59,7 @@ func TestConsensusModule_StartStateAndStop(t *testing.T) {
 		t.Error()
 	}
 
-	cm.StopAsync()
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	cm.Stop()
 
 	if !cm.IsStopped() {
 		t.Error()
@@ -78,7 +69,7 @@ func TestConsensusModule_StartStateAndStop(t *testing.T) {
 	}
 }
 
-func TestConsensusModule_CallStopAsyncMultipleTimes(t *testing.T) {
+func TestConsensusModule_CallStopMultipleTimes(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 
 	time.Sleep(testdata.SleepJustMoreThanATick)
@@ -86,9 +77,7 @@ func TestConsensusModule_CallStopAsyncMultipleTimes(t *testing.T) {
 		t.Error()
 	}
 
-	cm.StopAsync()
-	cm.StopAsync()
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	cm.Stop()
 
 	if !cm.IsStopped() {
 		t.Error()
@@ -97,84 +86,64 @@ func TestConsensusModule_CallStopAsyncMultipleTimes(t *testing.T) {
 		t.Error()
 	}
 
-	cm.StopAsync()
+	cm.Stop()
 }
 
-func TestConsensusModule_ProcessRpcAppendEntriesAsync(t *testing.T) {
+func TestConsensusModule_ProcessRpcAppendEntries(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
-	defer cm.StopAsync()
+	defer cm.Stop()
 	var serverTerm TermNo = testdata.CurrentTerm
 
-	replyChan := cm.ProcessRpcAppendEntriesAsync("s2", makeAEWithTerm(serverTerm-1))
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	reply := cm.ProcessRpcAppendEntries("s2", makeAEWithTerm(serverTerm-1))
 
-	select {
-	case reply := <-replyChan:
-		expectedRpc := RpcAppendEntriesReply{serverTerm, false}
-		if *reply != expectedRpc {
-			t.Fatal(reply)
-		}
-	default:
-		t.Fatal()
+	expectedRpc := RpcAppendEntriesReply{serverTerm, false}
+	if reply == nil || *reply != expectedRpc {
+		t.Fatal(reply)
 	}
 }
 
-func TestConsensusModule_ProcessRpcAppendEntriesAsync_StoppedCM(t *testing.T) {
+func TestConsensusModule_ProcessRpcAppendEntries_StoppedCM(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
-	cm.StopAsync()
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	cm.Stop()
 
-	replyChan := cm.ProcessRpcAppendEntriesAsync("s2", makeAEWithTerm(testdata.CurrentTerm-1))
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	reply := cm.ProcessRpcAppendEntries("s2", makeAEWithTerm(testdata.CurrentTerm-1))
 
-	select {
-	case <-replyChan:
-		t.Fatal()
-	default:
+	if reply != nil {
+		t.Fatal(reply)
 	}
 }
 
-func TestConsensusModule_ProcessRpcRequestVoteAsync(t *testing.T) {
+func TestConsensusModule_ProcessRpcRequestVote(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
-	defer cm.StopAsync()
+	defer cm.Stop()
 
-	replyChan := cm.ProcessRpcRequestVoteAsync("s2", &RpcRequestVote{testdata.CurrentTerm - 1, 0, 0})
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	reply := cm.ProcessRpcRequestVote("s2", &RpcRequestVote{testdata.CurrentTerm - 1, 0, 0})
 
-	select {
-	case reply := <-replyChan:
-		serverTerm := cm.passiveConsensusModule.RaftPersistentState.GetCurrentTerm()
-		expectedRpc := RpcRequestVoteReply{serverTerm, false}
-		if *reply != expectedRpc {
-			t.Fatal(reply)
-		}
-	default:
-		t.Fatal()
+	serverTerm := cm.passiveConsensusModule.RaftPersistentState.GetCurrentTerm()
+	expectedRpc := RpcRequestVoteReply{serverTerm, false}
+	if reply == nil || *reply != expectedRpc {
+		t.Fatal(reply)
 	}
 }
 
-func TestConsensusModule_ProcessRpcRequestVoteAsync_StoppedCM(t *testing.T) {
+func TestConsensusModule_ProcessRpcRequestVote_StoppedCM(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
-	cm.StopAsync()
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	cm.Stop()
 
-	replyChan := cm.ProcessRpcRequestVoteAsync(
+	reply := cm.ProcessRpcRequestVote(
 		"s2",
 		&RpcRequestVote{testdata.CurrentTerm - 1, 0, 0},
 	)
-	time.Sleep(testdata.SleepToLetGoroutineRun)
 
-	select {
-	case <-replyChan:
-		t.Fatal()
-	default:
+	if reply != nil {
+		t.Fatal(reply)
 	}
 }
 
 // Run through an election cycle to test the rpc reply callbacks!
 func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
 	cm, mrs := setupConsensusModuleR2(t, nil)
-	defer cm.StopAsync()
+	defer cm.Stop()
 
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
 }
@@ -268,9 +237,9 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	}
 }
 
-func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
+func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 	cm, mrs := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
-	defer cm.StopAsync()
+	defer cm.Stop()
 
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
 
@@ -283,45 +252,31 @@ func TestConsensusModule_AppendCommandAsync_Leader(t *testing.T) {
 		t.Fatal()
 	}
 
-	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand(1101))
+	err = cm.AppendCommand(testhelpers.DummyCommand(1101))
+
+	if cm.IsStopped() {
+		t.Error(cm.GetStopError())
+	}
+	if err != nil {
+		t.Fatal()
+	}
 
 	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
-	if iole != 10 {
+	if iole != 11 {
 		t.Fatal()
 	}
-
-	time.Sleep(testdata.SleepToLetGoroutineRun)
-
-	select {
-	case result := <-replyChan:
-		if cm.IsStopped() {
-			t.Error(cm.GetStopError())
-		}
-		if result != nil {
-			t.Fatal()
-		}
-		iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
-		if err != nil {
-			t.Fatal()
-		}
-		if iole != 11 {
-			t.Fatal()
-		}
-		le := log.TestHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.LogRO, 11)
-		if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
-			t.Fatal(le)
-		}
-	default:
-		t.Fatal()
+	le := log.TestHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.LogRO, 11)
+	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
+		t.Fatal(le)
 	}
 }
 
-func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
+func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 	cm, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
-	defer cm.StopAsync()
+	defer cm.Stop()
 
 	// pre check
 	iole, err := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
@@ -332,7 +287,14 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 		t.Fatal()
 	}
 
-	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand(1101))
+	err = cm.AppendCommand(testhelpers.DummyCommand(1101))
+
+	if err != ErrNotLeader {
+		t.Fatal()
+	}
+	if cm.IsStopped() {
+		t.Error(cm.GetStopError())
+	}
 
 	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 	if err != nil {
@@ -341,40 +303,15 @@ func TestConsensusModule_AppendCommandAsync_Follower(t *testing.T) {
 	if iole != 10 {
 		t.Fatal()
 	}
-
-	time.Sleep(testdata.SleepToLetGoroutineRun)
-
-	select {
-	case result := <-replyChan:
-		if cm.IsStopped() {
-			t.Error(cm.GetStopError())
-		}
-		if result != ErrNotLeader {
-			t.Fatal()
-		}
-		iole, err := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
-		if err != nil {
-			t.Fatal()
-		}
-		if iole != 10 {
-			t.Fatal()
-		}
-	default:
-		t.Fatal()
-	}
 }
 
-func TestConsensusModule_AppendCommandAsync_Follower_StoppedCM(t *testing.T) {
+func TestConsensusModule_AppendCommand_Follower_StoppedCM(t *testing.T) {
 	cm, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
-	cm.StopAsync()
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	cm.Stop()
 
-	replyChan := cm.AppendCommandAsync(testhelpers.DummyCommand(1101))
-	time.Sleep(testdata.SleepToLetGoroutineRun)
+	err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
-	select {
-	case <-replyChan:
-		t.Fatal()
-	default:
+	if err != nil {
+		t.Fatal(err)
 	}
 }

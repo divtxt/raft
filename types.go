@@ -13,6 +13,8 @@ const (
 	LEADER
 )
 
+var ErrStopped = errors.New("ConsensusModule is stopped")
+
 var ErrNotLeader = errors.New("Not currently in LEADER state")
 
 // Raft election term.

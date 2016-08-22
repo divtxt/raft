@@ -233,7 +233,7 @@ type RaftPersistentState interface {
 //
 // See Rpc* types (in rpctypes.go) for the various RPC message and reply types.
 //
-// See ConsensusModule's ProcessRpc...Async methods for incoming RPC.
+// See ConsensusModule's ProcessRpc* methods for incoming RPC.
 //
 // Notes for implementers:
 //
@@ -241,13 +241,12 @@ type RaftPersistentState interface {
 //
 // - No guarantee of RPC success is expected.
 //
-// - A bad server id or unknown rpc type should be treated as an error.
+// - A bad server id or unknown rpc type should be treated as an immediate error.
 //
-// - If the RPC succeeds, the reply rpc should be sent to the replyAsync()
+// - If the RPC succeeds, the reply rpc should be sent to the processReplyAsync()
 // function parameter.
 //
-// - replyAsync() will process the reply asynchronously. It sends the rpc
-// reply to the ConsensusModule's goroutine and returns immediately.
+// - processReplyAsync() is expected to process the reply asynchronously.
 //
 // - If the RPC fails, there is no need to do anything.
 //
@@ -268,7 +267,7 @@ type RpcService interface {
 	SendRpcAppendEntriesAsync(
 		toServer ServerId,
 		rpc *RpcAppendEntries,
-		replyAsync func(*RpcAppendEntriesReply),
+		processReplyAsync func(*RpcAppendEntriesReply),
 	) error
 
 	// Send the given RpcRequestVote message to the given server
@@ -276,6 +275,6 @@ type RpcService interface {
 	SendRpcRequestVoteAsync(
 		toServer ServerId,
 		rpc *RpcRequestVote,
-		replyAsync func(*RpcRequestVoteReply),
+		processReplyAsync func(*RpcRequestVoteReply),
 	) error
 }

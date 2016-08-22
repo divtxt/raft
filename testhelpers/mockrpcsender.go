@@ -14,8 +14,8 @@ import (
 // Mock in-memory implementation of both RpcService & RpcSendOnly
 // - meant only for tests
 type MockRpcSender struct {
-	c           chan MockSentRpc
-	replyAsyncs chan func(interface{})
+	c                  chan MockSentRpc
+	processReplyAsyncs chan func(interface{})
 }
 
 type MockSentRpc struct {
@@ -47,17 +47,17 @@ func (mrs *MockRpcSender) SendOnlyRpcRequestVoteAsync(
 func (mrs *MockRpcSender) SendRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
-	replyAsync func(*RpcAppendEntriesReply),
+	processReplyAsync func(*RpcAppendEntriesReply),
 ) error {
 	select {
 	default:
 		return errors.New("oops!")
 	case mrs.c <- MockSentRpc{toServer, rpc}:
-		if replyAsync != nil {
-			mrs.replyAsyncs <- func(rpcReply interface{}) {
+		if processReplyAsync != nil {
+			mrs.processReplyAsyncs <- func(rpcReply interface{}) {
 				switch rpcReply := rpcReply.(type) {
 				case *RpcAppendEntriesReply:
-					replyAsync(rpcReply)
+					processReplyAsync(rpcReply)
 				default:
 					panic("oops!")
 				}
@@ -70,17 +70,17 @@ func (mrs *MockRpcSender) SendRpcAppendEntriesAsync(
 func (mrs *MockRpcSender) SendRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
-	replyAsync func(*RpcRequestVoteReply),
+	processReplyAsync func(*RpcRequestVoteReply),
 ) error {
 	select {
 	default:
 		return errors.New("oops!")
 	case mrs.c <- MockSentRpc{toServer, rpc}:
-		if replyAsync != nil {
-			mrs.replyAsyncs <- func(rpcReply interface{}) {
+		if processReplyAsync != nil {
+			mrs.processReplyAsyncs <- func(rpcReply interface{}) {
 				switch rpcReply := rpcReply.(type) {
 				case *RpcRequestVoteReply:
-					replyAsync(rpcReply)
+					processReplyAsync(rpcReply)
 				default:
 					panic("oops!")
 				}
@@ -151,8 +151,8 @@ func (mrs *MockRpcSender) SendReplies(reply interface{}) int {
 loop:
 	for {
 		select {
-		case replyAsync := <-mrs.replyAsyncs:
-			replyAsync(reply)
+		case processReplyAsync := <-mrs.processReplyAsyncs:
+			processReplyAsync(reply)
 			n++
 		default:
 			break loop

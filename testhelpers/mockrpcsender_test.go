@@ -10,14 +10,14 @@ func TestMockRpcSender(t *testing.T) {
 	mrs := NewMockRpcSender()
 
 	var actualReply *RpcAppendEntriesReply = nil
-	var replyAsync func(*RpcAppendEntriesReply) = func(rpcReply *RpcAppendEntriesReply) {
+	var processReplyAsync func(*RpcAppendEntriesReply) = func(rpcReply *RpcAppendEntriesReply) {
 		actualReply = rpcReply
 	}
 
 	err = mrs.SendRpcAppendEntriesAsync(
 		"s2",
 		&RpcAppendEntries{101, 8080, 100, nil, 8000},
-		replyAsync,
+		processReplyAsync,
 	)
 	if err != nil {
 		t.Fatal(err)
