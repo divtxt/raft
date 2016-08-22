@@ -22,7 +22,7 @@ func NewDummyStateMachine() *DummyStateMachine {
 	return &DummyStateMachine{0}
 }
 
-func (dsm *DummyStateMachine) CommitIndexChanged(commitIndex LogIndex) error {
+func (dsm *DummyStateMachine) CommitIndexChanged(commitIndex LogIndex) {
 	if commitIndex < dsm.commitIndex {
 		// Panic instead of returning error here because we expect to never get here in tests.
 		panic(fmt.Sprintf(
@@ -32,7 +32,6 @@ func (dsm *DummyStateMachine) CommitIndexChanged(commitIndex LogIndex) error {
 		))
 	}
 	dsm.commitIndex = commitIndex
-	return nil
 }
 
 func (dsm *DummyStateMachine) GetCommitIndex() LogIndex {

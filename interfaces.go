@@ -114,8 +114,7 @@ type LogReadOnly interface {
 //
 // You must implement this interface!
 //
-// Your service must expose the command part of the state machine through this interface to the
-// ConsensusModule. The state machine's query functionality is not exposed here.
+// This interface lets the state machine listen for changes from the ConsensusModule.
 //
 // Raft describes two state parameters - commitIndex and lastApplied -
 // that are used to track which log entries are committed to the log and the
@@ -128,7 +127,7 @@ type LogReadOnly interface {
 //
 // We take advantage of this by having the implementer of this interface own
 // the lastApplied value and the above responsibility of driving state machine
-// commits. To achieve this we have this interface also be a listener for the
+// commits. To achieve this we have this interface be a listener for the
 // value of commitIndex.
 //
 // With this tweak, the implementation of lastApplied is no longer a concern
@@ -175,8 +174,7 @@ type StateMachine interface {
 	//
 	// It is an error if the value is beyond the end of the log.
 	// (i.e. the given index is greater than indexOfLastEntry)
-	//
-	CommitIndexChanged(LogIndex) error
+	CommitIndexChanged(LogIndex)
 }
 
 // Raft persistent state on all servers.

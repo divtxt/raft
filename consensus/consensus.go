@@ -136,10 +136,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	err := cm._stateMachine.CommitIndexChanged(commitIndex)
-	if err != nil {
-		return err
-	}
+	cm._stateMachine.CommitIndexChanged(commitIndex)
 	return nil
 }
 
