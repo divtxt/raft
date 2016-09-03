@@ -243,37 +243,42 @@ func (cm *ConsensusModule) AppendCommand(command Command) error {
 // -- protected methods
 
 // Implement RpcSendOnly.SendOnlyRpcAppendEntriesAsync to bridge to
-// RpcService.SendRpcAppendEntriesAsync() with a closure callback.
+// RpcService.RpcAppendEntries() with a closure callback.
 func (cm *ConsensusModule) SendOnlyRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
 ) error {
-	processReplyAsync := func(rpcReply *RpcAppendEntriesReply) {
-		// Process the given RPC reply message from the given peer
-		// asynchronously.
-		f := func() error {
-			return cm.passiveConsensusModule.RpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
+	rpcAndCallback := func() {
+		// Make the RPC call
+		rpcReply := cm.rpcService.RpcAppendEntries(toServer, rpc)
+
+		// If successful, send it back to the ConsensusModule
+		if rpcReply != nil {
+			cm.passiveConsensusModule.RpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
 		}
-		go cm.safeRunWithErrCheck(f)
+		// go cm.safeRunWithErrCheck(f)
 	}
-	return cm.rpcService.SendRpcAppendEntriesAsync(toServer, rpc, processReplyAsync)
+	go rpcAndCallback()
+	return nil
 }
 
 // Implement RpcSendOnly.SendOnlyRpcRequestVoteAsync to bridge to
-// RpcService.SendRpcRequestVoteAsync() with a closure callback.
+// RpcService.RpcRequestVote() with a closure callback.
 func (cm *ConsensusModule) SendOnlyRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
 ) error {
-	processReplyAsync := func(rpcReply *RpcRequestVoteReply) {
-		// Process the given RPC reply message from the given peer
-		// asynchronously.
-		f := func() error {
-			return cm.passiveConsensusModule.RpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
+	rpcAndCallback := func() {
+		// Make the RPC call
+		rpcReply := cm.rpcService.RpcRequestVote(toServer, rpc)
+
+		// If successful, send it back to the ConsensusModule
+		if rpcReply != nil {
+			cm.passiveConsensusModule.RpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
 		}
-		go cm.safeRunWithErrCheck(f)
 	}
-	return cm.rpcService.SendRpcRequestVoteAsync(toServer, rpc, processReplyAsync)
+	go rpcAndCallback()
+	return nil
 }
 
 func (cm *ConsensusModule) runTicks() {
@@ -301,16 +306,6 @@ func (cm *ConsensusModule) safeTick() {
 	// Get a fresh now since we could have been waiting
 	now := time.Now()
 	cm.passiveConsensusModule.Tick(now)
-}
-
-func (cm *ConsensusModule) safeRunWithErrCheck(f func() error) {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
-
-	err := f()
-	if err != nil {
-		cm.shutdown(err)
-	}
 }
 
 func (cm *ConsensusModule) shutdown(err error) {

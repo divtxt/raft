@@ -319,36 +319,24 @@ func (imrsh *inMemoryRpcServiceHub) getRpcService(
 	return &inMemoryRpcServiceConnector{imrsh, from}
 }
 
-func (imrs *inMemoryRpcServiceConnector) SendRpcAppendEntriesAsync(
+func (imrs *inMemoryRpcServiceConnector) RpcAppendEntries(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
-	processReplyAsync func(*RpcAppendEntriesReply),
-) error {
+) *RpcAppendEntriesReply {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
-		go func() {
-			result := cm.ProcessRpcAppendEntries(imrs.from, rpc)
-			if result != nil {
-				processReplyAsync(result)
-			}
-		}()
+		return cm.ProcessRpcAppendEntries(imrs.from, rpc)
 	}
 	return nil
 }
 
-func (imrs *inMemoryRpcServiceConnector) SendRpcRequestVoteAsync(
+func (imrs *inMemoryRpcServiceConnector) RpcRequestVote(
 	toServer ServerId,
 	rpc *RpcRequestVote,
-	processReplyAsync func(*RpcRequestVoteReply),
-) error {
+) *RpcRequestVoteReply {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
-		go func() {
-			result := cm.ProcessRpcRequestVote(imrs.from, rpc)
-			if result != nil {
-				processReplyAsync(result)
-			}
-		}()
+		return cm.ProcessRpcRequestVote(imrs.from, rpc)
 	}
 	return nil
 }

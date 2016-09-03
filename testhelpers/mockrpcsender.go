@@ -1,7 +1,6 @@
 package testhelpers
 
 import (
-	"errors"
 	"fmt"
 	. "github.com/divtxt/raft"
 	"reflect"
@@ -14,8 +13,9 @@ import (
 // Mock in-memory implementation of both RpcService & RpcSendOnly
 // - meant only for tests
 type MockRpcSender struct {
-	c                  chan MockSentRpc
-	processReplyAsyncs chan func(interface{})
+	sentRpcs         []MockSentRpc
+	sendAEReplyFuncs []func(*RpcAppendEntriesReply)
+	sendRVReplyFuncs []func(*RpcRequestVoteReply)
 }
 
 type MockSentRpc struct {
@@ -24,100 +24,65 @@ type MockSentRpc struct {
 }
 
 func NewMockRpcSender() *MockRpcSender {
-	return &MockRpcSender{
-		make(chan MockSentRpc, 100),
-		make(chan func(interface{}), 100),
-	}
+	return &MockRpcSender{nil, nil, nil}
 }
 
 func (mrs *MockRpcSender) SendOnlyRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
 ) error {
-	return mrs.SendRpcAppendEntriesAsync(toServer, rpc, nil)
+	mrs.sentRpcs = append(mrs.sentRpcs, MockSentRpc{toServer, rpc})
+	return nil
 }
 
 func (mrs *MockRpcSender) SendOnlyRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
 ) error {
-	return mrs.SendRpcRequestVoteAsync(toServer, rpc, nil)
+	mrs.sentRpcs = append(mrs.sentRpcs, MockSentRpc{toServer, rpc})
+	return nil
 }
 
-func (mrs *MockRpcSender) SendRpcAppendEntriesAsync(
+func (mrs *MockRpcSender) RpcAppendEntries(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
-	processReplyAsync func(*RpcAppendEntriesReply),
-) error {
-	select {
-	default:
-		return errors.New("oops!")
-	case mrs.c <- MockSentRpc{toServer, rpc}:
-		if processReplyAsync != nil {
-			mrs.processReplyAsyncs <- func(rpcReply interface{}) {
-				switch rpcReply := rpcReply.(type) {
-				case *RpcAppendEntriesReply:
-					processReplyAsync(rpcReply)
-				default:
-					panic("oops!")
-				}
-			}
-		}
-	}
-	return nil
+) *RpcAppendEntriesReply {
+	replyChan := make(chan *RpcAppendEntriesReply)
+
+	mrs.sentRpcs = append(mrs.sentRpcs, MockSentRpc{toServer, rpc})
+	mrs.sendAEReplyFuncs = append(mrs.sendAEReplyFuncs, func(reply *RpcAppendEntriesReply) {
+		replyChan <- reply
+	})
+
+	return <-replyChan
 }
 
-func (mrs *MockRpcSender) SendRpcRequestVoteAsync(
+func (mrs *MockRpcSender) RpcRequestVote(
 	toServer ServerId,
 	rpc *RpcRequestVote,
-	processReplyAsync func(*RpcRequestVoteReply),
-) error {
-	select {
-	default:
-		return errors.New("oops!")
-	case mrs.c <- MockSentRpc{toServer, rpc}:
-		if processReplyAsync != nil {
-			mrs.processReplyAsyncs <- func(rpcReply interface{}) {
-				switch rpcReply := rpcReply.(type) {
-				case *RpcRequestVoteReply:
-					processReplyAsync(rpcReply)
-				default:
-					panic("oops!")
-				}
-			}
-		}
-	}
-	return nil
+) *RpcRequestVoteReply {
+	replyChan := make(chan *RpcRequestVoteReply)
+
+	mrs.sentRpcs = append(mrs.sentRpcs, MockSentRpc{toServer, rpc})
+	mrs.sendRVReplyFuncs = append(mrs.sendRVReplyFuncs, func(reply *RpcRequestVoteReply) {
+		replyChan <- reply
+	})
+
+	return <-replyChan
 }
 
 // Clear sent rpcs.
 func (mrs *MockRpcSender) ClearSentRpcs() {
-loop:
-	for {
-		select {
-		case <-mrs.c:
-		default:
-			break loop
-		}
-	}
+	mrs.sentRpcs = nil
+	mrs.sendAEReplyFuncs = nil
+	mrs.sendRVReplyFuncs = nil
 }
 
 // Clears & checks sent rpcs.
 // expectedRpcs should be sorted by server
 func (mrs *MockRpcSender) CheckSentRpcs(t *testing.T, expectedRpcs []MockSentRpc) {
-	rpcs := make([]MockSentRpc, 0, 100)
-
-loop:
-	for {
-		select {
-		case v := <-mrs.c:
-			n := len(rpcs)
-			rpcs = rpcs[0 : n+1]
-			rpcs[n] = v
-		default:
-			break loop
-		}
-	}
+	rpcs := mrs.sentRpcs
+	mrs.sentRpcs = nil
 
 	sort.Sort(MockRpcSenderSlice(rpcs))
 
@@ -146,19 +111,26 @@ loop:
 }
 
 // Clears & sends reply to sent reply functions
-func (mrs *MockRpcSender) SendReplies(reply interface{}) int {
-	var n int = 0
-loop:
-	for {
-		select {
-		case processReplyAsync := <-mrs.processReplyAsyncs:
-			processReplyAsync(reply)
-			n++
-		default:
-			break loop
-		}
+func (mrs *MockRpcSender) SendAEReplies(reply *RpcAppendEntriesReply) int {
+	replyFuncs := mrs.sendAEReplyFuncs
+	mrs.sendAEReplyFuncs = nil
+
+	for _, f := range replyFuncs {
+		f(reply)
 	}
-	return n
+
+	return len(replyFuncs)
+}
+
+func (mrs *MockRpcSender) SendRVReplies(reply *RpcRequestVoteReply) int {
+	replyFuncs := mrs.sendRVReplyFuncs
+	mrs.sendRVReplyFuncs = nil
+
+	for _, f := range replyFuncs {
+		f(reply)
+	}
+
+	return len(replyFuncs)
 }
 
 // implement sort.Interface for MockSentRpc slices

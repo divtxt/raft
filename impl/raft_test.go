@@ -185,7 +185,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 
 	// reply true for all votes
 	serverTerm := cm.passiveConsensusModule.RaftPersistentState.GetCurrentTerm()
-	if mrs.SendReplies(&RpcRequestVoteReply{serverTerm, true}) != 4 {
+	if mrs.SendRVReplies(&RpcRequestVoteReply{serverTerm, true}) != 4 {
 		t.Fatal()
 	}
 
@@ -221,7 +221,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 		t.Fatal()
 	}
 
-	if mrs.SendReplies(&RpcAppendEntriesReply{serverTerm, true}) != 4 {
+	if mrs.SendAEReplies(&RpcAppendEntriesReply{serverTerm, true}) != 4 {
 		t.Fatal()
 	}
 	time.Sleep(testdata.SleepToLetGoroutineRun)
