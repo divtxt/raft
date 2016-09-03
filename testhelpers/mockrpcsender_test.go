@@ -2,34 +2,31 @@ package testhelpers
 
 import (
 	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/testdata"
 	"testing"
+	"time"
 )
 
 func TestMockRpcSender(t *testing.T) {
-	var err error
 	mrs := NewMockRpcSender()
 
 	var actualReply *RpcAppendEntriesReply = nil
-	var processReplyAsync func(*RpcAppendEntriesReply) = func(rpcReply *RpcAppendEntriesReply) {
-		actualReply = rpcReply
-	}
 
-	err = mrs.SendRpcAppendEntriesAsync(
-		"s2",
-		&RpcAppendEntries{101, 8080, 100, nil, 8000},
-		processReplyAsync,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = mrs.SendRpcRequestVoteAsync(
-		"s1",
-		&RpcRequestVote{102, 8008, 100},
-		nil,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	go func() {
+		actualReply = mrs.RpcAppendEntries(
+			"s2",
+			&RpcAppendEntries{101, 8080, 100, nil, 8000},
+		)
+	}()
+
+	go func() {
+		mrs.RpcRequestVote(
+			"s1",
+			&RpcRequestVote{102, 8008, 100},
+		)
+	}()
+
+	time.Sleep(testdata.SleepToLetGoroutineRun)
 
 	expected := []MockSentRpc{
 		{"s1", &RpcRequestVote{102, 8008, 100}},
@@ -42,9 +39,12 @@ func TestMockRpcSender(t *testing.T) {
 	}
 
 	sentReply := &RpcAppendEntriesReply{102, false}
-	if mrs.SendReplies(sentReply) != 1 {
+	if mrs.SendAEReplies(sentReply) != 1 {
 		t.Error()
 	}
+
+	time.Sleep(testdata.SleepToLetGoroutineRun)
+
 	expectedReply := RpcAppendEntriesReply{102, false}
 	if actualReply == nil || *actualReply != expectedReply {
 		t.Fatal(actualReply)

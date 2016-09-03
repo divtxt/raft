@@ -225,7 +225,7 @@ type RaftPersistentState interface {
 	SetVotedFor(votedFor ServerId) error
 }
 
-// Asynchronous RPC service.
+// RPC service.
 //
 // You must implement this interface!
 //
@@ -237,44 +237,30 @@ type RaftPersistentState interface {
 //
 // Notes for implementers:
 //
-// - The methods should return immediately.
+// - The methods are expected to be synchronous, and may block until the result is available.
+// The ConsensusModule will make each call to this interface from a separate goroutine to avoid
+// blocking itself.
 //
-// - No guarantee of RPC success is expected.
+// - Methods can expect server id to be valid & rpc parameter to be non-null. (and panic if not)
 //
-// - A bad server id or unknown rpc type should be treated as an immediate error.
+// - No guarantee of RPC success is expected. Methods should return nil if they decide not to make
+// an RPC call, or if there are any I/O errors or timeouts.
 //
-// - If the RPC succeeds, the reply rpc should be sent to the processReplyAsync()
-// function parameter.
+// - The ConsensusModule will send multiple concurrent RPCs to different servers, and this is
+// expected to work.
 //
-// - processReplyAsync() is expected to process the reply asynchronously.
+// - The ConsensusModule may also send multiple concurrent RPCs to a specific server, but the
+// implementation needs to only make one RPC call at a time to a given server. It is recommended
+// that the implementation try to avoid actually making multiple concurrent calls to a given
+// server. The implementation can choose how to handle this case e.g. if there is an RPC call in
+// flight then return nil any concurrent call to the same server.
 //
-// - If the RPC fails, there is no need to do anything.
-//
-// - The ConsensusModule only expects to send one RPC to a given server.
-// Since RPC failure is not reported to ConsensusModule, implementations can
-// choose how to handle extra RPCs to a server for which they already have an
-// RPC in flight i.e. cancel the first message and/or drop the second.
-//
-// - It is expected that multiple RPC messages will be sent independently to
-// different servers.
-//
-// - The RPC is time-sensitive and expected to be immediate. If any queueing
-// or retrying is implemented, it should be very limited in time and queue
-// size.
+// - The RPC is time-sensitive and expected to be immediate. If any queueing or retrying is
+// implemented, it should be very limited in time and queue size.
 type RpcService interface {
-	// Send the given RpcAppendEntries message to the given server
-	// asynchronously.
-	SendRpcAppendEntriesAsync(
-		toServer ServerId,
-		rpc *RpcAppendEntries,
-		processReplyAsync func(*RpcAppendEntriesReply),
-	) error
+	// Send the given RpcAppendEntries message to the given server and get the reply.
+	RpcAppendEntries(toServer ServerId, rpc *RpcAppendEntries) *RpcAppendEntriesReply
 
-	// Send the given RpcRequestVote message to the given server
-	// asynchronously.
-	SendRpcRequestVoteAsync(
-		toServer ServerId,
-		rpc *RpcRequestVote,
-		processReplyAsync func(*RpcRequestVoteReply),
-	) error
+	// Send the given RpcRequestVote message to the given server and get the reply.
+	RpcRequestVote(toServer ServerId, rpc *RpcRequestVote) *RpcRequestVoteReply
 }
