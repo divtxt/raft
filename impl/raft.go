@@ -254,9 +254,10 @@ func (cm *ConsensusModule) SendOnlyRpcAppendEntriesAsync(
 
 		// If successful, send it back to the ConsensusModule
 		if rpcReply != nil {
+			cm.mutex.Lock()
+			defer cm.mutex.Unlock()
 			cm.passiveConsensusModule.RpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
 		}
-		// go cm.safeRunWithErrCheck(f)
 	}
 	go rpcAndCallback()
 	return nil
@@ -274,6 +275,8 @@ func (cm *ConsensusModule) SendOnlyRpcRequestVoteAsync(
 
 		// If successful, send it back to the ConsensusModule
 		if rpcReply != nil {
+			cm.mutex.Lock()
+			defer cm.mutex.Unlock()
 			cm.passiveConsensusModule.RpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
 		}
 	}
