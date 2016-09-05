@@ -182,15 +182,16 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 		t.Fatal(err)
 	}
 	expectedRpc := &RpcRequestVote{expectedNewTerm, lastLogIndex, lastLogTerm}
-	expectedRpcs := make([]testhelpers.MockSentRpc, 0, 4)
+	expectedRpcs := map[ServerId]interface{}{}
 	err = mcm.pcm.ClusterInfo.ForEachPeer(func(serverId ServerId) error {
-		expectedRpcs = append(expectedRpcs, testhelpers.MockSentRpc{serverId, expectedRpc})
+		expectedRpcs[serverId] = expectedRpc
 		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 }
 
 func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
@@ -247,7 +248,8 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 	}
 
 	// no RPCs issued
-	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+	mrs.CheckSentRpcs(t, make(map[ServerId]interface{}))
+	mrs.ClearSentRpcs()
 }
 
 func TestCM_Follower_StartsElectionOnElectionTimeout_EmptyLog(t *testing.T) {
@@ -269,7 +271,8 @@ func TestCM_Leader_SendEmptyAppendEntriesDuringIdlePeriods(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+	mrs.CheckSentRpcs(t, make(map[ServerId]interface{}))
+	mrs.ClearSentRpcs()
 
 	err = mcm.Tick()
 	if err != nil {
@@ -332,13 +335,14 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 		},
 		5,
 	}
-	expectedRpcs := []testhelpers.MockSentRpc{
-		{"s2", expectedRpcS2},
-		{"s3", expectedRpcEmpty},
-		{"s4", expectedRpcEmpty},
-		{"s5", expectedRpcS5},
+	expectedRpcs := map[ServerId]interface{}{
+		"s2": expectedRpcS2,
+		"s3": expectedRpcEmpty,
+		"s4": expectedRpcEmpty,
+		"s5": expectedRpcS5,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 }
 
 func TestCM_sendAppendEntriesToPeer(t *testing.T) {
@@ -367,10 +371,11 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		[]LogEntry{},
 		4,
 	}
-	expectedRpcs := []testhelpers.MockSentRpc{
-		{"s2", expectedRpc},
+	expectedRpcs := map[ServerId]interface{}{
+		"s2": expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 
 	// empty send
 	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex("s2")
@@ -388,10 +393,11 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		[]LogEntry{},
 		4,
 	}
-	expectedRpcs = []testhelpers.MockSentRpc{
-		{"s2", expectedRpc},
+	expectedRpcs = map[ServerId]interface{}{
+		"s2": expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 
 	// send one
 	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
@@ -407,10 +413,11 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		},
 		4,
 	}
-	expectedRpcs = []testhelpers.MockSentRpc{
-		{"s2", expectedRpc},
+	expectedRpcs = map[ServerId]interface{}{
+		"s2": expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 
 	// send multiple
 	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex("s2")
@@ -436,10 +443,11 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		},
 		4,
 	}
-	expectedRpcs = []testhelpers.MockSentRpc{
-		{"s2", expectedRpc},
+	expectedRpcs = map[ServerId]interface{}{
+		"s2": expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 }
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
@@ -457,8 +465,9 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
-	expectedRpcs := []testhelpers.MockSentRpc{}
+	expectedRpcs := map[ServerId]interface{}{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 
 	// match peers for cases (a), (b), (c) & (d)
 	err := mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s2", 9)
@@ -486,31 +495,20 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
-	expectedRpcs = []testhelpers.MockSentRpc{
-		{
-			"s2",
-			&RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
-				{6, Command("c10")},
-			}, 0},
-		},
-		{
-			"s3",
-			&RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
-				{4, Command("c5")},
-				{5, Command("c6")},
-				{5, Command("c7")},
-			}, 0},
-		},
-		{
-			"s4",
-			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
-		},
-		{
-			"s5",
-			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
-		},
+	expectedRpcs = map[ServerId]interface{}{
+		"s2": &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
+			{6, Command("c10")},
+		}, 0},
+		"s3": &RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
+			{4, Command("c5")},
+			{5, Command("c6")},
+			{5, Command("c7")},
+		}, 0},
+		"s4": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
+		"s5": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
 	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
@@ -530,39 +528,28 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
-	expectedRpcs = []testhelpers.MockSentRpc{
-		{
-			"s2",
-			&RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
-				{6, Command("c10")},
-				{8, Command("c11")},
-				{8, Command("c12")},
-			}, 0},
-		},
-		{
-			"s3",
-			&RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
-				{4, Command("c5")},
-				{5, Command("c6")},
-				{5, Command("c7")},
-			}, 0},
-		},
-		{
-			"s4",
-			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
-				{8, Command("c11")},
-				{8, Command("c12")},
-			}, 0},
-		},
-		{
-			"s5",
-			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
-				{8, Command("c11")},
-				{8, Command("c12")},
-			}, 0},
-		},
+	expectedRpcs = map[ServerId]interface{}{
+		"s2": &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
+			{6, Command("c10")},
+			{8, Command("c11")},
+			{8, Command("c12")},
+		}, 0},
+		"s3": &RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
+			{4, Command("c5")},
+			{5, Command("c6")},
+			{5, Command("c7")},
+		}, 0},
+		"s4": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+			{8, Command("c11")},
+			{8, Command("c12")},
+		}, 0},
+		"s5": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+			{8, Command("c11")},
+			{8, Command("c12")},
+		}, 0},
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 
 	// 2 peers - for cases (a) & (b) - catch up
 	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s2", 11)
@@ -582,35 +569,24 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 11 {
 		t.Fatal()
 	}
-	expectedRpcs = []testhelpers.MockSentRpc{
-		{
-			"s2",
-			&RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
-				{8, Command("c12")},
-			}, 11},
-		},
-		{
-			"s3",
-			&RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
-				{8, Command("c12")},
-			}, 11},
-		},
-		{
-			"s4",
-			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
-				{8, Command("c11")},
-				{8, Command("c12")},
-			}, 11},
-		},
-		{
-			"s5",
-			&RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
-				{8, Command("c11")},
-				{8, Command("c12")},
-			}, 11},
-		},
+	expectedRpcs = map[ServerId]interface{}{
+		"s2": &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
+			{8, Command("c12")},
+		}, 11},
+		"s3": &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
+			{8, Command("c12")},
+		}, 11},
+		"s4": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+			{8, Command("c11")},
+			{8, Command("c12")},
+		}, 11},
+		"s5": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+			{8, Command("c11")},
+			{8, Command("c12")},
+		}, 11},
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 
 	// replies never came back -> tick cannot advance commitIndex
 	err = mcm.Tick()
@@ -621,6 +597,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		t.Fatal(mcm.pcm.GetCommitIndex())
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
 }
 
 func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
@@ -636,7 +613,8 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
-	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
+	mrs.ClearSentRpcs()
 
 	// tick should try to advance commitIndex but nothing should happen
 	err = mcm.Tick()
@@ -646,7 +624,8 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
-	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
+	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
 	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
@@ -671,7 +650,8 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 12 {
 		t.Fatal(mcm.pcm.GetCommitIndex())
 	}
-	mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
+	mrs.ClearSentRpcs()
 }
 
 func TestCM_SetCommitIndexNotifiesStateMachine(t *testing.T) {

@@ -175,18 +175,18 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 		t.Fatal(err)
 	}
 	expectedRpc := &RpcRequestVote{testdata.CurrentTerm + 1, lastLogIndex, lastLogTerm}
-	expectedRpcs := []testhelpers.MockSentRpc{
-		{"s2", expectedRpc},
-		{"s3", expectedRpc},
-		{"s4", expectedRpc},
-		{"s5", expectedRpc},
+	expectedRpcs := map[ServerId]interface{}{
+		"s2": expectedRpc,
+		"s3": expectedRpc,
+		"s4": expectedRpc,
+		"s5": expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 
 	// reply true for all votes
 	serverTerm := cm.passiveConsensusModule.RaftPersistentState.GetCurrentTerm()
-	if mrs.SendRVReplies(&RpcRequestVoteReply{serverTerm, true}) != 4 {
-		t.Fatal()
+	if n := mrs.SendRVRepliesAndClearRpcs(&RpcRequestVoteReply{serverTerm, true}); n != 4 {
+		t.Fatal(n)
 	}
 
 	time.Sleep(testdata.SleepToLetGoroutineRun)
@@ -207,11 +207,11 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 		[]LogEntry{},
 		cm.passiveConsensusModule.GetCommitIndex(),
 	}
-	expectedRpcs2 := []testhelpers.MockSentRpc{
-		{"s2", expectedRpc2},
-		{"s3", expectedRpc2},
-		{"s4", expectedRpc2},
-		{"s5", expectedRpc2},
+	expectedRpcs2 := map[ServerId]interface{}{
+		"s2": expectedRpc2,
+		"s3": expectedRpc2,
+		"s4": expectedRpc2,
+		"s5": expectedRpc2,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs2)
 
@@ -221,9 +221,10 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 		t.Fatal()
 	}
 
-	if mrs.SendAEReplies(&RpcAppendEntriesReply{serverTerm, true}) != 4 {
-		t.Fatal()
+	if n := mrs.SendAERepliesAndClearRpcs(&RpcAppendEntriesReply{serverTerm, true}); n != 4 {
+		t.Fatal(n)
 	}
+
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
 	expectedMatchIndex = map[ServerId]LogIndex{

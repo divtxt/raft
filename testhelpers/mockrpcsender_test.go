@@ -28,9 +28,9 @@ func TestMockRpcSender(t *testing.T) {
 
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
-	expected := []MockSentRpc{
-		{"s1", &RpcRequestVote{102, 8008, 100}},
-		{"s2", &RpcAppendEntries{101, 8080, 100, nil, 8000}},
+	expected := map[ServerId]interface{}{
+		"s1": &RpcRequestVote{102, 8008, 100},
+		"s2": &RpcAppendEntries{101, 8080, 100, nil, 8000},
 	}
 	mrs.CheckSentRpcs(t, expected)
 
@@ -39,7 +39,7 @@ func TestMockRpcSender(t *testing.T) {
 	}
 
 	sentReply := &RpcAppendEntriesReply{102, false}
-	if mrs.SendAEReplies(sentReply) != 1 {
+	if mrs.SendAERepliesAndClearRpcs(sentReply) != 1 {
 		t.Error()
 	}
 

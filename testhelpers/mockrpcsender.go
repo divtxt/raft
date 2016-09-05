@@ -4,34 +4,40 @@ import (
 	"fmt"
 	. "github.com/divtxt/raft"
 	"reflect"
-	"sort"
+	"sync"
 	"testing"
 )
 
-// -- rpcSender
-
-// Mock in-memory implementation of both RpcService & RpcSendOnly
+// Mock in-memory implementation of both RpcService and RpcSendOnly
 // - meant only for tests
 type MockRpcSender struct {
-	sentRpcs         []MockSentRpc
-	sendAEReplyFuncs []func(*RpcAppendEntriesReply)
-	sendRVReplyFuncs []func(*RpcRequestVoteReply)
+	mutex    *sync.Mutex
+	sentRpcs map[ServerId]interface{}
 }
 
-type MockSentRpc struct {
-	ToServer ServerId
-	Rpc      interface{}
+type SentAppendEntries struct {
+	Rpc       *RpcAppendEntries
+	ReplyChan chan *RpcAppendEntriesReply
+}
+type SentRequestVote struct {
+	Rpc       *RpcRequestVote
+	ReplyChan chan *RpcRequestVoteReply
 }
 
 func NewMockRpcSender() *MockRpcSender {
-	return &MockRpcSender{nil, nil, nil}
+	return &MockRpcSender{
+		&sync.Mutex{},
+		make(map[ServerId]interface{}),
+	}
 }
+
+// RpcSendOnly implementation
 
 func (mrs *MockRpcSender) SendOnlyRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
 ) error {
-	mrs.sentRpcs = append(mrs.sentRpcs, MockSentRpc{toServer, rpc})
+	mrs.sendRpc(toServer, SentAppendEntries{rpc, nil})
 	return nil
 }
 
@@ -39,21 +45,18 @@ func (mrs *MockRpcSender) SendOnlyRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
 ) error {
-	mrs.sentRpcs = append(mrs.sentRpcs, MockSentRpc{toServer, rpc})
+	mrs.sendRpc(toServer, SentRequestVote{rpc, nil})
 	return nil
 }
+
+// RpcService implementation
 
 func (mrs *MockRpcSender) RpcAppendEntries(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
 ) *RpcAppendEntriesReply {
 	replyChan := make(chan *RpcAppendEntriesReply)
-
-	mrs.sentRpcs = append(mrs.sentRpcs, MockSentRpc{toServer, rpc})
-	mrs.sendAEReplyFuncs = append(mrs.sendAEReplyFuncs, func(reply *RpcAppendEntriesReply) {
-		replyChan <- reply
-	})
-
+	mrs.sendRpc(toServer, SentAppendEntries{rpc, replyChan})
 	return <-replyChan
 }
 
@@ -62,80 +65,112 @@ func (mrs *MockRpcSender) RpcRequestVote(
 	rpc *RpcRequestVote,
 ) *RpcRequestVoteReply {
 	replyChan := make(chan *RpcRequestVoteReply)
-
-	mrs.sentRpcs = append(mrs.sentRpcs, MockSentRpc{toServer, rpc})
-	mrs.sendRVReplyFuncs = append(mrs.sendRVReplyFuncs, func(reply *RpcRequestVoteReply) {
-		replyChan <- reply
-	})
-
+	mrs.sendRpc(toServer, SentRequestVote{rpc, replyChan})
 	return <-replyChan
 }
 
-// Clear sent rpcs.
-func (mrs *MockRpcSender) ClearSentRpcs() {
-	mrs.sentRpcs = nil
-	mrs.sendAEReplyFuncs = nil
-	mrs.sendRVReplyFuncs = nil
+func (mrs *MockRpcSender) sendRpc(toServer ServerId, sentRpc interface{}) {
+	mrs.mutex.Lock()
+	defer mrs.mutex.Unlock()
+
+	if _, hasKey := mrs.sentRpcs[toServer]; hasKey {
+		panic(fmt.Sprintf("Already have sent rpc for server %v", toServer))
+	}
+	mrs.sentRpcs[toServer] = sentRpc
 }
 
-// Clears & checks sent rpcs.
-// expectedRpcs should be sorted by server
-func (mrs *MockRpcSender) CheckSentRpcs(t *testing.T, expectedRpcs []MockSentRpc) {
-	rpcs := mrs.sentRpcs
-	mrs.sentRpcs = nil
+func (mrs *MockRpcSender) CheckSentRpcs(t *testing.T, expectedRpcs map[ServerId]interface{}) {
+	mrs.mutex.Lock()
+	defer mrs.mutex.Unlock()
 
-	sort.Sort(MockRpcSenderSlice(rpcs))
+	if len(mrs.sentRpcs) != len(expectedRpcs) {
+		mrs.fatalSentRpcs(t, expectedRpcs)
+	}
 
-	diffs := false
-	if len(rpcs) == len(expectedRpcs) {
-		for i := 0; i < len(rpcs); i++ {
-			if !reflect.DeepEqual(rpcs[i], expectedRpcs[i]) {
-				t.Error(fmt.Sprintf(
-					"diff at [%v] - expected: [{%v %v}]; got: [{%v %v}]",
-					i,
-					expectedRpcs[i].ToServer, expectedRpcs[i].Rpc,
-					rpcs[i].ToServer, rpcs[i].Rpc,
-				))
-				diffs = true
+	for toServer, expectedRpc := range expectedRpcs {
+		sentRpc, hasKey := mrs.sentRpcs[toServer]
+		if !hasKey {
+			mrs.fatalSentRpcs(t, expectedRpcs)
+		}
+		if !rpcEquals(sentRpc, expectedRpc) {
+			mrs.fatalSentRpcs(t, expectedRpcs)
+		}
+	}
+}
+
+func rpcEquals(sentRpc interface{}, rpc interface{}) bool {
+	switch sentRpc := sentRpc.(type) {
+	case SentAppendEntries:
+		return reflect.DeepEqual(sentRpc.Rpc, rpc)
+	case SentRequestVote:
+		return reflect.DeepEqual(sentRpc.Rpc, rpc)
+	default:
+		panic("oops")
+	}
+}
+
+func (mrs *MockRpcSender) fatalSentRpcs(t *testing.T, expectedRpcs map[ServerId]interface{}) {
+	t.Error("--- Sent:")
+	for toServer, sentRpc := range mrs.sentRpcs {
+		switch sentRpc := sentRpc.(type) {
+		case SentAppendEntries:
+			t.Error(fmt.Sprintf("toServer: %v - RpcAppendEntries: %v", toServer, sentRpc.Rpc))
+		case SentRequestVote:
+			t.Error(fmt.Sprintf("toServer: %v - RpcRequestVote: %v", toServer, sentRpc.Rpc))
+		}
+	}
+
+	t.Error("--- Expected:")
+	for toServer, rpc := range expectedRpcs {
+		switch rpc := rpc.(type) {
+		case RpcAppendEntries:
+			t.Error(fmt.Sprintf("toServer: %v - RpcAppendEntries: %v", toServer, rpc))
+		case RpcRequestVote:
+			t.Error(fmt.Sprintf("toServer: %v - RpcRequestVote: %v", toServer, rpc))
+		}
+	}
+
+	t.Fatal("Sadness :(")
+}
+
+func (mrs *MockRpcSender) SendAERepliesAndClearRpcs(reply *RpcAppendEntriesReply) int {
+	return mrs.sendRepliesAndClearRpcs(reply, nil)
+}
+
+func (mrs *MockRpcSender) SendRVRepliesAndClearRpcs(reply *RpcRequestVoteReply) int {
+	return mrs.sendRepliesAndClearRpcs(nil, reply)
+}
+
+func (mrs *MockRpcSender) sendRepliesAndClearRpcs(
+	aeReply *RpcAppendEntriesReply,
+	rvReply *RpcRequestVoteReply,
+) int {
+	mrs.mutex.Lock()
+	defer mrs.mutex.Unlock()
+
+	n := 0
+	for _, sentRpc := range mrs.sentRpcs {
+		switch sentRpc := sentRpc.(type) {
+		case SentAppendEntries:
+			if aeReply != nil {
+				sentRpc.ReplyChan <- aeReply
+				n++
+			}
+		case SentRequestVote:
+			if rvReply != nil {
+				sentRpc.ReplyChan <- rvReply
+				n++
 			}
 		}
-	} else {
-		t.Error(fmt.Sprintf("Expected len: %v; got len: %v", len(expectedRpcs), len(rpcs)))
-		diffs = true
 	}
-	if diffs {
-		t.Error(fmt.Sprintf("Expected: %#v", expectedRpcs))
-		t.Error(fmt.Sprintf("Got: %#v", rpcs))
-		t.Fatal("Sadness :P")
-	}
+
+	mrs.sentRpcs = make(map[ServerId]interface{})
+	return n
 }
 
-// Clears & sends reply to sent reply functions
-func (mrs *MockRpcSender) SendAEReplies(reply *RpcAppendEntriesReply) int {
-	replyFuncs := mrs.sendAEReplyFuncs
-	mrs.sendAEReplyFuncs = nil
+func (mrs *MockRpcSender) ClearSentRpcs() {
+	mrs.mutex.Lock()
+	defer mrs.mutex.Unlock()
 
-	for _, f := range replyFuncs {
-		f(reply)
-	}
-
-	return len(replyFuncs)
+	mrs.sentRpcs = make(map[ServerId]interface{})
 }
-
-func (mrs *MockRpcSender) SendRVReplies(reply *RpcRequestVoteReply) int {
-	replyFuncs := mrs.sendRVReplyFuncs
-	mrs.sendRVReplyFuncs = nil
-
-	for _, f := range replyFuncs {
-		f(reply)
-	}
-
-	return len(replyFuncs)
-}
-
-// implement sort.Interface for MockSentRpc slices
-type MockRpcSenderSlice []MockSentRpc
-
-func (mrss MockRpcSenderSlice) Len() int           { return len(mrss) }
-func (mrss MockRpcSenderSlice) Less(i, j int) bool { return mrss[i].ToServer < mrss[j].ToServer }
-func (mrss MockRpcSenderSlice) Swap(i, j int)      { mrss[i], mrss[j] = mrss[j], mrss[i] }

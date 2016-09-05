@@ -39,7 +39,7 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 			if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 				t.Fatal()
 			}
-			mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+			mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 		}
 	}
 
@@ -119,7 +119,7 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
-	expectedRpcs := []testhelpers.MockSentRpc{}
+	expectedRpcs := map[ServerId]interface{}{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 }
 
@@ -186,8 +186,8 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 		},
 		3,
 	}
-	expectedRpcs := []testhelpers.MockSentRpc{
-		{"s3", expectedRpc},
+	expectedRpcs := map[ServerId]interface{}{
+		"s3": expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 }
@@ -244,7 +244,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 		t.Fatal()
 	}
 	// no new follow-on AppendEntries expected
-	expectedRpcs := []testhelpers.MockSentRpc{}
+	expectedRpcs := map[ServerId]interface{}{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 }
 
@@ -316,7 +316,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		t.Fatal(err)
 	}
 	// we currently do not expect appendCommand() to send AppendEntries
-	expectedRpcs := []testhelpers.MockSentRpc{}
+	expectedRpcs := map[ServerId]interface{}{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 
 	// rpcs should go out on tick
@@ -324,11 +324,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		{8, Command("c11")},
 		{8, Command("c12")},
 	}, 3}
-	expectedRpcs = []testhelpers.MockSentRpc{
-		{"s2", expectedRpc},
-		{"s3", expectedRpc},
-		{"s4", expectedRpc},
-		{"s5", expectedRpc},
+	expectedRpcs = map[ServerId]interface{}{
+		"s2": expectedRpc,
+		"s3": expectedRpc,
+		"s4": expectedRpc,
+		"s5": expectedRpc,
 	}
 	err = mcm.Tick()
 	if err != nil {

@@ -110,11 +110,11 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 		[]LogEntry{},
 		mcm.pcm.GetCommitIndex(),
 	}
-	expectedRpcs := []testhelpers.MockSentRpc{
-		{"s2", expectedRpc},
-		{"s3", expectedRpc},
-		{"s4", expectedRpc},
-		{"s5", expectedRpc},
+	expectedRpcs := map[ServerId]interface{}{
+		"s2": expectedRpc,
+		"s3": expectedRpc,
+		"s4": expectedRpc,
+		"s5": expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 }
@@ -181,7 +181,7 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 		if mcm.pcm.GetServerState() != beforeState {
 			t.Fatal()
 		}
-		mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+		mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 
 		// s3 denies vote - ignore
 		err = mcm.pcm.RpcReply_RpcRequestVoteReply(
@@ -195,7 +195,7 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 		if mcm.pcm.GetServerState() != beforeState {
 			t.Fatal()
 		}
-		mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+		mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 
 		// s4 grants vote - ignore
 		err = mcm.pcm.RpcReply_RpcRequestVoteReply(
@@ -209,7 +209,7 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 		if mcm.pcm.GetServerState() != beforeState {
 			t.Fatal()
 		}
-		mrs.CheckSentRpcs(t, []testhelpers.MockSentRpc{})
+		mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
