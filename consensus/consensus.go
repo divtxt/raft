@@ -236,7 +236,8 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	err = cm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-			return cm.RpcSendOnly.SendOnlyRpcRequestVoteAsync(serverId, rpcRequestVote)
+			cm.RpcSendOnly.SendOnlyRpcRequestVoteAsync(serverId, rpcRequestVote)
+			return nil
 		},
 	)
 	if err != nil {
@@ -280,15 +281,13 @@ func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error {
 	return cm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
-			return cm.sendAppendEntriesToPeer(serverId, empty)
+			cm.sendAppendEntriesToPeer(serverId, empty)
+			return nil
 		},
 	)
 }
 
-func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(
-	peerId ServerId,
-	empty bool,
-) error {
+func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId, empty bool) error {
 	serverTerm := cm.RaftPersistentState.GetCurrentTerm()
 	//
 	peerNextIndex, err := cm.LeaderVolatileState.GetNextIndex(peerId)
@@ -325,7 +324,8 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(
 		entriesToSend,
 		cm.GetCommitIndex(),
 	}
-	return cm.RpcSendOnly.SendOnlyRpcAppendEntriesAsync(peerId, rpcAppendEntries)
+	cm.RpcSendOnly.SendOnlyRpcAppendEntriesAsync(peerId, rpcAppendEntries)
+	return nil
 }
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
@@ -364,6 +364,6 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 
 // This is an internal equivalent to RpcService without the reply part.
 type RpcSendOnly interface {
-	SendOnlyRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries) error
-	SendOnlyRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote) error
+	SendOnlyRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries)
+	SendOnlyRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote)
 }
