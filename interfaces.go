@@ -92,9 +92,6 @@ type Log interface {
 	// Append a new entry with the given term and given serialized command.
 	//
 	// This method will only be called when this ConsensusModule is the leader.
-	//
-	// The raw command will have been approved and serialized by the
-	// StateMachine.ReviewAppendCommand() method before this method is called.
 	AppendEntry(LogEntry) error
 }
 

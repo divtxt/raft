@@ -212,6 +212,9 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 //
 // The command will be sent to Log.AppendEntry().
 //
+// The command must already have been checked to ensure that it will successfully apply to the
+// state machine in it's position in the Log.
+//
 // Returns ErrStopped if ConsensusModule is stopped.
 // Returns ErrNotLeader if not currently the leader.
 //
@@ -222,7 +225,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 // respond after entry applied to state machine (#5.3)
 //
 // We choose not to deal with the client directly. You must implement the interaction with
-// clients and with waiting for the entry to be applied to the state machine.
+// clients and, if required, with waiting for the entry to be applied to the state machine.
 // (see delegation of lastApplied to the state machine via the ChangeListener interface)
 //
 // See the notes on NewConsensusModule() for more details about this method's behavior.
