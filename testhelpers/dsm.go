@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-// Dummy in-memory implementation of StateMachine.
+// Dummy state machine that implements ChangeListener.
 // Does not provide any useful state or commands. Meant only for tests.
 type DummyStateMachine struct {
 	commitIndex LogIndex
