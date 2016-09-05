@@ -254,12 +254,26 @@ func (cm *ConsensusModule) SendOnlyRpcAppendEntriesAsync(
 
 		// If successful, send it back to the ConsensusModule
 		if rpcReply != nil {
-			cm.mutex.Lock()
-			defer cm.mutex.Unlock()
-			cm.passiveConsensusModule.RpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
+			cm.safeProcessRpcReply_RpcAppendEntriesReply(toServer, rpc, rpcReply)
 		}
 	}
 	go rpcAndCallback()
+}
+
+func (cm *ConsensusModule) safeProcessRpcReply_RpcAppendEntriesReply(
+	fromPeer ServerId,
+	rpc *RpcAppendEntries,
+	rpcReply *RpcAppendEntriesReply,
+) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	if !cm.stopped {
+		err := cm.passiveConsensusModule.RpcReply_RpcAppendEntriesReply(fromPeer, rpc, rpcReply)
+		if err != nil {
+			cm.shutdown(err)
+		}
+	}
 }
 
 // Implement RpcSendOnly.SendOnlyRpcRequestVoteAsync to bridge to
@@ -274,12 +288,26 @@ func (cm *ConsensusModule) SendOnlyRpcRequestVoteAsync(
 
 		// If successful, send it back to the ConsensusModule
 		if rpcReply != nil {
-			cm.mutex.Lock()
-			defer cm.mutex.Unlock()
-			cm.passiveConsensusModule.RpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
+			cm.safeProcessRpcReply_RpcRequestVoteReply(toServer, rpc, rpcReply)
 		}
 	}
 	go rpcAndCallback()
+}
+
+func (cm *ConsensusModule) safeProcessRpcReply_RpcRequestVoteReply(
+	fromPeer ServerId,
+	rpc *RpcRequestVote,
+	rpcReply *RpcRequestVoteReply,
+) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	if !cm.stopped {
+		err := cm.passiveConsensusModule.RpcReply_RpcRequestVoteReply(fromPeer, rpc, rpcReply)
+		if err != nil {
+			cm.shutdown(err)
+		}
+	}
 }
 
 func (cm *ConsensusModule) runTicks() {
@@ -306,7 +334,10 @@ func (cm *ConsensusModule) safeTick() {
 
 	// Get a fresh now since we could have been waiting
 	now := time.Now()
-	cm.passiveConsensusModule.Tick(now)
+	err := cm.passiveConsensusModule.Tick(now)
+	if err != nil {
+		cm.shutdown(err)
+	}
 }
 
 func (cm *ConsensusModule) shutdown(err error) {
