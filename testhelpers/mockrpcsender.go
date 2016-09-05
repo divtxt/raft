@@ -36,17 +36,15 @@ func NewMockRpcSender() *MockRpcSender {
 func (mrs *MockRpcSender) SendOnlyRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
-) error {
+) {
 	mrs.sendRpc(toServer, SentAppendEntries{rpc, nil})
-	return nil
 }
 
 func (mrs *MockRpcSender) SendOnlyRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
-) error {
+) {
 	mrs.sendRpc(toServer, SentRequestVote{rpc, nil})
-	return nil
 }
 
 // RpcService implementation

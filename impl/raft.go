@@ -247,7 +247,7 @@ func (cm *ConsensusModule) AppendCommand(command Command) error {
 func (cm *ConsensusModule) SendOnlyRpcAppendEntriesAsync(
 	toServer ServerId,
 	rpc *RpcAppendEntries,
-) error {
+) {
 	rpcAndCallback := func() {
 		// Make the RPC call
 		rpcReply := cm.rpcService.RpcAppendEntries(toServer, rpc)
@@ -260,7 +260,6 @@ func (cm *ConsensusModule) SendOnlyRpcAppendEntriesAsync(
 		}
 	}
 	go rpcAndCallback()
-	return nil
 }
 
 // Implement RpcSendOnly.SendOnlyRpcRequestVoteAsync to bridge to
@@ -268,7 +267,7 @@ func (cm *ConsensusModule) SendOnlyRpcAppendEntriesAsync(
 func (cm *ConsensusModule) SendOnlyRpcRequestVoteAsync(
 	toServer ServerId,
 	rpc *RpcRequestVote,
-) error {
+) {
 	rpcAndCallback := func() {
 		// Make the RPC call
 		rpcReply := cm.rpcService.RpcRequestVote(toServer, rpc)
@@ -281,7 +280,6 @@ func (cm *ConsensusModule) SendOnlyRpcRequestVoteAsync(
 		}
 	}
 	go rpcAndCallback()
-	return nil
 }
 
 func (cm *ConsensusModule) runTicks() {
