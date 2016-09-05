@@ -100,7 +100,7 @@ type Log interface {
 
 // Read-only subset of the Raft Log.
 //
-// This will typically be the interface used by a StateMachine implementation.
+// This will typically be the interface used by a state machine.
 //
 // See Log interface for method descriptions
 //
@@ -110,11 +110,16 @@ type LogReadOnly interface {
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 }
 
-// The State Machine being implemented.
+// Changes listener interface.
 //
 // You must implement this interface!
 //
-// This interface lets the state machine listen for changes from the ConsensusModule.
+// This interface is meant to be a callback interface that lets the state machine listen for
+// changes from the ConsensusModule.
+//
+// All methods should return immediately without blocking.
+//
+// Concurrency: the ConsensusModule will only ever call one method of this interface at a time.
 //
 // Raft describes two state parameters - commitIndex and lastApplied -
 // that are used to track which log entries are committed to the log and the
@@ -144,29 +149,22 @@ type LogReadOnly interface {
 // lastApplied should be volatile. If the state machine is persistent,
 // lastApplied should be just as persistent.
 //
-//
-// Concurrency: the ConsensusModule will only ever call the methods of this interface from it's
-// single goroutine.
-//
-// Errors: all errors should be indicated in the return value, and any such error returned by this
-// interface will shutdown the ConsensusModule.
-//
-type StateMachine interface {
+type ChangeListener interface {
 
-	// Notify the state machine that the commitIndex has changed to the given value.
+	// Notify the listener that the commitIndex has changed to the given value.
 	//
 	// commitIndex is the index of highest log entry known to be committed
 	// (initialized to 0, increases monotonically)
 	//
-	// The implementer can apply entries up to this index from the Log to the state machine.
+	// This means that entries up to this index from the Log can be committed to the state machine.
 	// (see #RFS-A1 mentioned above)
 	//
 	// This method should return immediately without blocking. This means that applying log entries
 	// to the state machine up to the new commitIndex should be asynchronous to this method call.
 	//
-	// On startup, the StateMachine can consider the previous commitIndex to be either 0 or to the
-	// persisted value of lastApplied. If the state machine is not persisted, there is no difference
-	// as lastApplied will also start at 0.
+	// On startup, the RaftChangeListener can consider the previous commitIndex to be either 0 or
+	// the persisted value of lastApplied. If the state machine is not persisted, there is no
+	// difference as lastApplied will also start at 0.
 	//
 	// It is an error if the value of commitIndex decreases. Note that the upstream commitIndex may
 	// NOT be persisted, and may reset to 0 on restart. However, the upstream should never send this

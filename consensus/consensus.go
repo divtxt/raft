@@ -17,7 +17,7 @@ type PassiveConsensusModule struct {
 	RaftPersistentState RaftPersistentState
 	LogRO               LogReadOnly
 	_log                Log
-	_stateMachine       StateMachine
+	_changeListener     ChangeListener
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
@@ -41,7 +41,7 @@ type PassiveConsensusModule struct {
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
-	stateMachine StateMachine,
+	changeListener ChangeListener,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	electionTimeoutLow time.Duration,
@@ -54,8 +54,8 @@ func NewPassiveConsensusModule(
 	if log == nil {
 		return nil, errors.New("'log' cannot be nil")
 	}
-	if stateMachine == nil {
-		return nil, errors.New("'stateMachine' cannot be nil")
+	if changeListener == nil {
+		return nil, errors.New("'changeListener' cannot be nil")
 	}
 	if rpcSendOnly == nil {
 		return nil, errors.New("'rpcSendOnly' cannot be nil")
@@ -72,7 +72,7 @@ func NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
 		log,
-		stateMachine,
+		changeListener,
 		rpcSendOnly,
 
 		// -- Config
@@ -129,7 +129,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	cm._stateMachine.CommitIndexChanged(commitIndex)
+	cm._changeListener.CommitIndexChanged(commitIndex)
 	return nil
 }
 

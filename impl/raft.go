@@ -8,7 +8,7 @@
 //
 //  - RaftPersistentState
 //  - Log
-//  - StateMachine
+//  - ChangeListener
 //  - RpcService
 //
 // Notes for implementers of these interfaces:
@@ -61,7 +61,7 @@ type ConsensusModule struct {
 func NewConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
-	stateMachine StateMachine,
+	changeListener ChangeListener,
 	rpcService RpcService,
 	clusterInfo *config.ClusterInfo,
 	timeSettings config.TimeSettings,
@@ -90,7 +90,7 @@ func NewConsensusModule(
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
-		stateMachine,
+		changeListener,
 		cm,
 		clusterInfo,
 		timeSettings.ElectionTimeoutLow,
@@ -223,7 +223,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 //
 // We choose not to deal with the client directly. You must implement the interaction with
 // clients and with waiting for the entry to be applied to the state machine.
-// (see delegation of lastApplied to the StateMachine interface)
+// (see delegation of lastApplied to the state machine via the ChangeListener interface)
 //
 // See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) AppendCommand(command Command) error {
