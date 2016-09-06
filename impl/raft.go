@@ -26,6 +26,7 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
+	"github.com/divtxt/raft/util"
 	"sync"
 	"time"
 )
@@ -45,9 +46,7 @@ type ConsensusModule struct {
 	stopError error
 
 	// -- Ticker
-	ticker       *time.Ticker
-	stopSignal   chan struct{}
-	runTicksDone *sync.WaitGroup
+	ticker *util.Ticker
 }
 
 // Allocate and initialize a ConsensusModule with the given components and
@@ -66,7 +65,6 @@ func NewConsensusModule(
 	clusterInfo *config.ClusterInfo,
 	timeSettings config.TimeSettings,
 ) (*ConsensusModule, error) {
-	ticker := time.NewTicker(timeSettings.TickerDuration)
 	now := time.Now()
 
 	cm := &ConsensusModule{
@@ -82,9 +80,7 @@ func NewConsensusModule(
 		nil,
 
 		// -- Ticker
-		ticker,
-		make(chan struct{}, 1),
-		&sync.WaitGroup{},
+		nil,
 	}
 
 	pcm, err := consensus.NewPassiveConsensusModule(
@@ -103,9 +99,8 @@ func NewConsensusModule(
 	// we can only set the value here because it's a cyclic reference
 	cm.passiveConsensusModule = pcm
 
-	// Start the ticker go routine
-	cm.runTicksDone.Add(1)
-	go cm.runTicks()
+	// Start the ticker goroutine
+	cm.ticker = util.NewTicker(cm.safeTick, timeSettings.TickerDuration)
 
 	return cm, nil
 }
@@ -313,24 +308,6 @@ func (cm *ConsensusModule) safeProcessRpcReply_RpcRequestVoteReply(
 	}
 }
 
-func (cm *ConsensusModule) runTicks() {
-	defer cm.runTicksDone.Done()
-	defer cm.ticker.Stop()
-
-loop:
-	for {
-		select {
-		case _, ok := <-cm.ticker.C:
-			if !ok {
-				break loop
-			}
-			cm.safeTick()
-		case <-cm.stopSignal:
-			break loop
-		}
-	}
-}
-
 func (cm *ConsensusModule) safeTick() {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
@@ -345,13 +322,8 @@ func (cm *ConsensusModule) safeTick() {
 
 func (cm *ConsensusModule) shutdown(err error) {
 	if !cm.stopped {
-		// Stop the ticker
-		select {
-		case cm.stopSignal <- struct{}{}:
-		default:
-		}
-		// Wait for ticker goroutine to actually stop
-		cm.runTicksDone.Wait()
+		// Stop the ticker and wait for it to complete
+		cm.ticker.StopSync()
 		// Update state
 		cm.stopError = err
 		cm.stopped = true
