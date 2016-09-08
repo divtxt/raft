@@ -24,7 +24,7 @@ Later:
 - [ ] Test for RPCs from senders not in cluster
 - [ ] Review fatal errors to see if they can be non-fatal
 - [ ] Assembling AppendEntries RPC should not block
-- [ ] Add errcheck to Travis build
+- [x] Add errcheck to Travis build
 - [ ] Add support for snapshotting & InstallSnapshot RPC
 - [x] Leader uses AppendEntry instead of SetEntriesAfterIndex
 - [x] AppendCommandAsync takes unserialized command
@@ -36,7 +36,6 @@ Later:
 Misc/Maybe:
 
 - [ ] Tests have theoretical concurrency issues
-- [ ] Change to actor model / library
 - [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
 - [ ] Servers check that they agree on cluster info
 - [ ] Election timeout based on ping times to bias selection of lower latency leader
