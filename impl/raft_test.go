@@ -312,7 +312,7 @@ func TestConsensusModule_AppendCommand_Follower_StoppedCM(t *testing.T) {
 
 	err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
-	if err != nil {
+	if err != ErrStopped {
 		t.Fatal(err)
 	}
 }

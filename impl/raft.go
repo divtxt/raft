@@ -213,6 +213,8 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 // Returns ErrStopped if ConsensusModule is stopped.
 // Returns ErrNotLeader if not currently the leader.
 //
+// Any errors from Log.AppendCommand() call will stop the ConsensusModule.
+//
 // Here, we intentionally punt on some of the leader details, specifically
 // most of:
 //
@@ -229,11 +231,13 @@ func (cm *ConsensusModule) AppendCommand(command Command) error {
 	defer cm.mutex.Unlock()
 
 	if cm.stopped {
-		return nil
+		return ErrStopped
 	}
 
 	err := cm.passiveConsensusModule.AppendCommand(command)
-	// FIXME: differentiate errors
+	if err != nil && err != ErrNotLeader {
+		cm.shutdown(err)
+	}
 
 	return err
 }
