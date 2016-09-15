@@ -9,17 +9,12 @@ import (
 // In-memory implementation of locking as raft.Log
 
 type InMemoryLog struct {
-	entries                  []LogEntry
-	MaxEntriesPerAppendEntry uint64
+	entries []LogEntry
 }
 
-func NewInMemoryLog(maxEntriesPerAppendEntry uint64) *InMemoryLog {
-	// FIXME: move maxEntriesPerAppendEntry out of here?!
-	if maxEntriesPerAppendEntry <= 0 {
-		panic("maxEntriesPerAppendEntry must be greater than zero")
-	}
+func NewInMemoryLog() *InMemoryLog {
 	entries := []LogEntry{}
-	iml := &InMemoryLog{entries, maxEntriesPerAppendEntry}
+	iml := &InMemoryLog{entries}
 	return iml
 }
 
@@ -39,7 +34,10 @@ func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 	return iml.entries[li-1].TermNo, nil
 }
 
-func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry, error) {
+func (iml *InMemoryLog) GetEntriesAfterIndex(
+	afterLogIndex LogIndex,
+	maxEntries uint64,
+) ([]LogEntry, error) {
 	iole, err := iml.GetIndexOfLastEntry()
 	if err != nil {
 		return nil, err
@@ -53,15 +51,19 @@ func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry
 		)
 	}
 
+	if maxEntries <= 0 {
+		panic("maxEntries must be greater than zero")
+	}
+
 	var numEntriesToGet uint64 = uint64(iole - afterLogIndex)
 
-	// Short-circuit allocation for common case
+	// Short-circuit allocation for no entries to return
 	if numEntriesToGet == 0 {
 		return []LogEntry{}, nil
 	}
 
-	if numEntriesToGet > iml.MaxEntriesPerAppendEntry {
-		numEntriesToGet = iml.MaxEntriesPerAppendEntry
+	if numEntriesToGet > maxEntries {
+		numEntriesToGet = maxEntries
 	}
 
 	logEntries := make([]LogEntry, numEntriesToGet)

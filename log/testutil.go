@@ -8,18 +8,15 @@ import (
 
 // Make an InMemoryLog with 10 entries with terms as shown in Figure 7, leader line.
 // Commands will be Command("c1"), Command("c2"), etc.
-func TestUtil_NewInMemoryLog_WithFigure7LeaderLine(maxEntriesPerAppendEntry uint64) *InMemoryLog {
+func TestUtil_NewInMemoryLog_WithFigure7LeaderLine() *InMemoryLog {
 	figure7LeaderLine := testdata.TestUtil_MakeFigure7LeaderLineTerms()
-	return TestUtil_NewInMemoryLog_WithTerms(figure7LeaderLine, maxEntriesPerAppendEntry)
+	return TestUtil_NewInMemoryLog_WithTerms(figure7LeaderLine)
 }
 
 // Make an InMemoryLog with entries with given terms.
 // Commands will be Command("c1"), Command("c2"), etc.
-func TestUtil_NewInMemoryLog_WithTerms(
-	logTerms []TermNo,
-	maxEntriesPerAppendEntry uint64,
-) *InMemoryLog {
-	inmem_log := NewInMemoryLog(maxEntriesPerAppendEntry)
+func TestUtil_NewInMemoryLog_WithTerms(logTerms []TermNo) *InMemoryLog {
+	inmem_log := NewInMemoryLog()
 
 	for i, term := range logTerms {
 		command := Command("c" + strconv.Itoa(i+1))
@@ -38,7 +35,7 @@ func TestHelper_GetLogEntryAtIndex(log LogReadOnly, li LogIndex) LogEntry {
 	if li == 0 {
 		panic("oops!")
 	}
-	entries, err := log.GetEntriesAfterIndex(li - 1)
+	entries, err := log.GetEntriesAfterIndex(li-1, 1)
 	if err != nil {
 		panic(err)
 	}

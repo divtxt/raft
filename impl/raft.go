@@ -63,6 +63,7 @@ func NewConsensusModule(
 	changeListener ChangeListener,
 	rpcService RpcService,
 	clusterInfo *config.ClusterInfo,
+	maxEntriesPerAppendEntry uint64,
 	timeSettings config.TimeSettings,
 ) (*ConsensusModule, error) {
 	now := time.Now()
@@ -89,6 +90,7 @@ func NewConsensusModule(
 		changeListener,
 		cm,
 		clusterInfo,
+		maxEntriesPerAppendEntry,
 		timeSettings.ElectionTimeoutLow,
 		now,
 	)

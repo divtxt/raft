@@ -41,6 +41,24 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 		t.Fatal(le.Command)
 	}
 
+	// get multiple entries
+	entries, err := log.GetEntriesAfterIndex(4, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 3 {
+		t.Fatal()
+	}
+	if !TestCommandEquals(entries[0].Command, "c5") {
+		t.Fatal()
+	}
+	if !TestCommandEquals(entries[1].Command, "c6") {
+		t.Fatal()
+	}
+	if !TestCommandEquals(entries[2].Command, "c7") {
+		t.Fatal()
+	}
+
 	var logEntries []LogEntry
 
 	// set test - invalid index

@@ -44,9 +44,10 @@ type Log interface {
 
 	// Get multiple entries after the given index.
 	//
-	// We make the Log responsible for choosing how many entries to send. The
-	// returned entries will be sent as is in an AppendEntries RPC to a follower.
-	// The Log can implement any policy - the simplest: "return just one entry".
+	// This method should as many entries as available after the given index up to the
+	// given count of maxEntries.
+	//
+	// The returned entries will be sent as is in an AppendEntries RPC to a follower.
 	//
 	// It is an error if the given index is beyond the end of the log.
 	// (i.e. the given index is greater than indexOfLastEntry)
@@ -56,7 +57,7 @@ type Log interface {
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
-	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
+	GetEntriesAfterIndex(li LogIndex, maxEntries uint64) ([]LogEntry, error)
 
 	// Set the entries after the given index.
 	//
@@ -104,7 +105,7 @@ type Log interface {
 type LogReadOnly interface {
 	GetIndexOfLastEntry() (LogIndex, error)
 	GetTermAtIndex(LogIndex) (TermNo, error)
-	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
+	GetEntriesAfterIndex(LogIndex, uint64) ([]LogEntry, error)
 }
 
 // Changes listener interface.

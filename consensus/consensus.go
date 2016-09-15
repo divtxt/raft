@@ -21,7 +21,8 @@ type PassiveConsensusModule struct {
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
-	ClusterInfo *config.ClusterInfo
+	ClusterInfo              *config.ClusterInfo
+	maxEntriesPerAppendEntry uint64
 
 	// -- State - for all servers
 	serverState ServerState
@@ -44,6 +45,7 @@ func NewPassiveConsensusModule(
 	changeListener ChangeListener,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
+	maxEntriesPerAppendEntry uint64,
 	electionTimeoutLow time.Duration,
 	now time.Time,
 ) (*PassiveConsensusModule, error) {
@@ -77,6 +79,7 @@ func NewPassiveConsensusModule(
 
 		// -- Config
 		clusterInfo,
+		maxEntriesPerAppendEntry,
 
 		// -- State - for all servers
 		// #5.2-p1s2: When servers start up, they begin as followers
@@ -310,7 +313,7 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId, empty
 		entriesToSend = []LogEntry{}
 	} else {
 		var err error
-		entriesToSend, err = cm.LogRO.GetEntriesAfterIndex(peerLastLogIndex)
+		entriesToSend, err = cm.LogRO.GetEntriesAfterIndex(peerLastLogIndex, cm.maxEntriesPerAppendEntry)
 		if err != nil {
 			return err
 		}

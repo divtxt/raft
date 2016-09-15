@@ -8,7 +8,7 @@ import (
 
 // Test InMemoryLog using the Log Blackbox test.
 func TestInMemoryLog_BlackboxTest(t *testing.T) {
-	inmem_log := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(10)
+	inmem_log := TestUtil_NewInMemoryLog_WithFigure7LeaderLine()
 
 	BlackboxTest_Log(t, inmem_log)
 }
@@ -16,10 +16,11 @@ func TestInMemoryLog_BlackboxTest(t *testing.T) {
 // Tests for InMemoryLog's GetEntriesAfterIndex implementation
 func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	// Log with 10 entries with terms as shown in Figure 7, leader line
-	iml := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	iml := TestUtil_NewInMemoryLog_WithFigure7LeaderLine()
+	var maxEntries uint64 = 3
 
 	// none
-	actualEntries, err := iml.GetEntriesAfterIndex(10)
+	actualEntries, err := iml.GetEntriesAfterIndex(10, maxEntries)
 	if err != nil {
 		t.Fatal()
 	}
@@ -29,7 +30,7 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// one
-	actualEntries, err = iml.GetEntriesAfterIndex(9)
+	actualEntries, err = iml.GetEntriesAfterIndex(9, maxEntries)
 	if err != nil {
 		t.Fatal()
 	}
@@ -41,7 +42,7 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// multiple
-	actualEntries, err = iml.GetEntriesAfterIndex(7)
+	actualEntries, err = iml.GetEntriesAfterIndex(7, maxEntries)
 	if err != nil {
 		t.Fatal()
 	}
@@ -55,7 +56,7 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// max
-	actualEntries, err = iml.GetEntriesAfterIndex(2)
+	actualEntries, err = iml.GetEntriesAfterIndex(2, maxEntries)
 	if err != nil {
 		t.Fatal()
 	}
@@ -69,7 +70,7 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// index of 0
-	actualEntries, err = iml.GetEntriesAfterIndex(0)
+	actualEntries, err = iml.GetEntriesAfterIndex(0, maxEntries)
 	if err != nil {
 		t.Fatal()
 	}
@@ -83,8 +84,7 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// max alternate value
-	iml.MaxEntriesPerAppendEntry = 2
-	actualEntries, err = iml.GetEntriesAfterIndex(2)
+	actualEntries, err = iml.GetEntriesAfterIndex(2, 2)
 	if err != nil {
 		t.Fatal()
 	}
@@ -97,7 +97,7 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// index more than last log entry
-	actualEntries, err = iml.GetEntriesAfterIndex(11)
+	actualEntries, err = iml.GetEntriesAfterIndex(11, maxEntries)
 	if err.Error() != "afterLogIndex=11 is > iole=10" {
 		t.Fatal(err)
 	}
