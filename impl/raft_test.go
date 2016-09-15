@@ -27,7 +27,7 @@ func setupConsensusModuleR2(
 	logTerms []TermNo,
 ) (*ConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	dsm := testhelpers.NewDummyStateMachine()
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
@@ -35,7 +35,7 @@ func setupConsensusModuleR2(
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, dsm, mrs, ci, ts)
+	cm, err := NewConsensusModule(ps, iml, dsm, mrs, ci, testdata.MaxEntriesPerAppendEntry, ts)
 	if err != nil {
 		t.Fatal(err)
 	}

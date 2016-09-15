@@ -25,7 +25,7 @@ func setupManagedConsensusModuleR2(
 	solo bool,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	dsm := testhelpers.NewDummyStateMachine()
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
@@ -45,6 +45,7 @@ func setupManagedConsensusModuleR2(
 		dsm,
 		mrs,
 		ci,
+		testdata.MaxEntriesPerAppendEntry,
 		testdata.ElectionTimeoutLow,
 		now,
 	)
