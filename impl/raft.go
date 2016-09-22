@@ -23,6 +23,7 @@
 package impl
 
 import (
+	"errors"
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
@@ -46,7 +47,8 @@ type ConsensusModule struct {
 	stopError error
 
 	// -- Ticker
-	ticker *util.Ticker
+	tickerDuration time.Duration
+	ticker         *util.Ticker
 }
 
 // Allocate and initialize a ConsensusModule with the given components and
@@ -55,12 +57,9 @@ type ConsensusModule struct {
 // All parameters are required.
 // timeSettings is checked using ValidateTimeSettings().
 //
-// A goroutine that drives ticks is created.
-//
 func NewConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
-	changeListener ChangeListener,
 	rpcService RpcService,
 	clusterInfo *config.ClusterInfo,
 	maxEntriesPerAppendEntry uint64,
@@ -81,13 +80,14 @@ func NewConsensusModule(
 		nil,
 
 		// -- Ticker
+		timeSettings.TickerDuration,
 		nil,
 	}
 
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
-		changeListener,
+		nil,
 		cm,
 		clusterInfo,
 		maxEntriesPerAppendEntry,
@@ -101,10 +101,32 @@ func NewConsensusModule(
 	// we can only set the value here because it's a cyclic reference
 	cm.passiveConsensusModule = pcm
 
-	// Start the ticker goroutine
-	cm.ticker = util.NewTicker(cm.safeTick, timeSettings.TickerDuration)
-
 	return cm, nil
+}
+
+// Start the ConsensusModule running with the given ChangeListener.
+//
+// This starts a goroutine that drives ticks.
+//
+// Should only be called once.
+func (cm *ConsensusModule) Start(changeListener ChangeListener) error {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	if changeListener == nil {
+		return errors.New("'changeListener' cannot be nil")
+	}
+
+	if cm.ticker != nil {
+		return ErrAlreadyStartedOnce
+	}
+
+	cm.passiveConsensusModule.SetChangeListener(changeListener)
+
+	// Start the ticker goroutine
+	cm.ticker = util.NewTicker(cm.safeTick, cm.tickerDuration)
+
+	return nil
 }
 
 // Check if the ConsensusModule is stopped.
