@@ -29,12 +29,16 @@ func setupConsensusModuleR3(
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	cm, err := NewConsensusModule(ps, iml, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cm == nil {
 		t.Fatal()
+	}
+	err = cm.Start(dsm)
+	if err != nil {
+		t.Fatal(err)
 	}
 	return cm, iml, dsm
 }
@@ -53,12 +57,16 @@ func setupConsensusModuleR3_SOLO(
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	cm, err := NewConsensusModule(ps, iml, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cm == nil {
 		t.Fatal()
+	}
+	err = cm.Start(dsm)
+	if err != nil {
+		t.Fatal(err)
 	}
 	return cm, iml, dsm
 }

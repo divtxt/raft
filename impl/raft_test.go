@@ -35,12 +35,16 @@ func setupConsensusModuleR2(
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, dsm, mrs, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	cm, err := NewConsensusModule(ps, iml, mrs, ci, testdata.MaxEntriesPerAppendEntry, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cm == nil {
 		t.Fatal()
+	}
+	err = cm.Start(dsm)
+	if err != nil {
+		t.Fatal(err)
 	}
 	return cm, mrs
 }
