@@ -56,9 +56,6 @@ func NewPassiveConsensusModule(
 	if log == nil {
 		return nil, errors.New("'log' cannot be nil")
 	}
-	if changeListener == nil {
-		return nil, errors.New("'changeListener' cannot be nil")
-	}
 	if rpcSendOnly == nil {
 		return nil, errors.New("'rpcSendOnly' cannot be nil")
 	}
@@ -101,6 +98,12 @@ func NewPassiveConsensusModule(
 	return pcm, nil
 }
 
+// Set the ChangeListener.
+// Replaces the current ChangeListener.
+func (cm *PassiveConsensusModule) SetChangeListener(changeListener ChangeListener) {
+	cm._changeListener = changeListener
+}
+
 // Get the current server state.
 // Validates the server state before returning.
 func (cm *PassiveConsensusModule) GetServerState() ServerState {
@@ -132,7 +135,9 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	cm._changeListener.CommitIndexChanged(commitIndex)
+	if cm._changeListener != nil {
+		cm._changeListener.CommitIndexChanged(commitIndex)
+	}
 	return nil
 }
 
