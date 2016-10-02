@@ -145,7 +145,7 @@ func (cm *ConsensusModule) Stop() {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	cm.shutdown(nil)
+	cm.shutdownAndPanic(nil)
 }
 
 // Get the error that stopped the ConsensusModule.
@@ -187,8 +187,8 @@ func (cm *ConsensusModule) ProcessRpcAppendEntries(
 
 	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcAppendEntries(from, rpc, now)
 	if err != nil {
-		cm.shutdown(err)
-		return nil
+		cm.shutdownAndPanic(err)
+		return nil // unreachable code
 	}
 
 	return rpcReply
@@ -218,8 +218,8 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 
 	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcRequestVote(from, rpc, now)
 	if err != nil {
-		cm.shutdown(err)
-		return nil
+		cm.shutdownAndPanic(err)
+		return nil // unreachable code
 	}
 
 	return rpcReply
@@ -260,7 +260,7 @@ func (cm *ConsensusModule) AppendCommand(command Command) error {
 
 	err := cm.passiveConsensusModule.AppendCommand(command)
 	if err != nil && err != ErrNotLeader {
-		cm.shutdown(err)
+		cm.shutdownAndPanic(err)
 	}
 
 	return err
@@ -297,7 +297,7 @@ func (cm *ConsensusModule) safeProcessRpcReply_RpcAppendEntriesReply(
 	if !cm.stopped {
 		err := cm.passiveConsensusModule.RpcReply_RpcAppendEntriesReply(fromPeer, rpc, rpcReply)
 		if err != nil {
-			cm.shutdown(err)
+			cm.shutdownAndPanic(err)
 		}
 	}
 }
@@ -331,7 +331,7 @@ func (cm *ConsensusModule) safeProcessRpcReply_RpcRequestVoteReply(
 	if !cm.stopped {
 		err := cm.passiveConsensusModule.RpcReply_RpcRequestVoteReply(fromPeer, rpc, rpcReply)
 		if err != nil {
-			cm.shutdown(err)
+			cm.shutdownAndPanic(err)
 		}
 	}
 }
@@ -344,16 +344,22 @@ func (cm *ConsensusModule) safeTick() {
 	now := time.Now()
 	err := cm.passiveConsensusModule.Tick(now)
 	if err != nil {
-		cm.shutdown(err)
+		cm.shutdownAndPanic(err)
 	}
 }
 
-func (cm *ConsensusModule) shutdown(err error) {
+// Shutdown the ConsensusModule.
+// Panic if the given error is not nil.
+func (cm *ConsensusModule) shutdownAndPanic(err error) {
 	if !cm.stopped {
 		// Stop the ticker and wait for it to complete
 		cm.ticker.StopSync()
 		// Update state
 		cm.stopError = err
 		cm.stopped = true
+		// Panic for error
+		if err != nil {
+			panic(err)
+		}
 	}
 }
