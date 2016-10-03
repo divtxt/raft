@@ -39,7 +39,7 @@ func TestTicker(t *testing.T) {
 		t.Fatal(getN())
 	}
 
-	ticker.StopSync()
+	ticker.StopAsync()
 
 	time.Sleep(10 * time.Millisecond)
 	if getN() != 3 {

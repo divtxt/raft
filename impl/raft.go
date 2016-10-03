@@ -76,7 +76,7 @@ func NewConsensusModule(
 		rpcService,
 
 		// -- State
-		false,
+		true,
 		nil,
 
 		// -- Ticker
@@ -123,6 +123,8 @@ func (cm *ConsensusModule) Start(changeListener ChangeListener) error {
 
 	cm.passiveConsensusModule.SetChangeListener(changeListener)
 
+	cm.stopped = false
+
 	// Start the ticker goroutine
 	cm.ticker = util.NewTicker(cm.safeTick, cm.tickerDuration)
 
@@ -139,7 +141,9 @@ func (cm *ConsensusModule) IsStopped() bool {
 
 // Stop the ConsensusModule.
 //
-// This will effectively stop the goroutine that does the processing.
+// This will mark the ConsensusModule as stopped and stop the goroutine that does the processing.
+// This call is effectively synchronous as far as the ConsensusModule operation is concerned,
+// even though the goroutine may not stop immediately.
 // This is safe to call multiple times, even if the ConsensusModule has already stopped.
 func (cm *ConsensusModule) Stop() {
 	cm.mutex.Lock()
@@ -160,6 +164,8 @@ func (cm *ConsensusModule) GetStopError() error {
 }
 
 // Get the current server state.
+//
+// This value is irrelevant if the ConsensusModule is stopped.
 func (cm *ConsensusModule) GetServerState() ServerState {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
@@ -340,11 +346,13 @@ func (cm *ConsensusModule) safeTick() {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	// Get a fresh now since we could have been waiting
-	now := time.Now()
-	err := cm.passiveConsensusModule.Tick(now)
-	if err != nil {
-		cm.shutdownAndPanic(err)
+	if !cm.stopped {
+		// Get a fresh now since we could have been waiting
+		now := time.Now()
+		err := cm.passiveConsensusModule.Tick(now)
+		if err != nil {
+			cm.shutdownAndPanic(err)
+		}
 	}
 }
 
@@ -352,8 +360,8 @@ func (cm *ConsensusModule) safeTick() {
 // Panic if the given error is not nil.
 func (cm *ConsensusModule) shutdownAndPanic(err error) {
 	if !cm.stopped {
-		// Stop the ticker and wait for it to complete
-		cm.ticker.StopSync()
+		// Tell the ticker to stop
+		cm.ticker.StopAsync()
 		// Update state
 		cm.stopError = err
 		cm.stopped = true
