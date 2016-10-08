@@ -68,9 +68,6 @@ func TestConsensusModule_StartStateAndStop(t *testing.T) {
 	if !cm.IsStopped() {
 		t.Error()
 	}
-	if cm.GetStopError() != nil {
-		t.Error()
-	}
 }
 
 func TestConsensusModule_CallStopMultipleTimes(t *testing.T) {
@@ -84,9 +81,6 @@ func TestConsensusModule_CallStopMultipleTimes(t *testing.T) {
 	cm.Stop()
 
 	if !cm.IsStopped() {
-		t.Error()
-	}
-	if cm.GetStopError() != nil {
 		t.Error()
 	}
 
@@ -197,7 +191,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 
 	// server should now be a leader
 	if cm.IsStopped() {
-		t.Fatal(cm.GetStopError())
+		t.Fatal()
 	}
 	if cm.GetServerState() != LEADER {
 		t.Fatal()
@@ -260,7 +254,7 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 	err = cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if cm.IsStopped() {
-		t.Error(cm.GetStopError())
+		t.Error()
 	}
 	if err != nil {
 		t.Fatal()
@@ -298,7 +292,7 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 		t.Fatal()
 	}
 	if cm.IsStopped() {
-		t.Error(cm.GetStopError())
+		t.Error()
 	}
 
 	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
