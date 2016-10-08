@@ -20,7 +20,7 @@ func setupConsensusModuleR3(
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
-) (*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	dsm := testhelpers.NewDummyStateMachine()
@@ -48,7 +48,7 @@ func setupConsensusModuleR3_SOLO(
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
-) (*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	dsm := testhelpers.NewDummyStateMachine()
@@ -73,7 +73,7 @@ func setupConsensusModuleR3_SOLO(
 
 func TestCluster_ElectsLeader(t *testing.T) {
 	imrsh := &inMemoryRpcServiceHub{nil}
-	setupCMR3 := func(thisServerId ServerId) *ConsensusModule {
+	setupCMR3 := func(thisServerId ServerId) IConsensusModule {
 		cm, _, _ := setupConsensusModuleR3(
 			t,
 			thisServerId,
@@ -89,7 +89,7 @@ func TestCluster_ElectsLeader(t *testing.T) {
 	defer cm2.Stop()
 	cm3 := setupCMR3("s3")
 	defer cm3.Stop()
-	imrsh.cms = map[ServerId]*ConsensusModule{
+	imrsh.cms = map[ServerId]IConsensusModule{
 		"s1": cm1,
 		"s2": cm2,
 		"s3": cm3,
@@ -125,14 +125,14 @@ func testSetupClusterWithLeader(
 	t *testing.T,
 ) (
 	*inMemoryRpcServiceHub,
-	*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
-	*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
-	*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
 ) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	setupCMR3 := func(
 		thisServerId ServerId, electionTimeoutLow time.Duration,
-	) (*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
+	) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 		return setupConsensusModuleR3(
 			t,
 			thisServerId,
@@ -144,7 +144,7 @@ func testSetupClusterWithLeader(
 	cm1, diml1, dsm1 := setupCMR3("s1", testdata.ElectionTimeoutLow)
 	cm2, diml2, dsm2 := setupCMR3("s2", testdata.ElectionTimeoutLow*3)
 	cm3, diml3, dsm3 := setupCMR3("s3", testdata.ElectionTimeoutLow*3)
-	imrsh.cms = map[ServerId]*ConsensusModule{
+	imrsh.cms = map[ServerId]IConsensusModule{
 		"s1": cm1,
 		"s2": cm2,
 		"s3": cm3,
@@ -165,7 +165,7 @@ func testSetupClusterWithLeader(
 
 func testSetup_SOLO_Leader(
 	t *testing.T,
-) (*ConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	cm, diml, dsm := setupConsensusModuleR3_SOLO(
 		t,
@@ -173,7 +173,7 @@ func testSetup_SOLO_Leader(
 		nil,
 		imrsh.getRpcService("_SOLO_"),
 	)
-	imrsh.cms = map[ServerId]*ConsensusModule{
+	imrsh.cms = map[ServerId]IConsensusModule{
 		"_SOLO_": cm,
 	}
 
@@ -313,7 +313,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 // Real in-memory implementation of RpcService
 // - meant only for tests
 type inMemoryRpcServiceHub struct {
-	cms map[ServerId]*ConsensusModule
+	cms map[ServerId]IConsensusModule
 }
 
 type inMemoryRpcServiceConnector struct {
