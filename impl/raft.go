@@ -43,8 +43,7 @@ type ConsensusModule struct {
 	rpcService RpcService
 
 	// -- State
-	stopped   bool
-	stopError error
+	stopped bool
 
 	// -- Ticker
 	tickerDuration time.Duration
@@ -77,7 +76,6 @@ func NewConsensusModule(
 
 		// -- State
 		true,
-		nil,
 
 		// -- Ticker
 		timeSettings.TickerDuration,
@@ -150,17 +148,6 @@ func (cm *ConsensusModule) Stop() {
 	defer cm.mutex.Unlock()
 
 	cm.shutdownAndPanic(nil)
-}
-
-// Get the error that stopped the ConsensusModule.
-//
-// The value will be nil if the ConsensusModule is not stopped, or if it stopped
-// without an error.
-func (cm *ConsensusModule) GetStopError() error {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
-
-	return cm.stopError
 }
 
 // Get the current server state.
@@ -363,7 +350,6 @@ func (cm *ConsensusModule) shutdownAndPanic(err error) {
 		// Tell the ticker to stop
 		cm.ticker.StopAsync()
 		// Update state
-		cm.stopError = err
 		cm.stopped = true
 		// Panic for error
 		if err != nil {
