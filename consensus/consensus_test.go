@@ -838,7 +838,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	if iole != 11 {
 		t.Fatal()
 	}
-	le := log.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 11)
+	le := testhelpers.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 11)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
 	}

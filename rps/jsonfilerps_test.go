@@ -3,6 +3,7 @@ package rps_test
 import (
 	"bytes"
 	"github.com/divtxt/raft/rps"
+	"github.com/divtxt/raft/testhelpers"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ func TestNewJsonFileRaftpersistentState_Blackbox(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rps.BlackboxTest_RaftPersistentState(t, jfrps)
+	testhelpers.BlackboxTest_RaftPersistentState(t, jfrps)
 
 	if jfrps.GetCurrentTerm() != 4 {
 		t.Fatal()

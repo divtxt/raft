@@ -97,6 +97,8 @@ func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) er
 }
 
 func (iml *InMemoryLog) AppendEntry(logEntry LogEntry) error {
+	// return fmt.Errorf("InMemoryLog: EEEE: %v", logEntry)
+
 	iml.entries = append(iml.entries, logEntry)
 	return nil
 }
