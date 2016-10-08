@@ -2,6 +2,7 @@ package log
 
 import (
 	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/testhelpers"
 	"reflect"
 	"testing"
 )
@@ -10,7 +11,7 @@ import (
 func TestInMemoryLog_BlackboxTest(t *testing.T) {
 	inmem_log := TestUtil_NewInMemoryLog_WithFigure7LeaderLine()
 
-	BlackboxTest_Log(t, inmem_log)
+	testhelpers.BlackboxTest_Log(t, inmem_log)
 }
 
 // Tests for InMemoryLog's GetEntriesAfterIndex implementation

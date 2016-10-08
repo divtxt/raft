@@ -1,4 +1,4 @@
-package log
+package testhelpers
 
 import (
 	"bytes"
@@ -139,4 +139,16 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 	if !reflect.DeepEqual(le, LogEntry{1, Command("c3")}) {
 		t.Fatal(le)
 	}
+}
+
+// Test Helper
+func TestHelper_GetLogEntryAtIndex(log LogReadOnly, li LogIndex) LogEntry {
+	if li == 0 {
+		panic("oops!")
+	}
+	entries, err := log.GetEntriesAfterIndex(li-1, 1)
+	if err != nil {
+		panic(err)
+	}
+	return entries[0]
 }

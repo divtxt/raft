@@ -1,4 +1,4 @@
-package rps
+package testhelpers
 
 import (
 	. "github.com/divtxt/raft"

@@ -267,7 +267,7 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 	if iole != 11 {
 		t.Fatal()
 	}
-	le := log.TestHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.LogRO, 11)
+	le := testhelpers.TestHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.LogRO, 11)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
 	}

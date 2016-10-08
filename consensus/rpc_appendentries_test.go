@@ -2,7 +2,6 @@ package consensus
 
 import (
 	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/testhelpers"
 	"testing"
 )
@@ -196,7 +195,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !testhelpers.DummyCommandEquals(log.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 6).Command, 6) {
+		if !testhelpers.DummyCommandEquals(testhelpers.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 6).Command, 6) {
 			t.Error()
 		}
 
@@ -232,7 +231,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if iole != 8 {
 			t.Fatal(iole)
 		}
-		addedLogEntry := log.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 6)
+		addedLogEntry := testhelpers.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 6)
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
@@ -293,7 +292,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !testhelpers.DummyCommandEquals(log.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 4).Command, 4) {
+		if !testhelpers.DummyCommandEquals(testhelpers.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 4).Command, 4) {
 			t.Error()
 		}
 
@@ -328,7 +327,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if iole != 6 {
 			t.Fatal(iole)
 		}
-		addedLogEntry := log.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 6)
+		addedLogEntry := testhelpers.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 6)
 		if addedLogEntry.TermNo != 5 {
 			t.Error()
 		}
