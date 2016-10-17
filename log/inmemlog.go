@@ -96,9 +96,9 @@ func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) er
 	return nil
 }
 
-func (iml *InMemoryLog) AppendEntry(logEntry LogEntry) error {
+func (iml *InMemoryLog) AppendEntry(logEntry LogEntry) (LogIndex, error) {
 	// return fmt.Errorf("InMemoryLog: EEEE: %v", logEntry)
 
 	iml.entries = append(iml.entries, logEntry)
-	return nil
+	return LogIndex(len(iml.entries)), nil
 }

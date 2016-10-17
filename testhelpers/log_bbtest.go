@@ -106,9 +106,12 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 
 	// append test
 	logEntry := LogEntry{8, Command("c14")}
-	err = log.AppendEntry(logEntry)
+	ioleAE, err := log.AppendEntry(logEntry)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if ioleAE != 14 {
+		t.Fatal(ioleAE)
 	}
 	iole, err = log.GetIndexOfLastEntry()
 	if err != nil {

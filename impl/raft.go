@@ -243,20 +243,20 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 // (see delegation of lastApplied to the state machine via the ChangeListener interface)
 //
 // See the notes on NewConsensusModule() for more details about this method's behavior.
-func (cm *ConsensusModule) AppendCommand(command Command) error {
+func (cm *ConsensusModule) AppendCommand(command Command) (LogIndex, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
 	if cm.stopped {
-		return ErrStopped
+		return 0, ErrStopped
 	}
 
-	err := cm.passiveConsensusModule.AppendCommand(command)
+	iole, err := cm.passiveConsensusModule.AppendCommand(command)
 	if err != nil && err != ErrNotLeader {
 		cm.shutdownAndPanic(err)
 	}
 
-	return err
+	return iole, err
 }
 
 // -- protected methods

@@ -92,8 +92,11 @@ type Log interface {
 
 	// Append a new entry with the given term and given serialized command.
 	//
+	// The index of the new entry should be returned.
+	// (This should match indexOfLastEntry)
+	//
 	// This method will only be called when this ConsensusModule is the leader.
-	AppendEntry(LogEntry) error
+	AppendEntry(LogEntry) (LogIndex, error)
 }
 
 // Read-only subset of the Raft Log.
