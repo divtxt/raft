@@ -512,12 +512,12 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
-	if err != nil {
+	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil || ioleAC != 11 {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil {
+	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil || ioleAC != 12 {
 		t.Fatal()
 	}
 
@@ -629,12 +629,12 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
-	if err != nil {
+	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil || ioleAC != 11 {
 		t.Fatal()
 	}
-	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil {
+	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil || ioleAC != 12 {
 		t.Fatal()
 	}
 
@@ -826,8 +826,8 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
-	if err != nil {
+	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+	if err != nil || ioleAC != 11 {
 		t.Fatal()
 	}
 
@@ -860,7 +860,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+		_, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
 		if err != ErrNotLeader {
 			t.Fatal()
 		}

@@ -147,19 +147,19 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 // The command will be sent to Log.AppendEntry().
 //
 // Returns ErrNotLeader if not currently the leader.
-func (cm *PassiveConsensusModule) AppendCommand(command Command) error {
+func (cm *PassiveConsensusModule) AppendCommand(command Command) (LogIndex, error) {
 	if cm.GetServerState() != LEADER {
-		return ErrNotLeader
+		return 0, ErrNotLeader
 	}
 
 	termNo := cm.RaftPersistentState.GetCurrentTerm()
 	logEntry := LogEntry{termNo, command}
-	err := cm._log.AppendEntry(logEntry)
+	iole, err := cm._log.AppendEntry(logEntry)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return iole, nil
 }
 
 // Iterate

@@ -21,7 +21,7 @@ func TestUtil_NewInMemoryLog_WithTerms(logTerms []TermNo) *InMemoryLog {
 	for i, term := range logTerms {
 		command := Command("c" + strconv.Itoa(i+1))
 		logEntry := LogEntry{term, command}
-		err := inmem_log.AppendEntry(logEntry)
+		_, err := inmem_log.AppendEntry(logEntry)
 		if err != nil {
 			panic(err)
 		}
