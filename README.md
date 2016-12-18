@@ -18,6 +18,7 @@ See [lockd](https://github.com/divtxt/lockd) for a example of how to use this mo
 
 Later:
 
+- [ ] Leader commits a no-op entry at the start of its term (#8p4)
 - [ ] Isolated server should not increment term (similar to #6p8)
 - [ ] Add metrics & logging
 - [ ] Expose raft details e.g. leader, term
@@ -33,9 +34,11 @@ Later:
 - [ ] Live cluster membership changes
 - [ ] Read-only nodes (replication)
 
+
 Misc/Maybe:
 
 - [ ] Tests have theoretical concurrency issues
 - [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
 - [ ] Servers check that they agree on cluster info
+- [ ] Leader heartbeats with a majority before responding to read-only requests (#8p4)
 - [ ] Election timeout based on ping times to bias selection of lower latency leader
