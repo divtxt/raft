@@ -1,7 +1,10 @@
 package consensus
 
 import (
-	"fmt"
+	"reflect"
+	"testing"
+	"time"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
@@ -9,9 +12,6 @@ import (
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
-	"reflect"
-	"testing"
-	"time"
 )
 
 func setupManagedConsensusModule(t *testing.T, logTerms []TermNo) *managedConsensusModule {
@@ -75,24 +75,9 @@ func TestCM_InitialState(t *testing.T) {
 	}
 }
 
-func test_ExpectPanic(t *testing.T, f func(), expectedRecover interface{}) {
-	skipRecover := false
-	defer func() {
-		if !skipRecover {
-			if r := recover(); r != expectedRecover {
-				t.Fatal(fmt.Sprintf("Expected panic: %v; got: %v", expectedRecover, r))
-			}
-		}
-	}()
-
-	f()
-	skipRecover = true
-	t.Fatal(fmt.Sprintf("Expected panic: %v; got nothing!", expectedRecover))
-}
-
 func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
-	test_ExpectPanic(
+	testhelpers.TestHelper_ExpectPanic(
 		t,
 		func() {
 			mcm.pcm.setServerState(42)
