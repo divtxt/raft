@@ -26,7 +26,7 @@ func setupManagedConsensusModuleR2(
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine()
+	mcl := testhelpers.NewMockChangeListener()
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
 	if solo {
@@ -42,7 +42,7 @@ func setupManagedConsensusModuleR2(
 	cm, err := NewPassiveConsensusModule(
 		ps,
 		iml,
-		dsm,
+		mcl,
 		mrs,
 		ci,
 		testdata.MaxEntriesPerAppendEntry,
@@ -57,7 +57,7 @@ func setupManagedConsensusModuleR2(
 	}
 	// Bias simulated clock to avoid exact time matches
 	now = now.Add(testdata.SleepToLetGoroutineRun)
-	mcm := &managedConsensusModule{cm, now, iml, dsm}
+	mcm := &managedConsensusModule{cm, now, iml, mcl}
 	return mcm, mrs
 }
 
@@ -644,7 +644,7 @@ func TestCM_SetCommitIndexNotifiesChangeListener(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 
-		if mcm.dsm.GetCommitIndex() != 0 {
+		if mcm.mcl.GetCommitIndex() != 0 {
 			t.Fatal()
 		}
 
@@ -652,7 +652,7 @@ func TestCM_SetCommitIndexNotifiesChangeListener(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.dsm.GetCommitIndex() != 2 {
+		if mcm.mcl.GetCommitIndex() != 2 {
 			t.Fatal()
 		}
 
@@ -660,7 +660,7 @@ func TestCM_SetCommitIndexNotifiesChangeListener(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.dsm.GetCommitIndex() != 9 {
+		if mcm.mcl.GetCommitIndex() != 9 {
 			t.Fatal()
 		}
 	}
@@ -870,7 +870,7 @@ type managedConsensusModule struct {
 	pcm  *PassiveConsensusModule
 	now  time.Time
 	diml LogReadOnly
-	dsm  *testhelpers.DummyStateMachine
+	mcl  *testhelpers.MockChangeListener
 }
 
 func (mcm *managedConsensusModule) Tick() error {
