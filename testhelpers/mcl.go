@@ -6,22 +6,22 @@ import (
 	. "github.com/divtxt/raft"
 )
 
-// MockChangeListener is a mock implementation of ChangeListener.
-type MockChangeListener struct {
+// MockCommitIndexChangeListener is a mock implementation of CommitIndexChangeListener.
+type MockCommitIndexChangeListener struct {
 	commitIndex LogIndex
 }
 
-// NewMockChangeListener creates a new MockChangeListener
-func NewMockChangeListener(
+// NewMockCommitIndexChangeListener creates a new MockCommitIndexChangeListener.
+func NewMockCommitIndexChangeListener(
 // FIXME: take commitIndex ?
-) *MockChangeListener {
-	return &MockChangeListener{0}
+) *MockCommitIndexChangeListener {
+	return &MockCommitIndexChangeListener{0}
 }
 
-func (mcl *MockChangeListener) CommitIndexChanged(commitIndex LogIndex) {
+func (mcl *MockCommitIndexChangeListener) CommitIndexChanged(commitIndex LogIndex) {
 	if commitIndex < mcl.commitIndex {
 		panic(fmt.Sprintf(
-			"MockChangeListener: CommitIndexChanged(%d) is < current commitIndex=%d",
+			"MockCommitIndexChangeListener: CommitIndexChanged(%d) is < current commitIndex=%d",
 			commitIndex,
 			mcl.commitIndex,
 		))
@@ -29,6 +29,6 @@ func (mcl *MockChangeListener) CommitIndexChanged(commitIndex LogIndex) {
 	mcl.commitIndex = commitIndex
 }
 
-func (mcl *MockChangeListener) GetCommitIndex() LogIndex {
+func (mcl *MockCommitIndexChangeListener) GetCommitIndex() LogIndex {
 	return mcl.commitIndex
 }

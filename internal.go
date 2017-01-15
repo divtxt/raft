@@ -9,17 +9,17 @@ type LogReadOnly interface {
 	GetEntriesAfterIndex(LogIndex, uint64) ([]LogEntry, error)
 }
 
-// ChangeListener is an internal interface to the component that applies committed entries
-// from the raft log to the state machine.
+// CommitIndexChangeListener is the internal interface that PassiveConsensusModule uses to
+// delegate the work of applying committed log entries to the state machine.
 //
-// Specifically, the following responsibility is delegated to the implementation of this interface:
+// Specifically, the following responsibility is being delegated:
 //
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
 // log[lastApplied] to state machine (#5.3)
 //
-// Concurrency: the consensus module will only ever make one call this interface at a time.
+// Concurrency: PassiveConsensusModule will only ever make one call to this interface at a time.
 //
-type ChangeListener interface {
+type CommitIndexChangeListener interface {
 
 	// CommitIndexChanged lets this interface know that commitIndex has changed to the given value.
 	//
@@ -32,8 +32,8 @@ type ChangeListener interface {
 	// This method should return immediately without blocking. This means that applying log entries
 	// to the state machine up to the new commitIndex should be asynchronous to this method call.
 	//
-	// On startup, the ChangeListener can consider the previous commitIndex to be either 0 or
-	// the persisted value of lastApplied. If the state machine is not persisted, there is no
+	// On startup, the CommitIndexChangeListener can consider the previous commitIndex to be either
+	// 0 or the persisted value of lastApplied. If the state machine is not persisted, there is no
 	// difference as lastApplied will also start at 0.
 	//
 	// It is an error if the value of commitIndex decreases. Note that the upstream commitIndex may

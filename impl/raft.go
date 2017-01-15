@@ -8,7 +8,7 @@
 //
 //  - RaftPersistentState
 //  - Log
-//  - ChangeListener
+//  - StateMachine
 //  - RpcService
 //
 // Notes for implementers of these interfaces:
@@ -240,7 +240,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 //
 // We choose not to deal with the client directly. You must implement the interaction with
 // clients and, if required, with waiting for the entry to be applied to the state machine.
-// (see delegation of lastApplied to the state machine via the ChangeListener interface)
+// (see delegation of lastApplied to the state machine via the StateMachine interface)
 //
 // See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) AppendCommand(command Command) (LogIndex, error) {
