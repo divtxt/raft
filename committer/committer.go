@@ -26,7 +26,7 @@ type Committer struct {
 }
 
 // NewCommitter creates a new Committer with the given parameters.
-func NewCommitter(log Log, stateMachine StateMachine) *Committer {
+func NewCommitter(log LogReadOnly, stateMachine StateMachine) *Committer {
 	c := &Committer{
 		0,
 		stateMachine.GetLastApplied(),
