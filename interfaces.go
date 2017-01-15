@@ -176,6 +176,58 @@ type ChangeListener interface {
 	CommitIndexChanged(LogIndex)
 }
 
+// StateMachine is the interface that the state machine must expose to Raft.
+//
+// You must implement this interface!
+//
+// Raft will apply committed commands from the log to the state machine through this interface.
+//
+// All methods should return immediately without blocking.
+//
+// Concurrency: the ConsensusModule will only ever call one method of this interface at a time.
+//
+// Raft describes two state parameters - commitIndex and lastApplied -
+// that are used to track which log entries are committed to the log and the
+// state machine respectively. However, Raft is focussed on the log and cares
+// very little about lastAplied, other than to drive state machine commits.
+//
+// Further, because lastApplied should be persisted with the state machine, we delegate
+// lastApplied to the state machine via this interface.
+//
+// Relevant technical details:
+//
+// - lastApplied is the index of highest log entry applied to state machine
+// (initialized to 0, increases monotonically)
+//
+// - (#Errata-X1:) lastApplied should be as durable as the state machine
+// From https://github.com/ongardie/dissertation#updates-and-errata :
+// Although lastApplied is listed as volatile state, it should be as
+// volatile as the state machine. If the state machine is volatile,
+// lastApplied should be volatile. If the state machine is persistent,
+// lastApplied should be just as persistent.
+//
+type StateMachine interface {
+	// GetLastApplied should return the value of lastApplied.
+	//
+	// On startup, the ConsensusModule may use this value to initialize commitIndex.
+	//
+	// If the state machine is not persisted, this value should start at 0.
+	GetLastApplied() LogIndex
+
+	// ApplyCommand should apply the given command to the state machine.
+	//
+	// The log index of the command is provided i.e. this is the new value of lastApplied
+	// corresponding to the given command.
+	//
+	// This method should return only after all changes have been applied.
+	//
+	// It is an error if the value of logIndex is less than lastApplied. Note that the upstream
+	// commitIndex may NOT be persisted, and may reset to 0 on restart.
+	// However, the upstream should never send this initial 0 value to StateMachine, and
+	// should always jump to a non-decreasing value.
+	ApplyCommand(logIndex LogIndex, command Command)
+}
+
 // Raft persistent state on all servers.
 //
 // You must implement this interface!
