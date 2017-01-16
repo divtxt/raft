@@ -2,6 +2,7 @@ package committer
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/util"
@@ -16,7 +17,7 @@ type Committer struct {
 	// -- Commit state
 	// commitIndex is the index of highest log entry known to be committed
 	// (initialized to 0, increases monotonically)
-	commitIndex        LogIndex
+	_commitIndex       LogIndex
 	appliedCommitIndex LogIndex
 
 	// -- External components
@@ -52,21 +53,37 @@ func (c *Committer) StopSync() {
 //
 // Will panic if commitIndex decreases or if StopSync has been called.
 func (c *Committer) CommitIndexChanged(commitIndex LogIndex) {
-	// FIXME: mutex
+	// Concurrency analysis:
+	// - PassiveConsensusModule will only make one call at a time to this method
+	// - this is the only method that modifies commitIndex
+	// Because of the above, simple atomic get and set actions are sufficient, and no
+	// extended locking is needed.
+
+	currentCI := c.atomicGetCommitIndex()
 
 	// Check commitIndex is not going backward
-	if c.commitIndex > commitIndex {
-		panic(fmt.Sprintf("FATAL: decreasing commitIndex: %v > %v", c.commitIndex, commitIndex))
+	if currentCI > commitIndex {
+		panic(fmt.Sprintf("FATAL: decreasing commitIndex: %v > %v", currentCI, commitIndex))
 	}
 
 	// Update commitIndex and then trigger a run of the applier goroutine
-	c.commitIndex = commitIndex
+	c.atomicSetCommitIndex(commitIndex)
 	c.commitApplier.TriggerRun()
+}
+
+func (c *Committer) atomicGetCommitIndex() LogIndex {
+	return LogIndex(atomic.LoadUint64((*uint64)(&c._commitIndex)))
+}
+
+func (c *Committer) atomicSetCommitIndex(commitIndex LogIndex) {
+	atomic.StoreUint64((*uint64)(&c._commitIndex), uint64(commitIndex))
 }
 
 // Apply pending committed entries.
 func (c *Committer) applyPendingCommits() {
-	for c.appliedCommitIndex < c.commitIndex {
+	currentCI := c.atomicGetCommitIndex()
+
+	for c.appliedCommitIndex < currentCI {
 		// #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
 		// log[lastApplied] to state machine (#5.3)
 		// TODO: get and apply multiple entries at a time
@@ -76,7 +93,9 @@ func (c *Committer) applyPendingCommits() {
 
 // Apply one pending commit.
 func (c *Committer) applyOnePendingCommit() {
-	if c.appliedCommitIndex >= c.commitIndex {
+	currentCI := c.atomicGetCommitIndex()
+
+	if c.appliedCommitIndex >= currentCI {
 		return
 	}
 
