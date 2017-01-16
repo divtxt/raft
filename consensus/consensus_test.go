@@ -1,7 +1,10 @@
 package consensus
 
 import (
-	"fmt"
+	"reflect"
+	"testing"
+	"time"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
@@ -9,9 +12,6 @@ import (
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
-	"reflect"
-	"testing"
-	"time"
 )
 
 func setupManagedConsensusModule(t *testing.T, logTerms []TermNo) *managedConsensusModule {
@@ -26,7 +26,7 @@ func setupManagedConsensusModuleR2(
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine()
+	mcicl := testhelpers.NewMockCommitIndexChangeListener()
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
 	if solo {
@@ -42,7 +42,7 @@ func setupManagedConsensusModuleR2(
 	cm, err := NewPassiveConsensusModule(
 		ps,
 		iml,
-		dsm,
+		mcicl,
 		mrs,
 		ci,
 		testdata.MaxEntriesPerAppendEntry,
@@ -57,7 +57,7 @@ func setupManagedConsensusModuleR2(
 	}
 	// Bias simulated clock to avoid exact time matches
 	now = now.Add(testdata.SleepToLetGoroutineRun)
-	mcm := &managedConsensusModule{cm, now, iml, dsm}
+	mcm := &managedConsensusModule{cm, now, iml, mcicl}
 	return mcm, mrs
 }
 
@@ -75,24 +75,9 @@ func TestCM_InitialState(t *testing.T) {
 	}
 }
 
-func test_ExpectPanic(t *testing.T, f func(), expectedRecover interface{}) {
-	skipRecover := false
-	defer func() {
-		if !skipRecover {
-			if r := recover(); r != expectedRecover {
-				t.Fatal(fmt.Sprintf("Expected panic: %v; got: %v", expectedRecover, r))
-			}
-		}
-	}()
-
-	f()
-	skipRecover = true
-	t.Fatal(fmt.Sprintf("Expected panic: %v; got nothing!", expectedRecover))
-}
-
 func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
-	test_ExpectPanic(
+	testhelpers.TestHelper_ExpectPanic(
 		t,
 		func() {
 			mcm.pcm.setServerState(42)
@@ -655,11 +640,11 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 }
 
-func TestCM_SetCommitIndexNotifiesChangeListener(t *testing.T) {
+func TestCM_SetCommitIndexNotifiesCommitIndexChangeListener(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 
-		if mcm.dsm.GetCommitIndex() != 0 {
+		if mcm.mcicl.GetCommitIndex() != 0 {
 			t.Fatal()
 		}
 
@@ -667,7 +652,7 @@ func TestCM_SetCommitIndexNotifiesChangeListener(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.dsm.GetCommitIndex() != 2 {
+		if mcm.mcicl.GetCommitIndex() != 2 {
 			t.Fatal()
 		}
 
@@ -675,7 +660,7 @@ func TestCM_SetCommitIndexNotifiesChangeListener(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.dsm.GetCommitIndex() != 9 {
+		if mcm.mcicl.GetCommitIndex() != 9 {
 			t.Fatal()
 		}
 	}
@@ -882,10 +867,10 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 // of time with helper methods. This simplifies tests and avoids concurrency
 // issues with inspecting the internals.
 type managedConsensusModule struct {
-	pcm  *PassiveConsensusModule
-	now  time.Time
-	diml LogReadOnly
-	dsm  *testhelpers.DummyStateMachine
+	pcm   *PassiveConsensusModule
+	now   time.Time
+	diml  LogReadOnly
+	mcicl *testhelpers.MockCommitIndexChangeListener
 }
 
 func (mcm *managedConsensusModule) Tick() error {

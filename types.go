@@ -13,7 +13,6 @@ const (
 	LEADER
 )
 
-var ErrAlreadyStartedOnce = errors.New("ConsensusModule was already started once")
 var ErrStopped = errors.New("ConsensusModule is stopped")
 
 var ErrNotLeader = errors.New("Not currently in LEADER state")

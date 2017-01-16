@@ -8,7 +8,7 @@
 //
 //  - RaftPersistentState
 //  - Log
-//  - ChangeListener
+//  - StateMachine
 //  - RpcService
 //
 // Notes for implementers of these interfaces:
@@ -23,13 +23,14 @@
 package impl
 
 import (
-	"errors"
+	"sync"
+	"time"
+
 	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/committer"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
 	"github.com/divtxt/raft/util"
-	"sync"
-	"time"
 )
 
 // A ConsensusModule is an active Raft consensus module implementation.
@@ -37,6 +38,7 @@ type ConsensusModule struct {
 	mutex *sync.Mutex
 
 	//
+	committer              *committer.Committer
 	passiveConsensusModule *consensus.PassiveConsensusModule
 
 	// -- External components - these fields meant to be immutable
@@ -50,15 +52,18 @@ type ConsensusModule struct {
 	ticker         *util.Ticker
 }
 
-// Allocate and initialize a ConsensusModule with the given components and
+// NewConsensusModule creates and starts a ConsensusModule with the given components and
 // settings.
 //
 // All parameters are required.
 // timeSettings is checked using ValidateTimeSettings().
 //
+// The goroutine that drives ticks (and therefore RPCs) is started.
+//
 func NewConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
+	stateMachine StateMachine,
 	rpcService RpcService,
 	clusterInfo *config.ClusterInfo,
 	maxEntriesPerAppendEntry uint64,
@@ -66,16 +71,19 @@ func NewConsensusModule(
 ) (*ConsensusModule, error) {
 	now := time.Now()
 
+	committer := committer.NewCommitter(log, stateMachine)
+
 	cm := &ConsensusModule{
 		&sync.Mutex{},
 
-		nil, // temp value, to be replaced before goroutine start
+		committer,
+		nil, // passiveConsensusModule - temp value, to be replaced before goroutine start
 
 		// -- External components
 		rpcService,
 
 		// -- State
-		true,
+		false, // stopped flag
 
 		// -- Ticker
 		timeSettings.TickerDuration,
@@ -85,7 +93,7 @@ func NewConsensusModule(
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
-		nil,
+		committer,
 		cm,
 		clusterInfo,
 		maxEntriesPerAppendEntry,
@@ -96,37 +104,13 @@ func NewConsensusModule(
 		return nil, err
 	}
 
-	// we can only set the value here because it's a cyclic reference
+	// We can only set the value here because it's a cyclic reference
 	cm.passiveConsensusModule = pcm
-
-	return cm, nil
-}
-
-// Start the ConsensusModule running with the given ChangeListener.
-//
-// This starts a goroutine that drives ticks.
-//
-// Should only be called once.
-func (cm *ConsensusModule) Start(changeListener ChangeListener) error {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
-
-	if changeListener == nil {
-		return errors.New("'changeListener' cannot be nil")
-	}
-
-	if cm.ticker != nil {
-		return ErrAlreadyStartedOnce
-	}
-
-	cm.passiveConsensusModule.SetChangeListener(changeListener)
-
-	cm.stopped = false
 
 	// Start the ticker goroutine
 	cm.ticker = util.NewTicker(cm.safeTick, cm.tickerDuration)
 
-	return nil
+	return cm, nil
 }
 
 // Check if the ConsensusModule is stopped.
@@ -240,7 +224,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 //
 // We choose not to deal with the client directly. You must implement the interaction with
 // clients and, if required, with waiting for the entry to be applied to the state machine.
-// (see delegation of lastApplied to the state machine via the ChangeListener interface)
+// (see delegation of lastApplied to the state machine via the StateMachine interface)
 //
 // See the notes on NewConsensusModule() for more details about this method's behavior.
 func (cm *ConsensusModule) AppendCommand(command Command) (LogIndex, error) {
@@ -349,6 +333,9 @@ func (cm *ConsensusModule) shutdownAndPanic(err error) {
 	if !cm.stopped {
 		// Tell the ticker to stop
 		cm.ticker.StopAsync()
+		// Tell the committer to stop
+		// FIXME: race condition with tick goroutine stop
+		cm.committer.StopSync()
 		// Update state
 		cm.stopped = true
 		// Panic for error
