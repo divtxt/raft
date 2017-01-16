@@ -37,10 +37,6 @@ func setupConsensusModuleR3(
 	if cm == nil {
 		t.Fatal()
 	}
-	err = cm.Start()
-	if err != nil {
-		t.Fatal(err)
-	}
 	return cm, iml, dsm
 }
 
@@ -64,10 +60,6 @@ func setupConsensusModuleR3_SOLO(
 	}
 	if cm == nil {
 		t.Fatal()
-	}
-	err = cm.Start()
-	if err != nil {
-		t.Fatal(err)
 	}
 	return cm, iml, dsm
 }

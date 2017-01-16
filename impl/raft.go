@@ -52,11 +52,13 @@ type ConsensusModule struct {
 	ticker         *util.Ticker
 }
 
-// Allocate and initialize a ConsensusModule with the given components and
+// NewConsensusModule creates and starts a ConsensusModule with the given components and
 // settings.
 //
 // All parameters are required.
 // timeSettings is checked using ValidateTimeSettings().
+//
+// The goroutine that drives ticks (and therefore RPCs) is started.
 //
 func NewConsensusModule(
 	raftPersistentState RaftPersistentState,
@@ -81,7 +83,7 @@ func NewConsensusModule(
 		rpcService,
 
 		// -- State
-		true,
+		false, // stopped flag
 
 		// -- Ticker
 		timeSettings.TickerDuration,
@@ -102,31 +104,13 @@ func NewConsensusModule(
 		return nil, err
 	}
 
-	// we can only set the value here because it's a cyclic reference
+	// We can only set the value here because it's a cyclic reference
 	cm.passiveConsensusModule = pcm
-
-	return cm, nil
-}
-
-// Start the ConsensusModule.
-//
-// This starts a goroutine that drives ticks.
-//
-// Should only be called once.
-func (cm *ConsensusModule) Start() error {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
-
-	if cm.ticker != nil {
-		return ErrAlreadyStartedOnce
-	}
-
-	cm.stopped = false
 
 	// Start the ticker goroutine
 	cm.ticker = util.NewTicker(cm.safeTick, cm.tickerDuration)
 
-	return nil
+	return cm, nil
 }
 
 // Check if the ConsensusModule is stopped.

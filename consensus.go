@@ -4,12 +4,6 @@ package raft
 
 // The Raft ConsensusModule.
 type IConsensusModule interface {
-	// Start the ConsensusModule.
-	//
-	// This starts a goroutine that drives ticks.
-	//
-	// Should only be called once.
-	Start() error
 
 	// Check if the ConsensusModule is stopped.
 	IsStopped() bool
