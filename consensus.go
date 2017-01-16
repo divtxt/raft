@@ -4,12 +4,6 @@ package raft
 
 // The Raft ConsensusModule.
 type IConsensusModule interface {
-	// Start the ConsensusModule running with the given ChangeListener.
-	//
-	// This starts a goroutine that drives ticks.
-	//
-	// Should only be called once.
-	Start(changeListener ChangeListener) error
 
 	// Check if the ConsensusModule is stopped.
 	IsStopped() bool
@@ -65,8 +59,13 @@ type IConsensusModule interface {
 	//
 	// We choose not to deal with the client directly. You must implement the interaction with
 	// clients and, if required, with waiting for the entry to be applied to the state machine.
-	// (see delegation of lastApplied to the state machine via the ChangeListener interface)
+	// (see delegation of lastApplied to the state machine via the StateMachine interface)
 	//
 	// See the notes on NewConsensusModule() for more details about this method's behavior.
+	AppendCommand(command Command) (LogIndex, error)
+}
+
+// A subset of the IConsensusModule interface with just the AppendCommand method.
+type IConsensusModule_AppendCommandOnly interface {
 	AppendCommand(command Command) (LogIndex, error)
 }

@@ -1,15 +1,16 @@
 package impl
 
 import (
+	"reflect"
+	"testing"
+	"time"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
-	"reflect"
-	"testing"
-	"time"
 )
 
 var testClusterServerIds = []ServerId{"s1", "s2", "s3"}
@@ -23,22 +24,18 @@ func setupConsensusModuleR3(
 ) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine()
+	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, electionTimeoutLow}
 	ci, err := config.NewClusterInfo(testClusterServerIds, thisServerId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cm == nil {
 		t.Fatal()
-	}
-	err = cm.Start(dsm)
-	if err != nil {
-		t.Fatal(err)
 	}
 	return cm, iml, dsm
 }
@@ -51,22 +48,18 @@ func setupConsensusModuleR3_SOLO(
 ) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine()
+	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo([]ServerId{"_SOLO_"}, "_SOLO_")
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cm == nil {
 		t.Fatal()
-	}
-	err = cm.Start(dsm)
-	if err != nil {
-		t.Fatal(err)
 	}
 	return cm, iml, dsm
 }
@@ -237,17 +230,24 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	}
 
 	// and committed on the leader
-	if dsm1.GetCommitIndex() != 1 {
+	if dsm1.GetLastApplied() != 1 {
 		t.Fatal()
 	}
+	if !dsm1.AppliedCommandsEqual(101) {
+		t.Fatal()
+	}
+
 	// but not yet on the connected followers
-	if dsm2.GetCommitIndex() != 0 {
+	if dsm2.GetLastApplied() != 0 {
 		t.Fatal()
 	}
 
 	// Another tick propagates the commit to the connected followers
 	time.Sleep(testdata.TickerDuration)
-	if dsm2.GetCommitIndex() != 1 {
+	if dsm2.GetLastApplied() != 1 {
+		t.Fatal()
+	}
+	if !dsm2.AppliedCommandsEqual(101) {
 		t.Fatal()
 	}
 
@@ -261,7 +261,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	)
 	defer cm3b.Stop()
 	imrsh.cms["s3"] = cm3b
-	if dsm3b.GetCommitIndex() != 0 {
+	if dsm3b.GetLastApplied() != 0 {
 		t.Fatal()
 	}
 
@@ -272,7 +272,10 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	if !reflect.DeepEqual(le, expectedLe) {
 		t.Fatal(le)
 	}
-	if dsm3b.GetCommitIndex() != 1 {
+	if dsm3b.GetLastApplied() != 1 {
+		t.Fatal()
+	}
+	if !dsm3b.AppliedCommandsEqual(101) {
 		t.Fatal()
 	}
 }
@@ -305,13 +308,16 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 		t.Fatal(le)
 	}
 	// but not yet committed
-	if dsm.GetCommitIndex() != 0 {
+	if dsm.GetLastApplied() != 0 {
 		t.Fatal()
 	}
 
 	// A tick allows command to be committed
 	time.Sleep(testdata.TickerDuration)
-	if dsm.GetCommitIndex() != 1 {
+	if dsm.GetLastApplied() != 1 {
+		t.Fatal()
+	}
+	if !dsm.AppliedCommandsEqual(101) {
 		t.Fatal()
 	}
 }

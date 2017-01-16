@@ -3,11 +3,12 @@ package consensus
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	. "github.com/divtxt/raft"
 	config "github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
 	util "github.com/divtxt/raft/util"
-	"time"
 )
 
 type PassiveConsensusModule struct {
@@ -17,7 +18,7 @@ type PassiveConsensusModule struct {
 	RaftPersistentState RaftPersistentState
 	LogRO               LogReadOnly
 	_log                Log
-	_changeListener     ChangeListener
+	_cicListener        CommitIndexChangeListener
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
@@ -42,7 +43,7 @@ type PassiveConsensusModule struct {
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
-	changeListener ChangeListener,
+	cicListener CommitIndexChangeListener,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	maxEntriesPerAppendEntry uint64,
@@ -55,6 +56,9 @@ func NewPassiveConsensusModule(
 	}
 	if log == nil {
 		return nil, errors.New("'log' cannot be nil")
+	}
+	if cicListener == nil {
+		return nil, errors.New("'cicListener' cannot be nil")
 	}
 	if rpcSendOnly == nil {
 		return nil, errors.New("'rpcSendOnly' cannot be nil")
@@ -71,7 +75,7 @@ func NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
 		log,
-		changeListener,
+		cicListener,
 		rpcSendOnly,
 
 		// -- Config
@@ -96,12 +100,6 @@ func NewPassiveConsensusModule(
 	}
 
 	return pcm, nil
-}
-
-// Set the ChangeListener.
-// Replaces the current ChangeListener.
-func (cm *PassiveConsensusModule) SetChangeListener(changeListener ChangeListener) {
-	cm._changeListener = changeListener
 }
 
 // Get the current server state.
@@ -135,9 +133,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	if cm._changeListener != nil {
-		cm._changeListener.CommitIndexChanged(commitIndex)
-	}
+	cm._cicListener.CommitIndexChanged(commitIndex)
 	return nil
 }
 

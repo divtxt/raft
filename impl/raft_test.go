@@ -1,6 +1,10 @@
 package impl
 
 import (
+	"reflect"
+	"testing"
+	"time"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
@@ -8,9 +12,6 @@ import (
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
-	"reflect"
-	"testing"
-	"time"
 )
 
 func makeAEWithTerm(term TermNo) *RpcAppendEntries {
@@ -28,23 +29,19 @@ func setupConsensusModuleR2(
 ) (*ConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine()
+	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo(testdata.AllServerIds, testdata.ThisServerId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, mrs, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	cm, err := NewConsensusModule(ps, iml, dsm, mrs, ci, testdata.MaxEntriesPerAppendEntry, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cm == nil {
 		t.Fatal()
-	}
-	err = cm.Start(dsm)
-	if err != nil {
-		t.Fatal(err)
 	}
 	return cm, mrs
 }
