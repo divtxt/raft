@@ -64,3 +64,8 @@ type IConsensusModule interface {
 	// See the notes on NewConsensusModule() for more details about this method's behavior.
 	AppendCommand(command Command) (LogIndex, error)
 }
+
+// A subset of the IConsensusModule interface with just the AppendCommand method.
+type IConsensusModule_AppendCommandOnly interface {
+	AppendCommand(command Command) (LogIndex, error)
+}
