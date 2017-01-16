@@ -94,3 +94,8 @@ func (c *Committer) applyOnePendingCommit() {
 	// Update internal state
 	c.appliedCommitIndex = indexToApply
 }
+
+// For test use only!
+func (c *Committer) TestHelperGetCommitApplier() *util.TriggeredRunner {
+	return c.commitApplier
+}
