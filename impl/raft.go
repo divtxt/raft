@@ -333,6 +333,9 @@ func (cm *ConsensusModule) shutdownAndPanic(err error) {
 	if !cm.stopped {
 		// Tell the ticker to stop
 		cm.ticker.StopAsync()
+		// Tell the committer to stop
+		// FIXME: race condition with tick goroutine stop
+		cm.committer.StopSync()
 		// Update state
 		cm.stopped = true
 		// Panic for error
