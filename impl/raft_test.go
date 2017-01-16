@@ -43,10 +43,6 @@ func setupConsensusModuleR2(
 	if cm == nil {
 		t.Fatal()
 	}
-	err = cm.Start()
-	if err != nil {
-		t.Fatal(err)
-	}
 	return cm, mrs
 }
 
