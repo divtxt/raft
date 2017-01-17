@@ -329,15 +329,21 @@ func (cm *ConsensusModule) safeTick() {
 
 // Shutdown the ConsensusModule.
 // Panic if the given error is not nil.
+// It is expected that we're under mutex when this method is called.
 func (cm *ConsensusModule) shutdownAndPanic(err error) {
 	if !cm.stopped {
-		// Tell the ticker to stop
-		cm.ticker.StopAsync()
-		// Tell the committer to stop
-		// FIXME: race condition with tick goroutine stop
-		cm.committer.StopSync()
-		// Update state
+		// Mark self as stopped.
+		// Since we should be under mutex, no other calls will be serviced after this line.
 		cm.stopped = true
+		// Tell the ticker to stop.
+		// This needs be async since this method could be running as part of a tick.
+		cm.ticker.StopAsync()
+		// Tell the committer to stop.
+		// No other calls will be serviced, so there's no need to worry about a race condition
+		// between this stop and a commitIndex change.
+		// (Even if this method is running as part of a tick, we should be past the actual tick code)
+		// where the actual tick code
+		cm.committer.StopSync()
 		// Panic for error
 		if err != nil {
 			panic(err)
