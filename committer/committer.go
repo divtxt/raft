@@ -103,7 +103,7 @@ func (c *Committer) applyOnePendingCommit() {
 	indexToApply := c.appliedCommitIndex + 1
 	entries, err := c.log.GetEntriesAfterIndex(indexToApply-1, 1)
 	if err != nil {
-		panic(err) // FIXME: non-panic error handling
+		panic(err)
 	}
 	commandToApply := entries[0].Command
 

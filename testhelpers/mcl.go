@@ -12,9 +12,7 @@ type MockCommitIndexChangeListener struct {
 }
 
 // NewMockCommitIndexChangeListener creates a new MockCommitIndexChangeListener.
-func NewMockCommitIndexChangeListener(
-// FIXME: take commitIndex ?
-) *MockCommitIndexChangeListener {
+func NewMockCommitIndexChangeListener() *MockCommitIndexChangeListener {
 	return &MockCommitIndexChangeListener{0}
 }
 
