@@ -1,10 +1,11 @@
 package consensus
 
 import (
+	"testing"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
-	"testing"
 )
 
 // 1. Reply false if term < currentTerm (#5.1)
@@ -17,7 +18,7 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 
 		requestVote := &RpcRequestVote{7, 9, 6}
 
-		reply, err := mcm.Rpc_RpcRequestVote("s2", requestVote)
+		reply, err := mcm.Rpc_RpcRequestVote(102, requestVote)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,13 +57,13 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 
 		// sanity check
 		votedFor := mcm.pcm.RaftPersistentState.GetVotedFor()
-		if votedFor != "s1" && votedFor != "s2" {
+		if votedFor != 101 && votedFor != 102 {
 			t.Fatal(votedFor)
 		}
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply, err := mcm.Rpc_RpcRequestVote("s3", requestVote)
+		reply, err := mcm.Rpc_RpcRequestVote(103, requestVote)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -104,13 +105,13 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 
 		// sanity check
 		votedFor := mcm.pcm.RaftPersistentState.GetVotedFor()
-		if votedFor != "" && votedFor != "s2" {
+		if votedFor != 0 && votedFor != 102 {
 			t.Fatal(votedFor)
 		}
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply, err := mcm.Rpc_RpcRequestVote("s2", requestVote)
+		reply, err := mcm.Rpc_RpcRequestVote(102, requestVote)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -145,13 +146,13 @@ func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 
 		// sanity check
 		votedFor := mcm.pcm.RaftPersistentState.GetVotedFor()
-		if votedFor != "s1" {
+		if votedFor != 101 {
 			t.Fatal(votedFor)
 		}
 
 		requestVote := &RpcRequestVote{serverTerm, 12, 7}
 
-		reply, err := mcm.Rpc_RpcRequestVote("s2", requestVote)
+		reply, err := mcm.Rpc_RpcRequestVote(102, requestVote)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -182,11 +183,11 @@ func testSetupMCM_FollowerThatVotedForS2_Figure7LeaderLine(
 	mcm, mrs := testSetupMCM_Follower_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 
 	// sanity check
-	if mcm.pcm.RaftPersistentState.GetVotedFor() != "" {
+	if mcm.pcm.RaftPersistentState.GetVotedFor() != 0 {
 		t.Fatal()
 	}
 	// pretend server voted
-	err := mcm.pcm.RaftPersistentState.SetVotedFor("s2")
+	err := mcm.pcm.RaftPersistentState.SetVotedFor(102)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,13 +263,13 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 			t.Fatal(serverTerm)
 		}
 		votedFor := mcm.pcm.RaftPersistentState.GetVotedFor()
-		if votedFor != "" && votedFor != "s1" {
+		if votedFor != 0 && votedFor != 101 {
 			t.Fatal(votedFor)
 		}
 
 		requestVote := &RpcRequestVote{10, senderLastEntryIndex, senderLastEntryTerm}
 
-		reply, err := mcm.Rpc_RpcRequestVote("s5", requestVote)
+		reply, err := mcm.Rpc_RpcRequestVote(105, requestVote)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -285,9 +286,9 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 		if mcm.pcm.RaftPersistentState.GetCurrentTerm() != 10 {
 			t.Fatal(mcm.pcm.RaftPersistentState.GetCurrentTerm())
 		}
-		var expectedVotedFor ServerId = ""
+		var expectedVotedFor ServerId = 0
 		if expectedVote {
-			expectedVotedFor = "s5"
+			expectedVotedFor = 105
 		}
 		actualVotedFor := mcm.pcm.RaftPersistentState.GetVotedFor()
 		if actualVotedFor != expectedVotedFor {
@@ -341,8 +342,8 @@ func TestCM_RpcRV_SameServerId(t *testing.T) {
 
 		requestVote := &RpcRequestVote{7, 9, 6}
 
-		_, err := mcm.Rpc_RpcRequestVote("s1", requestVote)
-		if err == nil || err.Error() != "FATAL: from server has same serverId: s1" {
+		_, err := mcm.Rpc_RpcRequestVote(101, requestVote)
+		if err == nil || err.Error() != "FATAL: from server has same serverId: 101" {
 			t.Fatal(err)
 		}
 	}

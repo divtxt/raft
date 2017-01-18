@@ -3,8 +3,9 @@ package rps
 import (
 	"errors"
 	"fmt"
-	. "github.com/divtxt/raft"
 	"sync"
+
+	. "github.com/divtxt/raft"
 )
 
 // In-memory implementation of RaftPersistentState
@@ -36,7 +37,7 @@ func (imps *InMemoryRaftPersistentState) SetCurrentTerm(currentTerm TermNo) erro
 		return fmt.Errorf("FATAL: attempt to decrease currentTerm: %v to %v", imps.currentTerm, currentTerm)
 	}
 	if currentTerm > imps.currentTerm {
-		imps.votedFor = ""
+		imps.votedFor = 0
 	}
 	imps.currentTerm = currentTerm
 	return nil
@@ -48,16 +49,16 @@ func (imps *InMemoryRaftPersistentState) SetVotedFor(votedFor ServerId) error {
 	if imps.currentTerm == 0 {
 		return errors.New("FATAL: attempt to set votedFor while currentTerm is 0")
 	}
-	if votedFor == "" {
-		return errors.New("FATAL: attempt to set blank votedFor")
+	if votedFor == 0 {
+		return errors.New("FATAL: attempt to set votedFor to 0")
 	}
-	if imps.votedFor != "" {
-		return fmt.Errorf("FATAL: attempt to change non-blank votedFor: %v to %v", imps.votedFor, votedFor)
+	if imps.votedFor != 0 {
+		return fmt.Errorf("FATAL: attempt to change non-zero votedFor: %v to %v", imps.votedFor, votedFor)
 	}
 	imps.votedFor = votedFor
 	return nil
 }
 
 func NewIMPSWithCurrentTerm(currentTerm TermNo) *InMemoryRaftPersistentState {
-	return &InMemoryRaftPersistentState{&sync.Mutex{}, currentTerm, ""}
+	return &InMemoryRaftPersistentState{&sync.Mutex{}, currentTerm, 0}
 }

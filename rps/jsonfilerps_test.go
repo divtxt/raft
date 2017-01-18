@@ -2,12 +2,13 @@ package rps_test
 
 import (
 	"bytes"
-	"github.com/divtxt/raft/rps"
-	"github.com/divtxt/raft/testhelpers"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/divtxt/raft/rps"
+	"github.com/divtxt/raft/testhelpers"
 )
 
 // Run the blackbox test on JsonFileRaftpersistentState
@@ -33,7 +34,7 @@ func TestNewJsonFileRaftpersistentState_Blackbox(t *testing.T) {
 	if jfrps.GetCurrentTerm() != 4 {
 		t.Fatal()
 	}
-	if jfrps.GetVotedFor() != "s2" {
+	if jfrps.GetVotedFor() != 2 {
 		t.Fatal()
 	}
 }
@@ -59,7 +60,7 @@ func TestNewJsonFileRaftpersistentState_Whitebox(t *testing.T) {
 	if jfrps.GetCurrentTerm() != 0 {
 		t.Fatal(jfrps)
 	}
-	if jfrps.GetVotedFor() != "" {
+	if jfrps.GetVotedFor() != 0 {
 		t.Fatal()
 	}
 	// no file written for no changes
@@ -78,12 +79,12 @@ func TestNewJsonFileRaftpersistentState_Whitebox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Compare(data, []byte("{\"currentTerm\":1,\"votedFor\":\"\"}")) != 0 {
+	if bytes.Compare(data, []byte("{\"currentTerm\":1,\"votedFor\":0}")) != 0 {
 		t.Fatal(string(data))
 	}
 
 	// Set votedFor and check file
-	err = jfrps.SetVotedFor("s2000")
+	err = jfrps.SetVotedFor(2000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +93,7 @@ func TestNewJsonFileRaftpersistentState_Whitebox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Compare(data, []byte("{\"currentTerm\":1,\"votedFor\":\"s2000\"}")) != 0 {
+	if bytes.Compare(data, []byte("{\"currentTerm\":1,\"votedFor\":2000}")) != 0 {
 		t.Fatal(string(data))
 	}
 }

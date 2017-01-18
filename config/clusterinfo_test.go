@@ -2,10 +2,11 @@ package config_test
 
 import (
 	"errors"
-	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/config"
 	"reflect"
 	"testing"
+
+	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/config"
 )
 
 func TestNewClusterInfo_Validation(t *testing.T) {
@@ -16,33 +17,33 @@ func TestNewClusterInfo_Validation(t *testing.T) {
 	}{
 		{
 			nil,
-			"s1",
+			1,
 			"allServerIds is nil",
 		},
 		{
 			[]ServerId{},
-			"s1",
+			1,
 			"allServerIds must have at least 1 element",
 		},
 		{
-			[]ServerId{"s1", "s2"},
-			"",
-			"thisServerId is empty string",
+			[]ServerId{1, 2},
+			0,
+			"thisServerId is 0",
 		},
 		{
-			[]ServerId{"s1", ""},
-			"s1",
-			"allServerIds contains empty string",
+			[]ServerId{1, 0},
+			1,
+			"allServerIds contains 0",
 		},
 		{
-			[]ServerId{"s1", "s2", "s2"},
-			"s1",
-			"allServerIds contains duplicate value: s2",
+			[]ServerId{1, 2, 2},
+			1,
+			"allServerIds contains duplicate value: 2",
 		},
 		{
-			[]ServerId{"s2", "s3"},
-			"s1",
-			"allServerIds does not contain thisServerId: s1",
+			[]ServerId{2, 3},
+			1,
+			"allServerIds does not contain thisServerId: 1",
 		},
 	}
 
@@ -55,12 +56,12 @@ func TestNewClusterInfo_Validation(t *testing.T) {
 }
 
 func TestClusterInfo_Assorted(t *testing.T) {
-	ci, err := config.NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s1")
+	ci, err := config.NewClusterInfo([]ServerId{1, 2, 3}, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if ci.GetThisServerId() != "s1" {
+	if ci.GetThisServerId() != 1 {
 		t.Fatal()
 	}
 
@@ -73,12 +74,12 @@ func TestClusterInfo_Assorted(t *testing.T) {
 }
 
 func TestClusterInfo_SOLO_Assorted(t *testing.T) {
-	ci, err := config.NewClusterInfo([]ServerId{"s1"}, "s1")
+	ci, err := config.NewClusterInfo([]ServerId{1}, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if ci.GetThisServerId() != "s1" {
+	if ci.GetThisServerId() != 1 {
 		t.Fatal()
 	}
 
@@ -91,7 +92,7 @@ func TestClusterInfo_SOLO_Assorted(t *testing.T) {
 }
 
 func TestClusterInfo_ForEach(t *testing.T) {
-	ci, err := config.NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s1")
+	ci, err := config.NewClusterInfo([]ServerId{1, 2, 3}, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +105,7 @@ func TestClusterInfo_ForEach(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(seenIds, []ServerId{"s2", "s3"}) {
+	if !reflect.DeepEqual(seenIds, []ServerId{2, 3}) {
 		t.Fatal(seenIds)
 	}
 
@@ -116,7 +117,7 @@ func TestClusterInfo_ForEach(t *testing.T) {
 	if err.Error() != "foo!" {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(seenIds, []ServerId{"s2"}) {
+	if !reflect.DeepEqual(seenIds, []ServerId{2}) {
 		t.Fatal(seenIds)
 	}
 }

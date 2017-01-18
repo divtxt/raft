@@ -1,12 +1,13 @@
 package testdata
 
 import (
-	. "github.com/divtxt/raft"
 	"time"
+
+	. "github.com/divtxt/raft"
 )
 
 const (
-	ThisServerId = "s1"
+	ThisServerId = 101
 
 	// Note: value for tests based on Figure 7
 	// Start as follower at term 7 so that leader will be at term 8
@@ -21,7 +22,7 @@ const (
 	MaxEntriesPerAppendEntry = 3
 )
 
-var AllServerIds = []ServerId{ThisServerId, "s2", "s3", "s4", "s5"}
+var AllServerIds = []ServerId{ThisServerId, 102, 103, 104, 105}
 
 // Log with 10 entries with terms as shown in Figure 7, leader line
 func TestUtil_MakeFigure7LeaderLineTerms() []TermNo {

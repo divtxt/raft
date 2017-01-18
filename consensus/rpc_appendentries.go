@@ -6,8 +6,9 @@ package consensus
 
 import (
 	"fmt"
-	. "github.com/divtxt/raft"
 	"time"
+
+	. "github.com/divtxt/raft"
 )
 
 // Process the given RpcAppendEntries message
@@ -18,7 +19,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	now time.Time,
 ) (*RpcAppendEntriesReply, error) {
 	if from == cm.ClusterInfo.GetThisServerId() {
-		return nil, fmt.Errorf("FATAL: from server has same serverId: %s", cm.ClusterInfo.GetThisServerId())
+		return nil, fmt.Errorf("FATAL: from server has same serverId: %v", cm.ClusterInfo.GetThisServerId())
 	}
 
 	makeReply := func(success bool) *RpcAppendEntriesReply {

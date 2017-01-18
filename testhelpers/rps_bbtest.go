@@ -1,8 +1,9 @@
 package testhelpers
 
 import (
-	. "github.com/divtxt/raft"
 	"testing"
+
+	. "github.com/divtxt/raft"
 )
 
 // RaftPersistentState blackbox test.
@@ -15,7 +16,7 @@ func BlackboxTest_RaftPersistentState(
 	if raftPersistentState.GetCurrentTerm() != 0 {
 		t.Fatal()
 	}
-	if raftPersistentState.GetVotedFor() != "" {
+	if raftPersistentState.GetVotedFor() != 0 {
 		t.Fatal()
 	}
 
@@ -28,7 +29,7 @@ func BlackboxTest_RaftPersistentState(
 		t.Fatal()
 	}
 	// Set votedFor while currentTerm is 0 is an error
-	err = raftPersistentState.SetVotedFor("s1")
+	err = raftPersistentState.SetVotedFor(1)
 	if err.Error() != "FATAL: attempt to set votedFor while currentTerm is 0" {
 		t.Fatal(err)
 	}
@@ -44,19 +45,19 @@ func BlackboxTest_RaftPersistentState(
 		t.Fatal()
 	}
 	// Set votedFor of blank is an error
-	err = raftPersistentState.SetVotedFor("")
-	if err.Error() != "FATAL: attempt to set blank votedFor" {
+	err = raftPersistentState.SetVotedFor(0)
+	if err.Error() != "FATAL: attempt to set votedFor to 0" {
 		t.Fatal(err)
 	}
-	if raftPersistentState.GetVotedFor() != "" {
+	if raftPersistentState.GetVotedFor() != 0 {
 		t.Fatal()
 	}
 	// Set votedFor is ok
-	err = raftPersistentState.SetVotedFor("s1")
+	err = raftPersistentState.SetVotedFor(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if raftPersistentState.GetVotedFor() != "s1" {
+	if raftPersistentState.GetVotedFor() != 1 {
 		t.Fatal()
 	}
 	// Set currentTerm greater is ok, clears votedFor
@@ -67,15 +68,15 @@ func BlackboxTest_RaftPersistentState(
 	if raftPersistentState.GetCurrentTerm() != 4 {
 		t.Fatal()
 	}
-	if raftPersistentState.GetVotedFor() != "" {
+	if raftPersistentState.GetVotedFor() != 0 {
 		t.Fatal(raftPersistentState.GetVotedFor())
 	}
 	// Set votedFor while blank is ok
-	err = raftPersistentState.SetVotedFor("s2")
+	err = raftPersistentState.SetVotedFor(2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if raftPersistentState.GetVotedFor() != "s2" {
+	if raftPersistentState.GetVotedFor() != 2 {
 		t.Fatal()
 	}
 	// Set currentTerm same is ok, does not affect votedFor
@@ -86,7 +87,7 @@ func BlackboxTest_RaftPersistentState(
 	if raftPersistentState.GetCurrentTerm() != 4 {
 		t.Fatal()
 	}
-	if raftPersistentState.GetVotedFor() != "s2" {
+	if raftPersistentState.GetVotedFor() != 2 {
 		t.Fatal()
 	}
 	// Set currentTerm less is an error
@@ -98,11 +99,11 @@ func BlackboxTest_RaftPersistentState(
 		t.Fatal()
 	}
 	// Set votedFor while not blank is an error
-	err = raftPersistentState.SetVotedFor("s3")
-	if err.Error() != "FATAL: attempt to change non-blank votedFor: s2 to s3" {
+	err = raftPersistentState.SetVotedFor(3)
+	if err.Error() != "FATAL: attempt to change non-zero votedFor: 2 to 3" {
 		t.Fatal(err)
 	}
-	if raftPersistentState.GetVotedFor() != "s2" {
+	if raftPersistentState.GetVotedFor() != 2 {
 		t.Fatal()
 	}
 }

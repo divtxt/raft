@@ -1,9 +1,10 @@
 package consensus
 
 import (
+	"testing"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/testhelpers"
-	"testing"
 )
 
 func makeAEWithTerm(term TermNo) *RpcAppendEntries {
@@ -29,7 +30,7 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 
 		appendEntries := makeAEWithTerm(serverTerm - 1)
 
-		reply, err := mcm.Rpc_RpcAppendEntries("s2", appendEntries)
+		reply, err := mcm.Rpc_RpcAppendEntries(102, appendEntries)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -98,7 +99,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 
 		appendEntries := makeAEWithTermAndPrevLogDetails(senderTerm, 10, 6)
 
-		reply, err := mcm.Rpc_RpcAppendEntries("s3", appendEntries)
+		reply, err := mcm.Rpc_RpcAppendEntries(103, appendEntries)
 		if expectedErr != "" {
 			if err != nil && err.Error() == expectedErr {
 				return
@@ -158,7 +159,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 	// Extra: raft violation - two leaders with same term
 	f(
 		testSetupMCM_Leader_WithTerms, false,
-		"FATAL: two leaders with same term - got AppendEntries from: s3 with term: 8",
+		"FATAL: two leaders with same term - got AppendEntries from: 103 with term: 8",
 	)
 }
 
@@ -207,7 +208,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 
 		appendEntries := &RpcAppendEntries{senderTerm, 5, 4, sentLogEntries, 7}
 
-		reply, err := mcm.Rpc_RpcAppendEntries("s4", appendEntries)
+		reply, err := mcm.Rpc_RpcAppendEntries(104, appendEntries)
 		if expectedErr != "" {
 			if err != nil && err.Error() == expectedErr {
 				return
@@ -262,7 +263,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 	f(testSetupMCM_Leader_WithTerms, true, "")
 	f(
 		testSetupMCM_Leader_WithTerms, false,
-		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 8",
+		"FATAL: two leaders with same term - got AppendEntries from: 104 with term: 8",
 	)
 }
 
@@ -303,7 +304,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 
 		appendEntries := &RpcAppendEntries{senderTerm, 4, 4, sentLogEntries, 7}
 
-		reply, err := mcm.Rpc_RpcAppendEntries("s4", appendEntries)
+		reply, err := mcm.Rpc_RpcAppendEntries(104, appendEntries)
 		if expectedErr != "" {
 			if err != nil && err.Error() == expectedErr {
 				return
@@ -351,18 +352,18 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 	}
 
 	// Follower
-	f(testSetupMCM_Follower_WithTerms, true, "", "")
-	f(testSetupMCM_Follower_WithTerms, false, "", "")
+	f(testSetupMCM_Follower_WithTerms, true, 0, "")
+	f(testSetupMCM_Follower_WithTerms, false, 0, "")
 
 	// Candidate
-	f(testSetupMCM_Candidate_WithTerms, true, "", "")
-	f(testSetupMCM_Candidate_WithTerms, false, "s1", "")
+	f(testSetupMCM_Candidate_WithTerms, true, 0, "")
+	f(testSetupMCM_Candidate_WithTerms, false, 101, "")
 
 	// Leader
-	f(testSetupMCM_Leader_WithTerms, true, "", "")
+	f(testSetupMCM_Leader_WithTerms, true, 0, "")
 	f(
-		testSetupMCM_Leader_WithTerms, false, "s1",
-		"FATAL: two leaders with same term - got AppendEntries from: s4 with term: 8",
+		testSetupMCM_Leader_WithTerms, false, 101,
+		"FATAL: two leaders with same term - got AppendEntries from: 104 with term: 8",
 	)
 
 }
@@ -377,8 +378,8 @@ func TestCM_RpcAE_SameServerId(t *testing.T) {
 
 		appendEntries := makeAEWithTerm(serverTerm - 1)
 
-		_, err := mcm.Rpc_RpcAppendEntries("s1", appendEntries)
-		if err == nil || err.Error() != "FATAL: from server has same serverId: s1" {
+		_, err := mcm.Rpc_RpcAppendEntries(101, appendEntries)
+		if err == nil || err.Error() != "FATAL: from server has same serverId: 101" {
 			t.Fatal(err)
 		}
 
@@ -412,7 +413,7 @@ func TestCM_RpcAE_LessThanCommitIndex(t *testing.T) {
 			7,
 		}
 
-		_, err = mcm.Rpc_RpcAppendEntries("s4", appendEntries)
+		_, err = mcm.Rpc_RpcAppendEntries(104, appendEntries)
 		if err.Error() != "FATAL: setEntriesAfterIndex(5, ...) but commitIndex=6" {
 			t.Fatal(err)
 		}

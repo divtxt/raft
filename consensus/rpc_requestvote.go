@@ -4,8 +4,9 @@ package consensus
 
 import (
 	"fmt"
-	. "github.com/divtxt/raft"
 	"time"
+
+	. "github.com/divtxt/raft"
 )
 
 // Process the given RpcRequestVote message
@@ -16,7 +17,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcRequestVote(
 	now time.Time,
 ) (*RpcRequestVoteReply, error) {
 	if from == cm.ClusterInfo.GetThisServerId() {
-		return nil, fmt.Errorf("FATAL: from server has same serverId: %s", cm.ClusterInfo.GetThisServerId())
+		return nil, fmt.Errorf("FATAL: from server has same serverId: %v", cm.ClusterInfo.GetThisServerId())
 	}
 
 	makeReply := func(voteGranted bool) *RpcRequestVoteReply {
@@ -74,8 +75,8 @@ func (cm *PassiveConsensusModule) Rpc_RpcRequestVote(
 	// 2. If votedFor is null or candidateId, and candidate's log is at least as
 	// up-to-date as receiver's log, grant vote (#5.2, #5.4)
 	votedFor := cm.RaftPersistentState.GetVotedFor()
-	if (votedFor == "" || votedFor == from) && senderIsAtLeastAsUpToDate {
-		if votedFor == "" {
+	if (votedFor == 0 || votedFor == from) && senderIsAtLeastAsUpToDate {
+		if votedFor == 0 {
 			err = cm.RaftPersistentState.SetVotedFor(from)
 			if err != nil {
 				return nil, err

@@ -13,7 +13,7 @@ import (
 	"github.com/divtxt/raft/testhelpers"
 )
 
-var testClusterServerIds = []ServerId{"s1", "s2", "s3"}
+var testClusterServerIds = []ServerId{101, 102, 103}
 
 func setupConsensusModuleR3(
 	t *testing.T,
@@ -50,7 +50,7 @@ func setupConsensusModuleR3_SOLO(
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
-	ci, err := config.NewClusterInfo([]ServerId{"_SOLO_"}, "_SOLO_")
+	ci, err := config.NewClusterInfo([]ServerId{101}, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,16 +76,16 @@ func TestCluster_ElectsLeader(t *testing.T) {
 		)
 		return cm
 	}
-	cm1 := setupCMR3("s1")
+	cm1 := setupCMR3(101)
 	defer cm1.Stop()
-	cm2 := setupCMR3("s2")
+	cm2 := setupCMR3(102)
 	defer cm2.Stop()
-	cm3 := setupCMR3("s3")
+	cm3 := setupCMR3(103)
 	defer cm3.Stop()
 	imrsh.cms = map[ServerId]IConsensusModule{
-		"s1": cm1,
-		"s2": cm2,
-		"s3": cm3,
+		101: cm1,
+		102: cm2,
+		103: cm3,
 	}
 
 	// -- All nodes start as followers
@@ -134,13 +134,13 @@ func testSetupClusterWithLeader(
 			imrsh.getRpcService(thisServerId),
 		)
 	}
-	cm1, diml1, dsm1 := setupCMR3("s1", testdata.ElectionTimeoutLow)
-	cm2, diml2, dsm2 := setupCMR3("s2", testdata.ElectionTimeoutLow*3)
-	cm3, diml3, dsm3 := setupCMR3("s3", testdata.ElectionTimeoutLow*3)
+	cm1, diml1, dsm1 := setupCMR3(101, testdata.ElectionTimeoutLow)
+	cm2, diml2, dsm2 := setupCMR3(102, testdata.ElectionTimeoutLow*3)
+	cm3, diml3, dsm3 := setupCMR3(103, testdata.ElectionTimeoutLow*3)
 	imrsh.cms = map[ServerId]IConsensusModule{
-		"s1": cm1,
-		"s2": cm2,
-		"s3": cm3,
+		101: cm1,
+		102: cm2,
+		103: cm3,
 	}
 
 	// -- Election timeout results in cm1 leader being elected
@@ -164,10 +164,10 @@ func testSetup_SOLO_Leader(
 		t,
 		testdata.ElectionTimeoutLow,
 		nil,
-		imrsh.getRpcService("_SOLO_"),
+		imrsh.getRpcService(101),
 	)
 	imrsh.cms = map[ServerId]IConsensusModule{
-		"_SOLO_": cm,
+		101: cm,
 	}
 
 	// -- Election timeout results in cm electing itself leader
@@ -187,7 +187,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	defer cm2.Stop()
 
 	// Simulate a follower crash
-	imrsh.cms["s3"] = nil
+	imrsh.cms[103] = nil
 	cm3.Stop()
 	cm3 = nil
 
@@ -254,20 +254,20 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	// Crashed follower restarts
 	cm3b, diml3b, dsm3b := setupConsensusModuleR3(
 		t,
-		"s3",
+		103,
 		testdata.ElectionTimeoutLow,
 		nil,
-		imrsh.getRpcService("s3"),
+		imrsh.getRpcService(103),
 	)
 	defer cm3b.Stop()
-	imrsh.cms["s3"] = cm3b
+	imrsh.cms[103] = cm3b
 	if dsm3b.GetLastApplied() != 0 {
 		t.Fatal()
 	}
 
 	// A tick propagates the command and the commit to the recovered follower
 	time.Sleep(testdata.TickerDuration)
-	// FIXME: err if cm3b.GetLeader() != "s1"
+	// FIXME: err if cm3b.GetLeader() != 101
 	le = testhelpers.TestHelper_GetLogEntryAtIndex(diml3b, 1)
 	if !reflect.DeepEqual(le, expectedLe) {
 		t.Fatal(le)

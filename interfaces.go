@@ -167,7 +167,7 @@ type RaftPersistentState interface {
 	// (initialized to 0, increases monotonically)
 	GetCurrentTerm() TermNo
 
-	// Get the candidate id this server has voted for. ("" if none)
+	// Get the candidate id this server has voted for. (0 if none)
 	GetVotedFor() ServerId
 
 	// Set the latest term this server has seen.
@@ -191,7 +191,7 @@ type RaftPersistentState interface {
 	// values:
 	//
 	//  - trying to set the value when currentTerm is 0
-	//  - trying to set a blank value
+	//  - trying to set a server id of 0
 	//  - trying to set the value when the current value is not blank
 	//
 	// This call should be synchronous i.e. not return until the values

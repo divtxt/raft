@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+
 	. "github.com/divtxt/raft"
 )
 
@@ -17,7 +18,7 @@ type ClusterInfo struct {
 
 // Allocate and initialize a NewClusterInfo with the given ServerIds.
 //
-//  - ServerIds must be distinct non-empty strings.
+//  - ServerIds must be distinct non-zero values.
 //  - allServerIds should list all the servers in the cluster.
 //  - thisServerId is the ServerId of "this" server.
 //  - allServerIds must include thisServerId.
@@ -33,16 +34,16 @@ func NewClusterInfo(
 	if len(allServerIds) < 1 {
 		return nil, errors.New("allServerIds must have at least 1 element")
 	}
-	if len(thisServerId) == 0 {
-		return nil, errors.New("thisServerId is empty string")
+	if thisServerId == 0 {
+		return nil, errors.New("thisServerId is 0")
 	}
 
 	allServerIdsMap := make(map[ServerId]bool)
 	clusterSize := len(allServerIds)
 	peerServerIds := make([]ServerId, 0, clusterSize-1)
 	for _, serverId := range allServerIds {
-		if len(serverId) == 0 {
-			return nil, errors.New("allServerIds contains empty string")
+		if serverId == 0 {
+			return nil, errors.New("allServerIds contains 0")
 		}
 		if _, ok := allServerIdsMap[serverId]; ok {
 			return nil, fmt.Errorf("allServerIds contains duplicate value: %v", serverId)

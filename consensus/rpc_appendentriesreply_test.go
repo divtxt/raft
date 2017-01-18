@@ -2,10 +2,11 @@ package consensus
 
 import (
 	"fmt"
-	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/testhelpers"
 	"reflect"
 	"testing"
+
+	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/testhelpers"
 )
 
 // Extra: ignore replies for previous term rpc
@@ -17,7 +18,7 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 		beforeState := mcm.pcm.GetServerState()
 
 		err := mcm.pcm.RpcReply_RpcAppendEntriesReply(
-			"s2",
+			102,
 			sentRpc,
 			&RpcAppendEntriesReply{serverTerm, true},
 		)
@@ -31,11 +32,11 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 			t.Fatal()
 		}
 		if beforeState == LEADER {
-			expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+			expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 			if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 				t.Fatal()
 			}
-			expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+			expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
 			if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 				t.Fatal()
 			}
@@ -56,12 +57,12 @@ func TestCM_RpcAER_FollowerOrCandidate_ReturnsErrorForSameTermReply(t *testing.T
 		sentRpc := makeAEWithTerm(serverTerm)
 
 		err := mcm.pcm.RpcReply_RpcAppendEntriesReply(
-			"s2",
+			102,
 			sentRpc,
 			&RpcAppendEntriesReply{serverTerm, true},
 		)
 		expectedErr := fmt.Sprintf(
-			"FATAL: non-leader got AppendEntriesReply from: s2 with term: %v",
+			"FATAL: non-leader got AppendEntriesReply from: 102 with term: %v",
 			serverTerm,
 		)
 		if err.Error() != expectedErr {
@@ -85,17 +86,17 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	sentRpc := makeAEWithTerm(serverTerm)
 
 	// sanity check
-	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
 
 	err := mcm.pcm.RpcReply_RpcAppendEntriesReply(
-		"s2",
+		102,
 		sentRpc,
 		&RpcAppendEntriesReply{serverTerm + 1, false},
 	)
@@ -108,7 +109,7 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm+1 {
 		t.Fatal()
 	}
-	if mcm.pcm.RaftPersistentState.GetVotedFor() != "" {
+	if mcm.pcm.RaftPersistentState.GetVotedFor() != 0 {
 		t.Fatal()
 	}
 
@@ -137,11 +138,11 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	}
 
 	// sanity check
-	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
@@ -155,7 +156,7 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	}
 
 	err = mcm.pcm.RpcReply_RpcAppendEntriesReply(
-		"s3",
+		103,
 		sentRpc,
 		&RpcAppendEntriesReply{serverTerm, false},
 	)
@@ -168,11 +169,11 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
-	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 10, "s4": 11, "s5": 11}
+	expectedNextIndex = map[ServerId]LogIndex{102: 11, 103: 10, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex = map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	expectedMatchIndex = map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
@@ -187,7 +188,7 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 		3,
 	}
 	expectedRpcs := map[ServerId]interface{}{
-		"s3": expectedRpc,
+		103: expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 }
@@ -204,11 +205,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 	}
 
 	// sanity check
-	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
@@ -222,7 +223,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 	}
 
 	err = mcm.pcm.RpcReply_RpcAppendEntriesReply(
-		"s3",
+		103,
 		sentRpc,
 		&RpcAppendEntriesReply{serverTerm, true},
 	)
@@ -235,11 +236,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
-	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex = map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex = map[ServerId]LogIndex{"s2": 0, "s3": 10, "s4": 0, "s5": 0}
+	expectedMatchIndex = map[ServerId]LogIndex{102: 0, 103: 10, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
@@ -263,12 +264,12 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// hack & sanity check
-	mcm.pcm.LeaderVolatileState.NextIndex["s2"] = 10
-	expectedNextIndex := map[ServerId]LogIndex{"s2": 10, "s3": 11, "s4": 11, "s5": 11}
+	mcm.pcm.LeaderVolatileState.NextIndex[102] = 10
+	expectedNextIndex := map[ServerId]LogIndex{102: 10, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
@@ -284,7 +285,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	err = mcm.pcm.RpcReply_RpcAppendEntriesReply(
-		"s2",
+		102,
 		sentRpc,
 		&RpcAppendEntriesReply{serverTerm, true},
 	)
@@ -297,11 +298,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
-	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex = map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal(mcm.pcm.LeaderVolatileState.NextIndex)
 	}
-	expectedMatchIndex = map[ServerId]LogIndex{"s2": 10, "s3": 0, "s4": 0, "s5": 0}
+	expectedMatchIndex = map[ServerId]LogIndex{102: 10, 103: 0, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
@@ -325,10 +326,10 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		{8, Command("c12")},
 	}, 3}
 	expectedRpcs = map[ServerId]interface{}{
-		"s2": expectedRpc,
-		"s3": expectedRpc,
-		"s4": expectedRpc,
-		"s5": expectedRpc,
+		102: expectedRpc,
+		103: expectedRpc,
+		104: expectedRpc,
+		105: expectedRpc,
 	}
 	err = mcm.Tick()
 	if err != nil {
@@ -338,7 +339,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 
 	// one reply - cannot advance commitIndex
 	err = mcm.pcm.RpcReply_RpcAppendEntriesReply(
-		"s2",
+		102,
 		expectedRpc,
 		&RpcAppendEntriesReply{serverTerm, true},
 	)
@@ -352,7 +353,7 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	// another reply - can advance commitIndex with majority
 	// commitIndex will advance to the highest match possible
 	err = mcm.pcm.RpcReply_RpcAppendEntriesReply(
-		"s4",
+		104,
 		expectedRpc,
 		&RpcAppendEntriesReply{serverTerm, true},
 	)
@@ -367,11 +368,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	if mcm.pcm.GetServerState() != LEADER {
 		t.Fatal()
 	}
-	expectedNextIndex = map[ServerId]LogIndex{"s2": 13, "s3": 11, "s4": 13, "s5": 11}
+	expectedNextIndex = map[ServerId]LogIndex{102: 13, 103: 11, 104: 13, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal(mcm.pcm.LeaderVolatileState.NextIndex)
 	}
-	expectedMatchIndex = map[ServerId]LogIndex{"s2": 12, "s3": 0, "s4": 12, "s5": 0}
+	expectedMatchIndex = map[ServerId]LogIndex{102: 12, 103: 0, 104: 12, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal(mcm.pcm.LeaderVolatileState.MatchIndex)
 	}

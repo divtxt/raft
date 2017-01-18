@@ -34,11 +34,12 @@ type LogEntry struct {
 // Log entry index. First index is 1.
 type LogIndex uint64
 
-// A string identifying a server in a Raft cluster.
+// An integer that uniquely identifies a server in a Raft cluster.
 //
-// The contents of the string is opaque to this package.
-// A blank string should not be used as a server id.
+// Zero should not be used as a server id.
 //
-// In practice, since this is used here for RPC, a network/service specifier
-// is probably the most useful e.g. "<host>:<port>".
-type ServerId string
+// See config.ClusterInfo for how this is used in this package.
+// The number value does not have a meaning to this package.
+// This package also does not know about the network details - e.g. protocol/host/port -
+// since the RPC is not part of the package but is delegated to the user.
+type ServerId uint64
