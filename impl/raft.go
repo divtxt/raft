@@ -23,6 +23,7 @@
 package impl
 
 import (
+	golog "log"
 	"sync"
 	"time"
 
@@ -69,6 +70,8 @@ func NewConsensusModule(
 	maxEntriesPerAppendEntry uint64,
 	timeSettings config.TimeSettings,
 ) (*ConsensusModule, error) {
+	golog.Println("raft: NewConsensusModule()")
+
 	now := time.Now()
 
 	committer := committer.NewCommitter(log, stateMachine)
@@ -131,6 +134,7 @@ func (cm *ConsensusModule) Stop() {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
+	golog.Println("raft: Stop()")
 	cm.shutdownAndPanic(nil)
 }
 
