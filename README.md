@@ -30,7 +30,6 @@ Later:
 - [x] Leader uses AppendEntry instead of SetEntriesAfterIndex
 - [x] AppendCommandAsync takes unserialized command
 - [x] AppendEntry can provide a result value and can reject command
-- [ ] Documentation
 - [ ] Live cluster membership changes
 - [ ] Read-only nodes (replication)
 
@@ -38,7 +37,6 @@ Later:
 Misc/Maybe:
 
 - [ ] Tests have theoretical concurrency issues
-- [ ] Use custom FIFO instead of fixed size channel (perhaps metrics first?)
 - [ ] Servers check that they agree on cluster info
 - [ ] Leader heartbeats with a majority before responding to read-only requests (#8p4)
 - [ ] Election timeout based on ping times to bias selection of lower latency leader
