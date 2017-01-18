@@ -1,10 +1,11 @@
 package consensus
 
 import (
-	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/testhelpers"
 	"reflect"
 	"testing"
+
+	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/testhelpers"
 )
 
 // #RFS-C2: If votes received from majority of servers: become leader
@@ -23,7 +24,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 
 	// s2 grants vote - should stay as candidate
 	err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-		"s2",
+		102,
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
 	)
@@ -36,7 +37,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 
 	// s3 denies vote - should stay as candidate
 	err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-		"s3",
+		103,
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, false},
 	)
@@ -49,7 +50,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 
 	// s4 grants vote - should become leader
 	err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-		"s4",
+		104,
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
 	)
@@ -60,7 +61,7 @@ func TestCM_RpcRVR_Candidate_CandidateWinsElectionIfItReceivesMajorityOfVotes(t 
 
 	// s5 grants vote - should stay leader
 	err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-		"s5",
+		105,
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
 	)
@@ -89,11 +90,11 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 	}
 
 	// leader state is fresh
-	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
@@ -111,10 +112,10 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 		mcm.pcm.GetCommitIndex(),
 	}
 	expectedRpcs := map[ServerId]interface{}{
-		"s2": expectedRpc,
-		"s3": expectedRpc,
-		"s4": expectedRpc,
-		"s5": expectedRpc,
+		102: expectedRpc,
+		103: expectedRpc,
+		104: expectedRpc,
+		105: expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 }
@@ -133,7 +134,7 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 
 	// s2 grants vote - should stay as candidate
 	err := mcm.pcm.RpcReply_RpcRequestVoteReply(
-		"s2",
+		102,
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, true},
 	)
@@ -146,7 +147,7 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 
 	// s3 denies vote - should stay as candidate
 	err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-		"s3",
+		103,
 		sentRpc,
 		&RpcRequestVoteReply{serverTerm, false},
 	)
@@ -171,7 +172,7 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 
 		// s2 grants vote - ignore
 		err := mcm.pcm.RpcReply_RpcRequestVoteReply(
-			"s2",
+			102,
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, true},
 		)
@@ -185,7 +186,7 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 
 		// s3 denies vote - ignore
 		err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-			"s3",
+			103,
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, false},
 		)
@@ -199,7 +200,7 @@ func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
 
 		// s4 grants vote - ignore
 		err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-			"s4",
+			104,
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, true},
 		)
@@ -239,7 +240,7 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 
 		// s2 grants vote - should stay as candidate
 		err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-			"s2",
+			102,
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm, true},
 		)
@@ -252,7 +253,7 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 
 		// s3 grants vote for previous term election - ignore and stay as candidate
 		err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-			"s3",
+			103,
 			&RpcRequestVote{serverTerm - 1, 0, 0},
 			&RpcRequestVoteReply{serverTerm - 1, true},
 		)
@@ -266,7 +267,7 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 		if sendMajorityVote {
 			// s3 grants vote for this election - become leader only if candidate
 			err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-				"s3",
+				103,
 				sentRpc,
 				&RpcRequestVoteReply{serverTerm, true},
 			)
@@ -285,7 +286,7 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 		// s4 denies vote for this election indicating a newer term - increase term
 		// and become follower
 		err = mcm.pcm.RpcReply_RpcRequestVoteReply(
-			"s4",
+			104,
 			sentRpc,
 			&RpcRequestVoteReply{serverTerm + 1, false},
 		)
@@ -298,7 +299,7 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 		if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm+1 {
 			t.Fatal()
 		}
-		if mcm.pcm.RaftPersistentState.GetVotedFor() != "" {
+		if mcm.pcm.RaftPersistentState.GetVotedFor() != 0 {
 			t.Fatal()
 		}
 	}

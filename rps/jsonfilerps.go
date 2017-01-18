@@ -3,10 +3,11 @@ package rps
 import (
 	"errors"
 	"fmt"
-	. "github.com/divtxt/raft"
-	util "github.com/divtxt/raft/util"
 	"os"
 	"sync"
+
+	. "github.com/divtxt/raft"
+	util "github.com/divtxt/raft/util"
 )
 
 type rps struct {
@@ -29,14 +30,14 @@ type JsonFileRaftPersistentState struct {
 // Writes to "filename" and also "filename.bak" using SafeWriteJsonToFile().
 func NewJsonFileRaftPersistentState(filename string) (RaftPersistentState, error) {
 	jfrps := &JsonFileRaftPersistentState{
-		&sync.Mutex{}, filename, rps{0, ""},
+		&sync.Mutex{}, filename, rps{0, 0},
 	}
 
 	err := util.ReadJsonFromFile(filename, &jfrps.rps)
 	if err != nil {
 		if os.IsNotExist(err) {
 			jfrps.rps.CurrentTerm = 0
-			jfrps.rps.VotedFor = ""
+			jfrps.rps.VotedFor = 0
 		} else {
 			return nil, err
 		}
@@ -73,7 +74,7 @@ func (jfrps *JsonFileRaftPersistentState) SetCurrentTerm(currentTerm TermNo) err
 		)
 	}
 	if currentTerm > jfrps.rps.CurrentTerm {
-		jfrps.rps.VotedFor = ""
+		jfrps.rps.VotedFor = 0
 	}
 	jfrps.rps.CurrentTerm = currentTerm
 	return jfrps.writeToJsonFile()
@@ -85,12 +86,12 @@ func (jfrps *JsonFileRaftPersistentState) SetVotedFor(votedFor ServerId) error {
 	if jfrps.rps.CurrentTerm == 0 {
 		return errors.New("FATAL: attempt to set votedFor while currentTerm is 0")
 	}
-	if votedFor == "" {
-		return errors.New("FATAL: attempt to set blank votedFor")
+	if votedFor == 0 {
+		return errors.New("FATAL: attempt to set votedFor to 0")
 	}
-	if jfrps.rps.VotedFor != "" {
+	if jfrps.rps.VotedFor != 0 {
 		return fmt.Errorf(
-			"FATAL: attempt to change non-blank votedFor: %v to %v", jfrps.rps.VotedFor, votedFor,
+			"FATAL: attempt to change non-zero votedFor: %v to %v", jfrps.rps.VotedFor, votedFor,
 		)
 	}
 	jfrps.rps.VotedFor = votedFor

@@ -110,7 +110,7 @@ func testCM_Follower_StartsElectionOnElectionTimeout(
 	if mcm.pcm.GetServerState() != FOLLOWER {
 		t.Fatal()
 	}
-	if mcm.pcm.RaftPersistentState.GetVotedFor() != "" {
+	if mcm.pcm.RaftPersistentState.GetVotedFor() != 0 {
 		t.Fatal()
 	}
 
@@ -188,7 +188,7 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 	if mcm.pcm.GetServerState() != FOLLOWER {
 		t.Fatal()
 	}
-	if mcm.pcm.RaftPersistentState.GetVotedFor() != "" {
+	if mcm.pcm.RaftPersistentState.GetVotedFor() != 0 {
 		t.Fatal()
 	}
 
@@ -279,11 +279,11 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	}
 
 	// repatch some peers as not caught up
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s2", 9)
+	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(102, 9)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s5", 7)
+	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(105, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -322,10 +322,10 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 		5,
 	}
 	expectedRpcs := map[ServerId]interface{}{
-		"s2": expectedRpcS2,
-		"s3": expectedRpcEmpty,
-		"s4": expectedRpcEmpty,
-		"s5": expectedRpcS5,
+		102: expectedRpcS2,
+		103: expectedRpcEmpty,
+		104: expectedRpcEmpty,
+		105: expectedRpcS5,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
@@ -340,13 +340,13 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	}
 
 	// sanity check
-	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
 
 	// nothing to send
-	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.sendAppendEntriesToPeer(102, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,17 +358,17 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		4,
 	}
 	expectedRpcs := map[ServerId]interface{}{
-		"s2": expectedRpc,
+		102: expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
 
 	// empty send
-	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex("s2")
+	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.sendAppendEntriesToPeer("s2", true)
+	err = mcm.pcm.sendAppendEntriesToPeer(102, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -380,13 +380,13 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		4,
 	}
 	expectedRpcs = map[ServerId]interface{}{
-		"s2": expectedRpc,
+		102: expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
 
 	// send one
-	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.sendAppendEntriesToPeer(102, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,21 +400,21 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		4,
 	}
 	expectedRpcs = map[ServerId]interface{}{
-		"s2": expectedRpc,
+		102: expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
 
 	// send multiple
-	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex("s2")
+	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex("s2")
+	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.sendAppendEntriesToPeer("s2", false)
+	err = mcm.pcm.sendAppendEntriesToPeer(102, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +430,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 		4,
 	}
 	expectedRpcs = map[ServerId]interface{}{
-		"s2": expectedRpc,
+		102: expectedRpc,
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
@@ -456,19 +456,19 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// match peers for cases (a), (b), (c) & (d)
-	err := mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s2", 9)
+	err := mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(102, 9)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s3", 4)
+	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(103, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s4", 10)
+	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(104, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s5", 10)
+	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(105, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,16 +482,16 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		t.Fatal()
 	}
 	expectedRpcs = map[ServerId]interface{}{
-		"s2": &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
+		102: &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
 			{6, Command("c10")},
 		}, 0},
-		"s3": &RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
+		103: &RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
 			{4, Command("c5")},
 			{5, Command("c6")},
 			{5, Command("c7")},
 		}, 0},
-		"s4": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
-		"s5": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
+		104: &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
+		105: &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{}, 0},
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
@@ -515,21 +515,21 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		t.Fatal()
 	}
 	expectedRpcs = map[ServerId]interface{}{
-		"s2": &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
+		102: &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
 			{6, Command("c10")},
 			{8, Command("c11")},
 			{8, Command("c12")},
 		}, 0},
-		"s3": &RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
+		103: &RpcAppendEntries{serverTerm, 4, 4, []LogEntry{
 			{4, Command("c5")},
 			{5, Command("c6")},
 			{5, Command("c7")},
 		}, 0},
-		"s4": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+		104: &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
 			{8, Command("c11")},
 			{8, Command("c12")},
 		}, 0},
-		"s5": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+		105: &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
 			{8, Command("c11")},
 			{8, Command("c12")},
 		}, 0},
@@ -538,11 +538,11 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// 2 peers - for cases (a) & (b) - catch up
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s2", 11)
+	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(102, 11)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex("s3", 11)
+	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(103, 11)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -556,17 +556,17 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		t.Fatal()
 	}
 	expectedRpcs = map[ServerId]interface{}{
-		"s2": &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
+		102: &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
 			{8, Command("c12")},
 		}, 11},
-		"s3": &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
+		103: &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
 			{8, Command("c12")},
 		}, 11},
-		"s4": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+		104: &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
 			{8, Command("c11")},
 			{8, Command("c12")},
 		}, 11},
-		"s5": &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
+		105: &RpcAppendEntries{serverTerm, 10, 6, []LogEntry{
 			{8, Command("c11")},
 			{8, Command("c12")},
 		}, 11},
@@ -711,11 +711,11 @@ func testSetupMCM_Leader_WithTerms(
 	mcm, mrs := testSetupMCM_Candidate_WithTerms(t, terms)
 	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
-	err := mcm.pcm.RpcReply_RpcRequestVoteReply("s2", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	err := mcm.pcm.RpcReply_RpcRequestVoteReply(102, sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.RpcReply_RpcRequestVoteReply("s3", sentRpc, &RpcRequestVoteReply{serverTerm, true})
+	err = mcm.pcm.RpcReply_RpcRequestVoteReply(103, sentRpc, &RpcRequestVoteReply{serverTerm, true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -754,11 +754,11 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	mcm, mrs := testSetupMCM_Leader_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 
 	// sanity check - before
-	expectedNextIndex := map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex := map[ServerId]LogIndex{"s2": 0, "s3": 0, "s4": 0, "s5": 0}
+	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}
@@ -782,11 +782,11 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	}
 
 	// after check
-	expectedNextIndex = map[ServerId]LogIndex{"s2": 11, "s3": 11, "s4": 11, "s5": 11}
+	expectedNextIndex = map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
 		t.Fatal()
 	}
-	expectedMatchIndex = map[ServerId]LogIndex{"s2": 10, "s3": 10, "s4": 10, "s5": 10}
+	expectedMatchIndex = map[ServerId]LogIndex{102: 10, 103: 10, 104: 10, 105: 10}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal()
 	}

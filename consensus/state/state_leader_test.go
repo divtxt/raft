@@ -1,16 +1,17 @@
 package consensus_state_test
 
 import (
+	"reflect"
+	"testing"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
 	"github.com/divtxt/raft/log"
-	"reflect"
-	"testing"
 )
 
 func TestLeaderVolatileState(t *testing.T) {
-	ci, err := config.NewClusterInfo([]ServerId{"s1", "s2", "s3"}, "s3")
+	ci, err := config.NewClusterInfo([]ServerId{101, 102, 103}, 103)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,17 +25,17 @@ func TestLeaderVolatileState(t *testing.T) {
 	// #5.3-p8s4: When a leader first comes to power, it initializes
 	// all nextIndex values to the index just after the last one in
 	// its log (11 in Figure 7).
-	expectedNextIndex := map[ServerId]LogIndex{"s1": 43, "s2": 43}
+	expectedNextIndex := map[ServerId]LogIndex{101: 43, 102: 43}
 	if !reflect.DeepEqual(lvs.NextIndex, expectedNextIndex) {
 		t.Fatal(lvs.NextIndex)
 	}
-	expectedMatchIndex := map[ServerId]LogIndex{"s1": 0, "s2": 0}
+	expectedMatchIndex := map[ServerId]LogIndex{101: 0, 102: 0}
 	if !reflect.DeepEqual(lvs.MatchIndex, expectedMatchIndex) {
 		t.Fatal(lvs.MatchIndex)
 	}
 
 	// getNextIndex
-	idx, err := lvs.GetNextIndex("s2")
+	idx, err := lvs.GetNextIndex(102)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,25 +43,25 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal()
 	}
 
-	idx, err = lvs.GetNextIndex("s5")
-	if err.Error() != "LeaderVolatileState.GetNextIndex(): unknown peer: s5" {
+	idx, err = lvs.GetNextIndex(105)
+	if err.Error() != "LeaderVolatileState.GetNextIndex(): unknown peer: 105" {
 		t.Fatal(err)
 	}
 
 	// DecrementNextIndex
-	err = lvs.DecrementNextIndex("s2")
+	err = lvs.DecrementNextIndex(102)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.DecrementNextIndex("s3")
-	if err.Error() != "LeaderVolatileState.DecrementNextIndex(): unknown peer: s3" {
+	err = lvs.DecrementNextIndex(103)
+	if err.Error() != "LeaderVolatileState.DecrementNextIndex(): unknown peer: 103" {
 		t.Fatal(err)
 	}
-	expectedNextIndex = map[ServerId]LogIndex{"s1": 43, "s2": 42}
+	expectedNextIndex = map[ServerId]LogIndex{101: 43, 102: 42}
 	if !reflect.DeepEqual(lvs.NextIndex, expectedNextIndex) {
 		t.Fatal(lvs.NextIndex)
 	}
-	idx, err = lvs.GetNextIndex("s2")
+	idx, err = lvs.GetNextIndex(102)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,34 +69,34 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal()
 	}
 
-	lvs.NextIndex["s1"] = 1
-	err = lvs.DecrementNextIndex("s1")
-	if err.Error() != "LeaderVolatileState.DecrementNextIndex(): nextIndex <=1 for peer: s1" {
+	lvs.NextIndex[101] = 1
+	err = lvs.DecrementNextIndex(101)
+	if err.Error() != "LeaderVolatileState.DecrementNextIndex(): nextIndex <=1 for peer: 101" {
 		t.Fatal(err)
 	}
 
 	// SetMatchIndexAndNextIndex
-	err = lvs.SetMatchIndexAndNextIndex("s2", 24)
+	err = lvs.SetMatchIndexAndNextIndex(102, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedNextIndex = map[ServerId]LogIndex{"s1": 1, "s2": 25}
+	expectedNextIndex = map[ServerId]LogIndex{101: 1, 102: 25}
 	if !reflect.DeepEqual(lvs.NextIndex, expectedNextIndex) {
 		t.Fatal(lvs.NextIndex)
 	}
-	expectedMatchIndex = map[ServerId]LogIndex{"s1": 0, "s2": 24}
+	expectedMatchIndex = map[ServerId]LogIndex{101: 0, 102: 24}
 	if !reflect.DeepEqual(lvs.MatchIndex, expectedMatchIndex) {
 		t.Fatal(lvs.MatchIndex)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s2", 0)
+	err = lvs.SetMatchIndexAndNextIndex(102, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedNextIndex = map[ServerId]LogIndex{"s1": 1, "s2": 1}
+	expectedNextIndex = map[ServerId]LogIndex{101: 1, 102: 1}
 	if !reflect.DeepEqual(lvs.NextIndex, expectedNextIndex) {
 		t.Fatal(lvs.NextIndex)
 	}
-	expectedMatchIndex = map[ServerId]LogIndex{"s1": 0, "s2": 0}
+	expectedMatchIndex = map[ServerId]LogIndex{101: 0, 102: 0}
 	if !reflect.DeepEqual(lvs.MatchIndex, expectedMatchIndex) {
 		t.Fatal(lvs.MatchIndex)
 	}
@@ -105,7 +106,7 @@ func TestLeaderVolatileState(t *testing.T) {
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
 func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
-	ci, err := config.NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	ci, err := config.NewClusterInfo([]ServerId{101, 102, 103, 104, 105}, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,19 +139,19 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (a)
-	err = lvs.SetMatchIndexAndNextIndex("s2", 2)
+	err = lvs.SetMatchIndexAndNextIndex(102, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s3", 1)
+	err = lvs.SetMatchIndexAndNextIndex(103, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s4", 1)
+	err = lvs.SetMatchIndexAndNextIndex(104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s5", 1)
+	err = lvs.SetMatchIndexAndNextIndex(105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +173,7 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 }
 
 func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
-	ci, err := config.NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	ci, err := config.NewClusterInfo([]ServerId{101, 102, 103, 104, 105}, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,19 +206,19 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (c)
-	err = lvs.SetMatchIndexAndNextIndex("s2", 2)
+	err = lvs.SetMatchIndexAndNextIndex(102, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s3", 2)
+	err = lvs.SetMatchIndexAndNextIndex(103, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s4", 1)
+	err = lvs.SetMatchIndexAndNextIndex(104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s5", 1)
+	err = lvs.SetMatchIndexAndNextIndex(105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,19 +259,19 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (e)
-	err = lvs.SetMatchIndexAndNextIndex("s2", 3)
+	err = lvs.SetMatchIndexAndNextIndex(102, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s3", 3)
+	err = lvs.SetMatchIndexAndNextIndex(103, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s4", 1)
+	err = lvs.SetMatchIndexAndNextIndex(104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s5", 1)
+	err = lvs.SetMatchIndexAndNextIndex(105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +292,7 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 }
 
 func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
-	ci, err := config.NewClusterInfo([]ServerId{"s1", "s2", "s3", "s4", "s5"}, "s1")
+	ci, err := config.NewClusterInfo([]ServerId{101, 102, 103, 104, 105}, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,19 +314,19 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	}
 
 	// match peers
-	err = lvs.SetMatchIndexAndNextIndex("s2", 4)
+	err = lvs.SetMatchIndexAndNextIndex(102, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s3", 4)
+	err = lvs.SetMatchIndexAndNextIndex(103, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s4", 1)
+	err = lvs.SetMatchIndexAndNextIndex(104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex("s5", 1)
+	err = lvs.SetMatchIndexAndNextIndex(105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +353,7 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 }
 
 func TestFindNewerCommitIndex_SOLO(t *testing.T) {
-	ci, err := config.NewClusterInfo([]ServerId{"s1"}, "s1")
+	ci, err := config.NewClusterInfo([]ServerId{101}, 101)
 	if err != nil {
 		t.Fatal(err)
 	}

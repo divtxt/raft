@@ -1,10 +1,11 @@
 package testhelpers
 
 import (
-	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/testdata"
 	"testing"
 	"time"
+
+	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/testdata"
 )
 
 func TestMockRpcSender(t *testing.T) {
@@ -14,14 +15,14 @@ func TestMockRpcSender(t *testing.T) {
 
 	go func() {
 		actualReply = mrs.RpcAppendEntries(
-			"s2",
+			2,
 			&RpcAppendEntries{101, 8080, 100, nil, 8000},
 		)
 	}()
 
 	go func() {
 		mrs.RpcRequestVote(
-			"s1",
+			1,
 			&RpcRequestVote{102, 8008, 100},
 		)
 	}()
@@ -29,8 +30,8 @@ func TestMockRpcSender(t *testing.T) {
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
 	expected := map[ServerId]interface{}{
-		"s1": &RpcRequestVote{102, 8008, 100},
-		"s2": &RpcAppendEntries{101, 8080, 100, nil, 8000},
+		1: &RpcRequestVote{102, 8008, 100},
+		2: &RpcAppendEntries{101, 8080, 100, nil, 8000},
 	}
 	mrs.CheckSentRpcs(t, expected)
 
