@@ -3,6 +3,7 @@ package consensus
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	. "github.com/divtxt/raft"
@@ -226,6 +227,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	if err != nil {
 		return err
 	}
+	log.Println("raft: becomeCandidateAndBeginElection(): newTerm =", newTerm)
 	cm.setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
@@ -261,6 +263,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
+	log.Println("raft: becomeLeader(): iole = ", iole, ", commitIndex = ", cm._commitIndex)
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
@@ -272,6 +275,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 }
 
 func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
+	log.Println("raft: becomeFollowerWithTerm(): newTerm = ", newTerm)
 	cm.setServerState(FOLLOWER)
 	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {
