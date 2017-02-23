@@ -263,7 +263,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
-	log.Println("raft: becomeLeader(): iole = ", iole, ", commitIndex = ", cm._commitIndex)
+	log.Println("raft: becomeLeader(): iole =", iole, ", commitIndex =", cm._commitIndex)
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
@@ -275,7 +275,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 }
 
 func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
-	log.Println("raft: becomeFollowerWithTerm(): newTerm = ", newTerm)
+	log.Println("raft: becomeFollowerWithTerm(): newTerm =", newTerm)
 	cm.setServerState(FOLLOWER)
 	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {
