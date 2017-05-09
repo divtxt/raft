@@ -275,6 +275,11 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 }
 
 func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
+	currentTerm := cm.RaftPersistentState.GetCurrentTerm()
+	if cm.GetServerState() == FOLLOWER && currentTerm == newTerm {
+		// Nothing to change!
+		return nil
+	}
 	log.Println("raft: becomeFollowerWithTerm(): newTerm =", newTerm)
 	cm.setServerState(FOLLOWER)
 	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
