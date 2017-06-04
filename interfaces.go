@@ -14,14 +14,8 @@ package raft
 // error handling behavior:
 //
 // Concurrency:
-// All methods should be concurrent safe and a call to one method from other goroutines should
-// try to avoid blocking a call to any other method made by the ConsensusModule goroutine.
-// In practice, the non-blocking requirement is narrower:
-// The ConsensusModule will only ever call the methods of this interface from it's
-// single goroutine. Meanwhile, the implementation of the state machine's apply committed command
-// action will probably call another method from a different goroutine.
-// Since only the ConsensusModule should be calling the SetEntriesAfterIndex() and AppendEntry()
-// methods, implementations should not have to deal with concurrent calls to those two methods.
+// All methods should be concurrent safe and a call to one method should
+// try to avoid blocking a call to any other method.
 //
 // Errors:
 // All errors should be indicated in the return value, and any such error returned by this
@@ -93,7 +87,7 @@ type Log interface {
 	// Append a new entry with the given term and given serialized command.
 	//
 	// The index of the new entry should be returned.
-	// (This should match indexOfLastEntry)
+	// (This should match the new indexOfLastEntry)
 	//
 	// This method will only be called when this ConsensusModule is the leader.
 	AppendEntry(LogEntry) (LogIndex, error)
