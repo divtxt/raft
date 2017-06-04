@@ -211,14 +211,13 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 // This can only be done if the ConsensusModule is in LEADER state.
 //
 // The command will be sent to Log.AppendEntry().
+// Any errors from Log.AppendEntry() call will stop the ConsensusModule.
 //
 // The command must already have been checked to ensure that it will successfully apply to the
 // state machine in it's position in the Log.
 //
 // Returns ErrStopped if ConsensusModule is stopped.
 // Returns ErrNotLeader if not currently the leader.
-//
-// Any errors from Log.AppendCommand() call will stop the ConsensusModule.
 //
 // Here, we intentionally punt on some of the leader details, specifically
 // most of:
