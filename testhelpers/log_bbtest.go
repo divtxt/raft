@@ -8,7 +8,7 @@ import (
 )
 
 // Helper
-func TestCommandEquals(c Command, s string) bool {
+func commandEquals(c Command, s string) bool {
 	return bytes.Equal(c, Command(s))
 }
 
@@ -37,7 +37,7 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 	if le.TermNo != 6 {
 		t.Fatal(le.TermNo)
 	}
-	if !TestCommandEquals(le.Command, "c10") {
+	if !commandEquals(le.Command, "c10") {
 		t.Fatal(le.Command)
 	}
 
@@ -49,13 +49,13 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 	if len(entries) != 3 {
 		t.Fatal()
 	}
-	if !TestCommandEquals(entries[0].Command, "c5") {
+	if !commandEquals(entries[0].Command, "c5") {
 		t.Fatal()
 	}
-	if !TestCommandEquals(entries[1].Command, "c6") {
+	if !commandEquals(entries[1].Command, "c6") {
 		t.Fatal()
 	}
-	if !TestCommandEquals(entries[2].Command, "c7") {
+	if !commandEquals(entries[2].Command, "c7") {
 		t.Fatal()
 	}
 

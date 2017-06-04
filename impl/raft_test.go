@@ -29,7 +29,7 @@ func setupConsensusModuleR2(
 ) (*ConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
+	dsm := testhelpers.NewDummyStateMachineFromLog(0, iml) // FIXME: test with non-zero value
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo(testdata.AllServerIds, testdata.ThisServerId)

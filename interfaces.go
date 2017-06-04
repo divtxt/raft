@@ -93,15 +93,26 @@ type Log interface {
 	AppendEntry(LogEntry) (LogIndex, error)
 }
 
+// LogReadOnly is the read-only subset of the Log interface.
+type LogReadOnly interface {
+	GetIndexOfLastEntry() (LogIndex, error)
+	GetTermAtIndex(LogIndex) (TermNo, error)
+	GetEntriesAfterIndex(LogIndex, uint64) ([]LogEntry, error)
+}
+
 // StateMachine is the interface that the state machine must expose to Raft.
 //
 // You must implement this interface!
 //
-// Raft will apply committed commands from the log to the state machine through this interface.
+// This interface models a state machine that can maintain both committed and uncommitted states.
 //
-// All methods should return immediately without blocking.
+// Raft will apply commands to the state machine through this interface.
 //
 // Concurrency: the ConsensusModule will only ever call one method of this interface at a time.
+//
+// Errors:
+// All errors should be indicated in the return value, and any such error returned by this
+// interface - except by CheckAndApplyCommand() - will shutdown the ConsensusModule.
 //
 // Raft describes two state parameters - commitIndex and lastApplied -
 // that are used to track which log entries are committed to the log and the
@@ -131,18 +142,67 @@ type StateMachine interface {
 	// If the state machine is not persisted, this value should start at 0.
 	GetLastApplied() LogIndex
 
-	// ApplyCommand should apply the given command to the state machine.
+	// CheckAndApplyCommand should check if the given command against the state machine
+	// and either apply it if allowed or return an error if not allowed.
 	//
-	// The log index of the command is provided i.e. this is the new value of lastApplied
-	// corresponding to the given command.
+	// Checking the command is about both if the command deserializes to a valid command,
+	// and if the command is valid for the current uncommitted state of the state machine.
 	//
-	// This method should return only after all changes have been applied.
+	// IConsensusModule.AppendCommand() will call this method.
+	// If this method approves the command, the command will be sent to Log.AppendEntry().
+	// If this method rejects the command, the command will NOT be sent to the Log, and
+	// the error returned by this method will be returned to AppendCommand's caller.
 	//
-	// It is an error if the value of logIndex is less than lastApplied. Note that the upstream
-	// commitIndex may NOT be persisted, and may reset to 0 on restart.
-	// However, the upstream should never send this initial 0 value to StateMachine, and
-	// should always jump to a non-decreasing value.
-	ApplyCommand(logIndex LogIndex, command Command)
+	// The log index of the command is provided. This should always be one more than the
+	// current indexOfLastEntry.
+	//
+	// This method should return only after all changes have been applied to the state machine.
+	// FIXME: update this language to allow application to be async with respect for ordering.
+	//
+	// This method will only be called when this ConsensusModule is the leader.
+	CheckAndApplyCommand(LogIndex, Command) error
+
+	// SetEntriesAfterIndex tells the state machine about Log entry changes.
+	//
+	// This method will only be called when the ConsensusModule is a follower.
+	//
+	// This method is called after Log.SetEntriesAfterIndex(), and has the same exact
+	// parameters and semantics.
+	//
+	// This method should use only the command and not the term in the log entries slice.
+	// Note that commands sent via CheckAndApplyCommand will have no term.
+	//
+	// This method should return only after all changes have been applied to the state machine.
+	// FIXME: update this language to allow application to be async with respect for ordering.
+	//
+	// It is an error if commands after the given index have already been
+	// applied to the state machine.
+	// (i.e. the given index is less than commitIndex or lastApplied)
+	SetEntriesAfterIndex(LogIndex, []LogEntry) error
+
+	// CommitIndexChanged tells the state machine that commitIndex has changed to the given value.
+	//
+	// commitIndex is the index of highest log entry known to be committed
+	// (initialized to 0, increases monotonically)
+	//
+	// This means that entries up to this index from the Log can be committed to the state machine.
+	// (see #RFS-A1 mentioned above)
+	//
+	// This method should return immediately without blocking. This means that marking the state
+	// machine as committed up to the new commitIndex should be asynchronous to this method call.
+	// FIXME: update this language with note about respecting ordering.
+	//
+	// On startup, the state machine can consider the previous commitIndex to be either
+	// 0 or the persisted value of lastApplied. If the state machine is not persisted, there is no
+	// difference as lastApplied will also start at 0.
+	//
+	// It is an error if the value of commitIndex decreases. Note that the upstream commitIndex may
+	// NOT be persisted, and may reset to 0 on restart. However, the upstream should never send this
+	// initial 0 value to StateMachine, and should never send a value that is less than a persisted
+	// value of lastApplied or a previously sent value of commitIndex.
+	//
+	// It is an error if the value is greater than indexOfLastEntry.
+	CommitIndexChanged(LogIndex)
 }
 
 // Raft persistent state on all servers.

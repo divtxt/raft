@@ -19,7 +19,7 @@ type PassiveConsensusModule struct {
 	RaftPersistentState RaftPersistentState
 	LogRO               LogReadOnly
 	_log                Log
-	_cicListener        CommitIndexChangeListener
+	_stateMachine       StateMachine
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
@@ -44,7 +44,7 @@ type PassiveConsensusModule struct {
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
-	cicListener CommitIndexChangeListener,
+	stateMachine StateMachine,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	maxEntriesPerAppendEntry uint64,
@@ -58,8 +58,8 @@ func NewPassiveConsensusModule(
 	if log == nil {
 		return nil, errors.New("'log' cannot be nil")
 	}
-	if cicListener == nil {
-		return nil, errors.New("'cicListener' cannot be nil")
+	if stateMachine == nil {
+		return nil, errors.New("'stateMachine' cannot be nil")
 	}
 	if rpcSendOnly == nil {
 		return nil, errors.New("'rpcSendOnly' cannot be nil")
@@ -76,7 +76,7 @@ func NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
 		log,
-		cicListener,
+		stateMachine,
 		rpcSendOnly,
 
 		// -- Config
@@ -134,14 +134,15 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	cm._cicListener.CommitIndexChanged(commitIndex)
+	cm._stateMachine.CommitIndexChanged(commitIndex)
 	return nil
 }
 
 // Append the given command as an entry in the log.
 // #RFS-L2a: If command received from client: append entry to local log
 //
-// The command will be sent to Log.AppendEntry().
+// The command will be sent to StateMachine.CheckAndApplyCommand(),
+// and then to Log.AppendEntry() if approved.
 //
 // Returns ErrNotLeader if not currently the leader.
 func (cm *PassiveConsensusModule) AppendCommand(command Command) (LogIndex, error) {
@@ -149,9 +150,20 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) (LogIndex, erro
 		return 0, ErrNotLeader
 	}
 
+	// send to state machine
+	iole, err := cm._log.GetIndexOfLastEntry()
+	if err != nil {
+		panic(err)
+	}
+	err = cm._stateMachine.CheckAndApplyCommand(iole+1, command)
+	if err != nil {
+		return 0, err
+	}
+
+	// then send to log
 	termNo := cm.RaftPersistentState.GetCurrentTerm()
 	logEntry := LogEntry{termNo, command}
-	iole, err := cm._log.AppendEntry(logEntry)
+	iole, err = cm._log.AppendEntry(logEntry)
 	if err != nil {
 		return 0, err
 	}
@@ -369,7 +381,11 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 	if li < cm._commitIndex {
 		return fmt.Errorf("FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
 	}
-	return cm._log.SetEntriesAfterIndex(li, entries)
+	err := cm._log.SetEntriesAfterIndex(li, entries)
+	if err != nil {
+		return err
+	}
+	return cm._stateMachine.SetEntriesAfterIndex(li, entries)
 }
 
 // -- rpc bridging things

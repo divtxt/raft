@@ -26,7 +26,7 @@ func setupManagedConsensusModuleR2(
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	mcicl := testhelpers.NewMockCommitIndexChangeListener()
+	dsm := testhelpers.NewDummyStateMachineFromLog(0, iml)
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
 	if solo {
@@ -42,7 +42,7 @@ func setupManagedConsensusModuleR2(
 	cm, err := NewPassiveConsensusModule(
 		ps,
 		iml,
-		mcicl,
+		dsm,
 		mrs,
 		ci,
 		testdata.MaxEntriesPerAppendEntry,
@@ -57,7 +57,7 @@ func setupManagedConsensusModuleR2(
 	}
 	// Bias simulated clock to avoid exact time matches
 	now = now.Add(testdata.SleepToLetGoroutineRun)
-	mcm := &managedConsensusModule{cm, now, iml, mcicl}
+	mcm := &managedConsensusModule{cm, now, iml, dsm}
 	return mcm, mrs
 }
 
@@ -644,7 +644,7 @@ func TestCM_SetCommitIndexNotifiesCommitIndexChangeListener(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 
-		if mcm.mcicl.GetCommitIndex() != 0 {
+		if mcm.dsm.GetLastApplied() != 0 {
 			t.Fatal()
 		}
 
@@ -652,7 +652,7 @@ func TestCM_SetCommitIndexNotifiesCommitIndexChangeListener(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.mcicl.GetCommitIndex() != 2 {
+		if mcm.dsm.GetLastApplied() != 2 {
 			t.Fatal()
 		}
 
@@ -660,7 +660,7 @@ func TestCM_SetCommitIndexNotifiesCommitIndexChangeListener(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.mcicl.GetCommitIndex() != 9 {
+		if mcm.dsm.GetLastApplied() != 9 {
 			t.Fatal()
 		}
 	}
@@ -827,6 +827,44 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
 	}
+
+	if mcm.dsm.GetLastApplied() != 0 {
+		t.Error(mcm.dsm)
+	}
+	if !mcm.dsm.AppliedCommandsEqual(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1101) {
+		t.Fatal(mcm.dsm)
+	}
+}
+
+// #RFS-L2a: If Command received from client: append entry to local log
+func TestCM_Leader_AppendCommand_InvalidCommand(t *testing.T) {
+	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
+
+	// pre check
+	iole, err := mcm.pcm.LogRO.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 10 {
+		t.Fatal()
+	}
+
+	_, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(-1101))
+	if err.Error() != "Invalid command: c-1101" {
+		t.Fatal(err)
+	}
+
+	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 10 {
+		t.Fatal()
+	}
+
+	if !mcm.dsm.AppliedCommandsEqual(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) {
+		t.Fatal(mcm.dsm)
+	}
 }
 
 // #RFS-L2a: If Command received from client: append entry to local log
@@ -857,6 +895,10 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		if iole != 10 {
 			t.Fatal()
 		}
+
+		if !mcm.dsm.AppliedCommandsEqual(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) {
+			t.Fatal(mcm.dsm)
+		}
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
@@ -867,10 +909,10 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 // of time with helper methods. This simplifies tests and avoids concurrency
 // issues with inspecting the internals.
 type managedConsensusModule struct {
-	pcm   *PassiveConsensusModule
-	now   time.Time
-	diml  LogReadOnly
-	mcicl *testhelpers.MockCommitIndexChangeListener
+	pcm  *PassiveConsensusModule
+	now  time.Time
+	diml LogReadOnly
+	dsm  *testhelpers.DummyStateMachine
 }
 
 func (mcm *managedConsensusModule) Tick() error {

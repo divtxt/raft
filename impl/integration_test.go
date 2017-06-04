@@ -24,7 +24,7 @@ func setupConsensusModuleR3(
 ) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
+	dsm := testhelpers.NewDummyStateMachineFromLog(0, iml) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, electionTimeoutLow}
 	ci, err := config.NewClusterInfo(testClusterServerIds, thisServerId)
 	if err != nil {
@@ -48,7 +48,7 @@ func setupConsensusModuleR3_SOLO(
 ) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
+	dsm := testhelpers.NewDummyStateMachineFromLog(0, iml) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo([]ServerId{101}, 101)
 	if err != nil {
@@ -244,11 +244,8 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 
 	// Another tick propagates the commit to the connected followers
 	time.Sleep(testdata.TickerDuration)
-	if dsm2.GetLastApplied() != 1 {
-		t.Fatal()
-	}
-	if !dsm2.AppliedCommandsEqual(101) {
-		t.Fatal()
+	if dsm2.GetLastApplied() != 1 || !dsm2.AppliedCommandsEqual(101) {
+		t.Fatal(dsm2)
 	}
 
 	// Crashed follower restarts

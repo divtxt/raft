@@ -28,7 +28,6 @@ import (
 	"time"
 
 	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/committer"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
 	"github.com/divtxt/raft/util"
@@ -39,7 +38,6 @@ type ConsensusModule struct {
 	mutex *sync.Mutex
 
 	//
-	committer              *committer.Committer
 	passiveConsensusModule *consensus.PassiveConsensusModule
 
 	// -- External components - these fields meant to be immutable
@@ -74,12 +72,9 @@ func NewConsensusModule(
 
 	now := time.Now()
 
-	committer := committer.NewCommitter(log, stateMachine)
-
 	cm := &ConsensusModule{
 		&sync.Mutex{},
 
-		committer,
 		nil, // passiveConsensusModule - temp value, to be replaced before goroutine start
 
 		// -- External components
@@ -96,7 +91,7 @@ func NewConsensusModule(
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
-		committer,
+		stateMachine,
 		cm,
 		clusterInfo,
 		maxEntriesPerAppendEntry,
@@ -341,12 +336,6 @@ func (cm *ConsensusModule) shutdownAndPanic(err error) {
 		// Tell the ticker to stop.
 		// This needs be async since this method could be running as part of a tick.
 		cm.ticker.StopAsync()
-		// Tell the committer to stop.
-		// No other calls will be serviced, so there's no need to worry about a race condition
-		// between this stop and a commitIndex change.
-		// (Even if this method is running as part of a tick, we should be past the actual tick code)
-		// where the actual tick code
-		cm.committer.StopSync()
 		// Panic for error
 		if err != nil {
 			panic(err)

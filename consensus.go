@@ -19,6 +19,9 @@ type IConsensusModule interface {
 
 	// Process the given RpcAppendEntries message from the given peer.
 	//
+	// The log entries will be sent to Log.SetEntriesAfterIndex()
+	// and then to StateMachine.SetEntriesAfterIndex().
+	//
 	// Returns nil if there was an error or if the ConsensusModule is shutdown.
 	//
 	// Note that an error would have shutdown the ConsensusModule.
@@ -39,7 +42,9 @@ type IConsensusModule interface {
 	//
 	// This can only be done if the ConsensusModule is in LEADER state.
 	//
-	// The command will be sent to Log.AppendEntry().
+	// The command will first be sent to StateMachine.CheckAndApplyCommand().
+	// If rejected, the error will be returned.
+	// If approved, the command will be sent to Log.AppendEntry().
 	// Any errors from Log.AppendEntry() call will stop the ConsensusModule.
 	//
 	// The command must already have been checked to ensure that it will successfully apply to the
@@ -49,6 +54,7 @@ type IConsensusModule interface {
 	//
 	// Returns ErrStopped if ConsensusModule is stopped.
 	// Returns ErrNotLeader if not currently the leader.
+	// Any other error is an error from StateMachine.CheckAndApplyCommand().
 	//
 	// Here, we intentionally punt on some of the leader details, specifically
 	// most of:
@@ -61,10 +67,5 @@ type IConsensusModule interface {
 	// (see delegation of lastApplied to the state machine via the StateMachine interface)
 	//
 	// See the notes on NewConsensusModule() for more details about this method's behavior.
-	AppendCommand(command Command) (LogIndex, error)
-}
-
-// A subset of the IConsensusModule interface with just the AppendCommand method.
-type IConsensusModule_AppendCommandOnly interface {
 	AppendCommand(command Command) (LogIndex, error)
 }

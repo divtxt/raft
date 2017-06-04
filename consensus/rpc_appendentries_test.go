@@ -199,6 +199,9 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if !testhelpers.DummyCommandEquals(testhelpers.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 6).Command, 6) {
 			t.Error()
 		}
+		if !mcm.dsm.AppliedCommandsEqual(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11) {
+			t.Fatal(mcm.dsm)
+		}
 
 		sentLogEntries := []LogEntry{
 			{5, Command("c601")},
@@ -242,6 +245,13 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 
 		if mcm.pcm.GetCommitIndex() != 7 {
 			t.Error()
+		}
+
+		if mcm.dsm.GetLastApplied() != 7 {
+			t.Error(mcm.dsm)
+		}
+		if !mcm.dsm.AppliedCommandsEqual(1, 2, 3, 4, 5, 601, 701, 801) {
+			t.Fatal(mcm.dsm)
 		}
 
 		// #RFS-F2: (paraphrasing) AppendEntries RPC from current leader should
@@ -296,6 +306,9 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if !testhelpers.DummyCommandEquals(testhelpers.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 4).Command, 4) {
 			t.Error()
 		}
+		if !mcm.dsm.AppliedCommandsEqual(1, 2, 3, 4) {
+			t.Fatal(mcm.dsm)
+		}
 
 		sentLogEntries := []LogEntry{
 			{4, Command("c501")},
@@ -338,6 +351,13 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 
 		if mcm.pcm.GetCommitIndex() != 6 {
 			t.Error()
+		}
+
+		if mcm.dsm.GetLastApplied() != 6 {
+			t.Error(mcm.dsm)
+		}
+		if !mcm.dsm.AppliedCommandsEqual(1, 2, 3, 4, 501, 601) {
+			t.Fatal(mcm.dsm)
 		}
 
 		if mcm.pcm.RaftPersistentState.GetVotedFor() != expectedVotedFor {
