@@ -352,3 +352,21 @@ func TestCM_RpcRV_SameServerId(t *testing.T) {
 	f(testSetupMCM_Candidate_Figure7LeaderLine)
 	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
+
+// Test for a server with an id not in the cluster
+func TestCM_RpcRV_ServerIdNotInCluster(t *testing.T) {
+	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+		mcm, _ := setup(t)
+
+		requestVote := &RpcRequestVote{7, 9, 6}
+
+		_, err := mcm.Rpc_RpcRequestVote(151, requestVote)
+		if err == nil || err.Error() != "FATAL: 'from' serverId 151 is not in the cluster" {
+			t.Fatal(err)
+		}
+	}
+
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
+	f(testSetupMCM_Leader_Figure7LeaderLine)
+}

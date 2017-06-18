@@ -391,6 +391,29 @@ func TestCM_RpcAE_SameServerId(t *testing.T) {
 	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
 
+// Test for a server with an id not in the cluster
+func TestCM_RpcAE_ServerIdNotInCluster(t *testing.T) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) (*managedConsensusModule, *testhelpers.MockRpcSender) {
+		mcm, mrs := setup(t)
+		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
+
+		appendEntries := makeAEWithTerm(serverTerm - 1)
+
+		_, err := mcm.Rpc_RpcAppendEntries(151, appendEntries)
+		if err == nil || err.Error() != "FATAL: 'from' serverId 151 is not in the cluster" {
+			t.Fatal(err)
+		}
+
+		return mcm, mrs
+	}
+
+	f(testSetupMCM_Follower_Figure7LeaderLine)
+	f(testSetupMCM_Candidate_Figure7LeaderLine)
+	f(testSetupMCM_Leader_Figure7LeaderLine)
+}
+
 // Test for append entries that tries to modify earlier than commitIndex
 func TestCM_RpcAE_LessThanCommitIndex(t *testing.T) {
 	f := func(

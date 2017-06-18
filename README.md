@@ -22,7 +22,7 @@ Later:
 - [ ] Isolated server should not increment term (similar to #6p8)
 - [ ] Add metrics & logging
 - [ ] Expose raft details e.g. leader, term
-- [ ] Test for RPCs from senders not in cluster
+- [x] Test for RPCs from senders not in cluster
 - [ ] Review fatal errors to see if they can be non-fatal
 - [ ] Assembling AppendEntries RPC should not block
 - [x] Add errcheck to Travis build
