@@ -122,6 +122,40 @@ func TestClusterInfo_ForEach(t *testing.T) {
 	}
 }
 
+func TestClusterInfo_IsPeer(t *testing.T) {
+	ci, err := config.NewClusterInfo([]ServerId{100, 110, 120}, 110)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// "this" server
+	if ci.IsPeer(110) {
+		t.Error()
+	}
+
+	// peers
+	if !ci.IsPeer(100) {
+		t.Error()
+	}
+	if !ci.IsPeer(120) {
+		t.Error()
+	}
+
+	// others
+	if ci.IsPeer(0) {
+		t.Error()
+	}
+	if ci.IsPeer(1) {
+		t.Error()
+	}
+	if ci.IsPeer(101) {
+		t.Error()
+	}
+	if ci.IsPeer(1000) {
+		t.Error()
+	}
+}
+
 func TestQuorumSizeForClusterSize(t *testing.T) {
 	clusterSizes := []uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	expectedQrms := []uint{1, 2, 2, 3, 3, 4, 4, 5, 5, 6}

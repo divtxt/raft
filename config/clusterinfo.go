@@ -89,6 +89,19 @@ func (ci *ClusterInfo) ForEachPeer(f func(serverId ServerId) error) error {
 	return nil
 }
 
+// IsPeer checks if the given ServerId is a peer server in the cluster.
+//
+// "Peer" servers here means all servers except for "this" server.
+func (ci *ClusterInfo) IsPeer(serverId ServerId) bool {
+	// XXX: brute forcing for now - at what size does a map/set become more efficient?
+	for _, peerServerId := range ci.peerServerIds {
+		if serverId == peerServerId {
+			return true
+		}
+	}
+	return false
+}
+
 // Get the cluster size for this ClusterInfo.
 func (ci *ClusterInfo) GetClusterSize() uint {
 	return ci.clusterSize
