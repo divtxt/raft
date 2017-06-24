@@ -20,6 +20,9 @@ Later:
 
 - [ ] Leader commits a no-op entry at the start of its term (#8p4)
 - [ ] Isolated server should not increment term (similar to #6p8)
+- [ ] Unified log and state machine
+- [ ] Pluggable logging
+- [ ] Log many more details e.g. leader, voters
 - [ ] Add metrics & logging
 - [ ] Expose raft details e.g. leader, term
 - [x] Test for RPCs from senders not in cluster
