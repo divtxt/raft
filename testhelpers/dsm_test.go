@@ -22,15 +22,18 @@ func TestDummyStateMachine(t *testing.T) {
 	}
 
 	// Append some commands
-	err := dsm.CheckAndApplyCommand(1, DummyCommand(101))
+	resp, err := dsm.CheckAndApplyCommand(1, DummyCommand(101))
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = dsm.CheckAndApplyCommand(2, DummyCommand(102))
+	if resp != "rc101" {
+		t.Fatal(resp)
+	}
+	_, err = dsm.CheckAndApplyCommand(2, DummyCommand(102))
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = dsm.CheckAndApplyCommand(3, DummyCommand(103))
+	_, err = dsm.CheckAndApplyCommand(3, DummyCommand(103))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +42,7 @@ func TestDummyStateMachine(t *testing.T) {
 	}
 
 	// Append rejection
-	err = dsm.CheckAndApplyCommand(4, DummyCommand(-1))
+	_, err = dsm.CheckAndApplyCommand(4, DummyCommand(-1))
 	if err.Error() != "Invalid command: c-1" {
 		t.Fatal(err)
 	}

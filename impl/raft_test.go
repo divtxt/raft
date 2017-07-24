@@ -248,13 +248,16 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 		t.Fatal()
 	}
 
-	err = cm.AppendCommand(testhelpers.DummyCommand(1101))
+	resp, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if cm.IsStopped() {
 		t.Error()
 	}
 	if err != nil {
 		t.Fatal()
+	}
+	if resp != "rc1101" {
+		t.Fatal(resp)
 	}
 
 	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
@@ -283,7 +286,7 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 		t.Fatal()
 	}
 
-	err = cm.AppendCommand(testhelpers.DummyCommand(1101))
+	_, err = cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if err != ErrNotLeader {
 		t.Fatal()
@@ -305,7 +308,7 @@ func TestConsensusModule_AppendCommand_Follower_StoppedCM(t *testing.T) {
 	cm, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	cm.Stop()
 
-	err := cm.AppendCommand(testhelpers.DummyCommand(1101))
+	_, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if err != ErrStopped {
 		t.Fatal(err)

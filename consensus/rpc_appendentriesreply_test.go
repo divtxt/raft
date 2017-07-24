@@ -308,22 +308,20 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// let's make some new log entries
-	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	resp, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioleAC, err := mcm.diml.GetIndexOfLastEntry()
-	if err != nil || ioleAC != 11 {
-		t.Fatal(err)
+	if resp != "rc11" {
+		t.Fatal(resp)
 	}
 
-	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	resp, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioleAC, err = mcm.diml.GetIndexOfLastEntry()
-	if err != nil || ioleAC != 12 {
-		t.Fatal(err)
+	if resp != "rc12" {
+		t.Fatal(resp)
 	}
 
 	// we currently do not expect appendCommand() to send AppendEntries

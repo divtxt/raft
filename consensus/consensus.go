@@ -145,9 +145,9 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 // and then to Log.AppendEntry() if approved.
 //
 // Returns ErrNotLeader if not currently the leader.
-func (cm *PassiveConsensusModule) AppendCommand(command Command) error {
+func (cm *PassiveConsensusModule) AppendCommand(command Command) (CommandResponse, error) {
 	if cm.GetServerState() != LEADER {
-		return ErrNotLeader
+		return nil, ErrNotLeader
 	}
 
 	// send to state machine
@@ -155,9 +155,9 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) error {
 	if err != nil {
 		panic(err)
 	}
-	err = cm._stateMachine.CheckAndApplyCommand(iole+1, command)
+	commandResponse, err := cm._stateMachine.CheckAndApplyCommand(iole+1, command)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// then send to log
@@ -165,10 +165,10 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) error {
 	logEntry := LogEntry{termNo, command}
 	iole, err = cm._log.AppendEntry(logEntry)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return commandResponse, nil
 }
 
 // Iterate
