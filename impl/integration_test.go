@@ -192,12 +192,9 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	cm3 = nil
 
 	// Apply a command on the leader
-	ioleAC, result := cm1.AppendCommand(testhelpers.DummyCommand(101))
+	result := cm1.AppendCommand(testhelpers.DummyCommand(101))
 
 	if result != nil {
-		t.Fatal()
-	}
-	if ioleAC != 1 {
 		t.Fatal()
 	}
 	if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
@@ -282,15 +279,12 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	defer cm.Stop()
 
 	// Apply a command on the leader
-	ioleAC, result := cm.AppendCommand(testhelpers.DummyCommand(101))
+	result := cm.AppendCommand(testhelpers.DummyCommand(101))
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
 	if result != nil {
-		t.Fatal()
-	}
-	if ioleAC != 1 {
 		t.Fatal()
 	}
 	if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {

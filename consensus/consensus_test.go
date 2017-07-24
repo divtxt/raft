@@ -497,13 +497,21 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ioleAC, err := mcm.diml.GetIndexOfLastEntry()
 	if err != nil || ioleAC != 11 {
 		t.Fatal(err)
 	}
-	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil || ioleAC != 12 {
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil {
 		t.Fatal()
+	}
+	ioleAC, err = mcm.diml.GetIndexOfLastEntry()
+	if err != nil || ioleAC != 12 {
+		t.Fatal(err)
 	}
 
 	// tick should try to advance commitIndex but nothing should happen
@@ -614,13 +622,21 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
-	if err != nil || ioleAC != 11 {
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil {
 		t.Fatal()
 	}
-	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil || ioleAC != 12 {
+	ioleAC, err := mcm.diml.GetIndexOfLastEntry()
+	if err != nil || ioleAC != 11 {
+		t.Fatal(err)
+	}
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil {
 		t.Fatal()
+	}
+	ioleAC, err = mcm.diml.GetIndexOfLastEntry()
+	if err != nil || ioleAC != 12 {
+		t.Fatal(err)
 	}
 
 	// commitIndex does not advance immediately
@@ -811,9 +827,13 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
-	if err != nil || ioleAC != 11 {
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+	if err != nil {
 		t.Fatal()
+	}
+	ioleAC, err := mcm.diml.GetIndexOfLastEntry()
+	if err != nil || ioleAC != 11 {
+		t.Fatal(err)
 	}
 
 	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
@@ -849,7 +869,7 @@ func TestCM_Leader_AppendCommand_InvalidCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	_, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(-1101))
+	err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(-1101))
 	if err.Error() != "Invalid command: c-1101" {
 		t.Fatal(err)
 	}
@@ -883,7 +903,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		_, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+		err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
 		if err != ErrNotLeader {
 			t.Fatal()
 		}

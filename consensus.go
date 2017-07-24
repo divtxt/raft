@@ -67,5 +67,5 @@ type IConsensusModule interface {
 	// (see delegation of lastApplied to the state machine via the StateMachine interface)
 	//
 	// See the notes on NewConsensusModule() for more details about this method's behavior.
-	AppendCommand(command Command) (LogIndex, error)
+	AppendCommand(command Command) error
 }

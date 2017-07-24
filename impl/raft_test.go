@@ -248,15 +248,12 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 		t.Fatal()
 	}
 
-	ioleAC, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
+	err = cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if cm.IsStopped() {
 		t.Error()
 	}
 	if err != nil {
-		t.Fatal()
-	}
-	if ioleAC != 11 {
 		t.Fatal()
 	}
 
@@ -286,7 +283,7 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 		t.Fatal()
 	}
 
-	_, err = cm.AppendCommand(testhelpers.DummyCommand(1101))
+	err = cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if err != ErrNotLeader {
 		t.Fatal()
@@ -308,7 +305,7 @@ func TestConsensusModule_AppendCommand_Follower_StoppedCM(t *testing.T) {
 	cm, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	cm.Stop()
 
-	_, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
+	err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if err != ErrStopped {
 		t.Fatal(err)
