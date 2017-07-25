@@ -12,9 +12,10 @@ import (
 // Entries should be Command("c1"), Command("c2"), etc.
 func TestDummyStateMachine(t *testing.T) {
 	dsm := newDummyStateMachine(0)
+	var sm StateMachine = dsm
 
 	// Initial data tests
-	if dsm.GetLastApplied() != 0 {
+	if sm.GetLastApplied() != 0 {
 		t.Fatal(dsm)
 	}
 	if !dsm.AppliedCommandsEqual() {
@@ -22,18 +23,18 @@ func TestDummyStateMachine(t *testing.T) {
 	}
 
 	// Append some commands
-	resp, err := dsm.CheckAndApplyCommand(1, DummyCommand(101))
+	resp, err := sm.CheckAndApplyCommand(1, DummyCommand(101))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp != "rc101" {
 		t.Fatal(resp)
 	}
-	_, err = dsm.CheckAndApplyCommand(2, DummyCommand(102))
+	_, err = sm.CheckAndApplyCommand(2, DummyCommand(102))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = dsm.CheckAndApplyCommand(3, DummyCommand(103))
+	_, err = sm.CheckAndApplyCommand(3, DummyCommand(103))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +43,7 @@ func TestDummyStateMachine(t *testing.T) {
 	}
 
 	// Append rejection
-	_, err = dsm.CheckAndApplyCommand(4, DummyCommand(-1))
+	_, err = sm.CheckAndApplyCommand(4, DummyCommand(-1))
 	if err.Error() != "Invalid command: c-1" {
 		t.Fatal(err)
 	}
@@ -54,7 +55,7 @@ func TestDummyStateMachine(t *testing.T) {
 	TestHelper_ExpectPanicMessage(
 		t,
 		func() {
-			_, _ = dsm.CheckAndApplyCommand(3, DummyCommand(104))
+			_, _ = sm.CheckAndApplyCommand(3, DummyCommand(104))
 		},
 		"DummyStateMachine: logIndex=3 is != 1 + indexOfLastEntry=3",
 	)
@@ -64,7 +65,7 @@ func TestDummyStateMachine(t *testing.T) {
 		{TermNo: 1, Command: DummyCommand(104)},
 		{TermNo: 1, Command: DummyCommand(105)},
 	}
-	err = dsm.SetEntriesAfterIndex(3, entries)
+	err = sm.SetEntriesAfterIndex(3, entries)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +78,7 @@ func TestDummyStateMachine(t *testing.T) {
 		{TermNo: 2, Command: DummyCommand(203)},
 		{TermNo: 2, Command: DummyCommand(204)},
 	}
-	err = dsm.SetEntriesAfterIndex(2, entries)
+	err = sm.SetEntriesAfterIndex(2, entries)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,12 +87,12 @@ func TestDummyStateMachine(t *testing.T) {
 	}
 
 	// Commit
-	if dsm.GetLastApplied() != 0 {
-		t.Fatal(dsm.GetLastApplied())
+	if sm.GetLastApplied() != 0 {
+		t.Fatal(sm.GetLastApplied())
 	}
-	dsm.CommitIndexChanged(3)
-	if dsm.GetLastApplied() != 3 { // XXX: assumes instant commit
-		t.Fatal(dsm.GetLastApplied())
+	sm.CommitIndexChanged(3)
+	if sm.GetLastApplied() != 3 { // XXX: assumes instant commit
+		t.Fatal(sm.GetLastApplied())
 	}
 
 	// Attempt to rewind beyond lastApplied
@@ -100,7 +101,7 @@ func TestDummyStateMachine(t *testing.T) {
 		{TermNo: 2, Command: DummyCommand(304)},
 	}
 
-	err = dsm.SetEntriesAfterIndex(2, entries)
+	err = sm.SetEntriesAfterIndex(2, entries)
 	if err.Error() != "DummyStateMachine: logIndex=2 is < current commitIndex=3" {
 		t.Fatal(dsm)
 	}
