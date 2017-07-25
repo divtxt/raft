@@ -26,7 +26,7 @@ func setupManagedConsensusModuleR2(
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	mcicl := testhelpers.NewMockCommitIndexChangeListener()
+	mc := newMockCommitter()
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
 	if solo {
@@ -42,7 +42,7 @@ func setupManagedConsensusModuleR2(
 	cm, err := NewPassiveConsensusModule(
 		ps,
 		iml,
-		mcicl,
+		mc,
 		mrs,
 		ci,
 		testdata.MaxEntriesPerAppendEntry,
@@ -57,7 +57,7 @@ func setupManagedConsensusModuleR2(
 	}
 	// Bias simulated clock to avoid exact time matches
 	now = now.Add(testdata.SleepToLetGoroutineRun)
-	mcm := &managedConsensusModule{cm, now, iml, mcicl}
+	mcm := &managedConsensusModule{cm, now, iml, mc}
 	return mcm, mrs
 }
 
@@ -644,25 +644,23 @@ func TestCM_SetCommitIndexNotifiesCommitIndexChangeListener(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 
-		if mcm.mcicl.GetCommitIndex() != 0 {
-			t.Fatal()
-		}
+		mcm.mc.CheckCalls([]mockCommitterCall{})
 
 		err := mcm.pcm.setCommitIndex(2)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.mcicl.GetCommitIndex() != 2 {
-			t.Fatal()
-		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 2, nil},
+		})
 
 		err = mcm.pcm.setCommitIndex(9)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.mcicl.GetCommitIndex() != 9 {
-			t.Fatal()
-		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 9, nil},
+		})
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
@@ -867,10 +865,10 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 // of time with helper methods. This simplifies tests and avoids concurrency
 // issues with inspecting the internals.
 type managedConsensusModule struct {
-	pcm   *PassiveConsensusModule
-	now   time.Time
-	diml  LogReadOnly
-	mcicl *testhelpers.MockCommitIndexChangeListener
+	pcm  *PassiveConsensusModule
+	now  time.Time
+	diml LogReadOnly
+	mc   *mockCommitter
 }
 
 func (mcm *managedConsensusModule) Tick() error {
