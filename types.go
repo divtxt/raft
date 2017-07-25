@@ -25,9 +25,6 @@ type TermNo uint64
 // The contents of the byte slice are opaque to the ConsensusModule.
 type Command []byte
 
-// A command reply from the state machine.
-type CommandResponse interface{}
-
 // CommitSignal is a channel used to signal when a command is committed.
 //
 // If and when the command is committed, a value is sent on this channel.

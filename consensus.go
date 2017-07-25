@@ -50,7 +50,8 @@ type IConsensusModule interface {
 	// The command must already have been checked to ensure that it will successfully apply to the
 	// state machine in it's position in the Log.
 	//
-	// Returns the index of the new entry.
+	// Returns a CommitSignal channel to signal when this command is committed.
+	// See CommitSignal type documentation for details.
 	//
 	// Returns ErrStopped if ConsensusModule is stopped.
 	// Returns ErrNotLeader if not currently the leader.
@@ -67,5 +68,5 @@ type IConsensusModule interface {
 	// (see delegation of lastApplied to the state machine via the StateMachine interface)
 	//
 	// See the notes on NewConsensusModule() for more details about this method's behavior.
-	AppendCommand(command Command) (CommandResponse, error)
+	AppendCommand(command Command) (CommitSignal, error)
 }

@@ -197,7 +197,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 // Append the given command as an entry in the log.
 //
 // See IConsensusModule for details.
-func (cm *ConsensusModule) AppendCommand(command Command) (CommandResponse, error) {
+func (cm *ConsensusModule) AppendCommand(command Command) (CommitSignal, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
@@ -205,12 +205,12 @@ func (cm *ConsensusModule) AppendCommand(command Command) (CommandResponse, erro
 		return nil, ErrStopped
 	}
 
-	commandResponse, err := cm.passiveConsensusModule.AppendCommand(command)
+	cs, err := cm.passiveConsensusModule.AppendCommand(command)
 	if err != nil && err != ErrNotLeader {
 		cm.shutdownAndPanic(err)
 	}
 
-	return commandResponse, err
+	return cs, err
 }
 
 // -- protected methods

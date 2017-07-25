@@ -497,20 +497,16 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	resp, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	cs11, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp != "rc11" {
-		t.Fatal(resp)
-	}
-	resp, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	testhelpers.AssertWillBlock(cs11)
+	cs12, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
 	if err != nil {
 		t.Fatal()
 	}
-	if resp != "rc12" {
-		t.Fatal(resp)
-	}
+	testhelpers.AssertWillBlock(cs12)
 
 	// tick should try to advance commitIndex but nothing should happen
 	err = mcm.Tick()
@@ -520,6 +516,8 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	testhelpers.AssertWillBlock(cs11)
+	testhelpers.AssertWillBlock(cs12)
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
 			{6, Command("c10")},
@@ -553,7 +551,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// tick advances commitIndex
+	// tick advances commitIndex; signals listeners
 	err = mcm.Tick()
 	if err != nil {
 		t.Fatal(err)
@@ -561,6 +559,8 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 11 {
 		t.Fatal()
 	}
+	testhelpers.AssertHasValue(cs11)
+	testhelpers.AssertWillBlock(cs12)
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
 			{8, Command("c12")},
@@ -590,6 +590,49 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
+
+	// make some more new entries
+	cs13, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(13))
+	if err != nil {
+		t.Fatal()
+	}
+	testhelpers.AssertWillBlock(cs13)
+	cs14, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(14))
+	if err != nil {
+		t.Fatal()
+	}
+	testhelpers.AssertWillBlock(cs14)
+
+	// An RpcAppendEntries taking leadership and clearing entries
+	// will signal or close commit listeners as appropriate.
+	appendEntries := &RpcAppendEntries{
+		Term:         serverTerm + 1,
+		PrevLogIndex: 12,
+		PrevLogTerm:  serverTerm,
+		Entries: []LogEntry{
+			{serverTerm + 1, Command("c1013")},
+		},
+		LeaderCommit: 12,
+	}
+	reply, err := mcm.Rpc_RpcAppendEntries(104, appendEntries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedRpc := RpcAppendEntriesReply{serverTerm + 1, true}
+	if *reply != expectedRpc {
+		t.Fatal(reply)
+	}
+	iole, err := mcm.pcm.LogRO.GetIndexOfLastEntry()
+	if err != nil {
+		t.Fatal()
+	}
+	if iole != 13 {
+		t.Fatal(iole)
+	}
+	testhelpers.AssertHasValue(cs12)
+	testhelpers.AssertClosed(cs13)
+	testhelpers.AssertClosed(cs14)
+
 }
 
 func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
@@ -620,20 +663,16 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	resp, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	cs11, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
 	if err != nil {
 		t.Fatal()
 	}
-	if resp != "rc11" {
-		t.Fatal(resp)
-	}
-	resp, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	testhelpers.AssertWillBlock(cs11)
+	cs12, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
 	if err != nil {
 		t.Fatal()
 	}
-	if resp != "rc12" {
-		t.Fatal(resp)
-	}
+	testhelpers.AssertWillBlock(cs12)
 
 	// commitIndex does not advance immediately
 	if mcm.pcm.GetCommitIndex() != 0 {
@@ -648,6 +687,8 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 12 {
 		t.Fatal(mcm.pcm.GetCommitIndex())
 	}
+	testhelpers.AssertHasValue(cs11)
+	testhelpers.AssertHasValue(cs12)
 	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 	mrs.ClearSentRpcs()
 }
@@ -823,13 +864,11 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	resp, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+	cs1101, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
 	if err != nil {
 		t.Fatal()
 	}
-	if resp != "rc1101" {
-		t.Fatal(resp)
-	}
+	testhelpers.AssertWillBlock(cs1101)
 
 	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
 	if err != nil {

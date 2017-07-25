@@ -192,14 +192,12 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	cm3 = nil
 
 	// Apply a command on the leader
-	resp, err := cm1.AppendCommand(testhelpers.DummyCommand(101))
+	cs101, err := cm1.AppendCommand(testhelpers.DummyCommand(101))
 
 	if err != nil {
 		t.Fatal()
 	}
-	if resp != "rc101" {
-		t.Fatal(resp)
-	}
+	testhelpers.AssertWillBlock(cs101)
 	if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
 		t.Fatal()
 	}
@@ -236,6 +234,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	if !dsm1.AppliedCommandsEqual(101) {
 		t.Fatal()
 	}
+	testhelpers.AssertHasValue(cs101)
 
 	// but not yet on the connected followers
 	if dsm2.GetLastApplied() != 0 {
@@ -282,7 +281,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	defer cm.Stop()
 
 	// Apply a command on the leader
-	resp, err := cm.AppendCommand(testhelpers.DummyCommand(101))
+	cs101, err := cm.AppendCommand(testhelpers.DummyCommand(101))
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
@@ -290,9 +289,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	if err != nil {
 		t.Fatal()
 	}
-	if resp != "rc101" {
-		t.Fatal(resp)
-	}
+	testhelpers.AssertWillBlock(cs101)
 	if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {
 		t.Fatal()
 	}
@@ -317,6 +314,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	if !dsm.AppliedCommandsEqual(101) {
 		t.Fatal()
 	}
+	testhelpers.AssertHasValue(cs101)
 }
 
 // Real in-memory implementation of RpcService

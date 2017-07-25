@@ -9,7 +9,7 @@ import (
 	. "github.com/divtxt/raft"
 	config "github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
-	util "github.com/divtxt/raft/util"
+	"github.com/divtxt/raft/util"
 )
 
 type PassiveConsensusModule struct {
@@ -33,6 +33,7 @@ type PassiveConsensusModule struct {
 	// (initialized to 0, increases monotonically)
 	_commitIndex           LogIndex
 	ElectionTimeoutTracker *util.ElectionTimeoutTracker
+	commitNotifier         *util.CommitNotifier
 
 	// -- State - for candidates only
 	CandidateVolatileState *consensus_state.CandidateVolatileState
@@ -71,6 +72,8 @@ func NewPassiveConsensusModule(
 		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
 
+	lastApplied := stateMachine.GetLastApplied()
+
 	pcm := &PassiveConsensusModule{
 		// -- External components
 		raftPersistentState,
@@ -92,6 +95,7 @@ func NewPassiveConsensusModule(
 		// (initialized to 0, increases monotonically)
 		0,
 		util.NewElectionTimeoutTracker(electionTimeoutLow, now),
+		util.NewCommitNotifier(lastApplied),
 
 		// -- State - for candidates only
 		nil,
@@ -135,6 +139,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 	}
 	cm._commitIndex = commitIndex
 	cm._stateMachine.CommitIndexChanged(commitIndex)
+	cm.commitNotifier.CommitIndexChanged(commitIndex)
 	return nil
 }
 
@@ -145,7 +150,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 // and then to Log.AppendEntry() if approved.
 //
 // Returns ErrNotLeader if not currently the leader.
-func (cm *PassiveConsensusModule) AppendCommand(command Command) (CommandResponse, error) {
+func (cm *PassiveConsensusModule) AppendCommand(command Command) (CommitSignal, error) {
 	if cm.GetServerState() != LEADER {
 		return nil, ErrNotLeader
 	}
@@ -155,7 +160,8 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) (CommandRespons
 	if err != nil {
 		panic(err)
 	}
-	commandResponse, err := cm._stateMachine.CheckAndApplyCommand(iole+1, command)
+	logIndex := iole + 1
+	err = cm._stateMachine.CheckAndApplyCommand(logIndex, command)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +174,10 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) (CommandRespons
 		return nil, err
 	}
 
-	return commandResponse, nil
+	// register for commit
+	cs := cm.commitNotifier.RegisterListener(logIndex)
+
+	return cs, nil
 }
 
 // Iterate
@@ -385,6 +394,7 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 	if err != nil {
 		return err
 	}
+	cm.commitNotifier.ClearListenersAfterIndex(li)
 	return cm._stateMachine.SetEntriesAfterIndex(li, entries)
 }
 

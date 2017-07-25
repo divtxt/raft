@@ -248,7 +248,7 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 		t.Fatal()
 	}
 
-	resp, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
+	cs1101, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if cm.IsStopped() {
 		t.Error()
@@ -256,9 +256,7 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 	if err != nil {
 		t.Fatal()
 	}
-	if resp != "rc1101" {
-		t.Fatal(resp)
-	}
+	testhelpers.AssertWillBlock(cs1101)
 
 	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 	if err != nil {
