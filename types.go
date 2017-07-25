@@ -28,6 +28,15 @@ type Command []byte
 // A command reply from the state machine.
 type CommandResponse interface{}
 
+// CommitSignal is a channel used to signal when a command is committed.
+//
+// If and when the command is committed, a value is sent on this channel.
+//
+// If the ConsensusModule loses leadership, this channel is closed.
+// Note that the command may still commit, but the ConsensusModule stops tracking it.
+//
+type CommitSignal <-chan struct{}
+
 // An entry in the Raft Log
 type LogEntry struct {
 	TermNo
