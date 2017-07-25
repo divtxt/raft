@@ -25,6 +25,15 @@ type TermNo uint64
 // The contents of the byte slice are opaque to the ConsensusModule.
 type Command []byte
 
+// CommitSignal is a channel used to signal when a command is committed.
+//
+// If and when the command is committed, a value is sent on this channel.
+//
+// If the ConsensusModule loses leadership, this channel is closed.
+// Note that the command may still commit, but the ConsensusModule stops tracking it.
+//
+type CommitSignal <-chan struct{}
+
 // An entry in the Raft Log
 type LogEntry struct {
 	TermNo

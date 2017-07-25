@@ -24,7 +24,7 @@ func setupConsensusModuleR3(
 ) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
+	dsm := testhelpers.NewDummyStateMachineFromLog(0, iml) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, electionTimeoutLow}
 	ci, err := config.NewClusterInfo(testClusterServerIds, thisServerId)
 	if err != nil {
@@ -48,7 +48,7 @@ func setupConsensusModuleR3_SOLO(
 ) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
+	dsm := testhelpers.NewDummyStateMachineFromLog(0, iml) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo([]ServerId{101}, 101)
 	if err != nil {
@@ -192,14 +192,12 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	cm3 = nil
 
 	// Apply a command on the leader
-	ioleAC, result := cm1.AppendCommand(testhelpers.DummyCommand(101))
+	cs101, err := cm1.AppendCommand(testhelpers.DummyCommand(101))
 
-	if result != nil {
+	if err != nil {
 		t.Fatal()
 	}
-	if ioleAC != 1 {
-		t.Fatal()
-	}
+	testhelpers.AssertWillBlock(cs101)
 	if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
 		t.Fatal()
 	}
@@ -236,6 +234,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	if !dsm1.AppliedCommandsEqual(101) {
 		t.Fatal()
 	}
+	testhelpers.AssertHasValue(cs101)
 
 	// but not yet on the connected followers
 	if dsm2.GetLastApplied() != 0 {
@@ -244,11 +243,8 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 
 	// Another tick propagates the commit to the connected followers
 	time.Sleep(testdata.TickerDuration)
-	if dsm2.GetLastApplied() != 1 {
-		t.Fatal()
-	}
-	if !dsm2.AppliedCommandsEqual(101) {
-		t.Fatal()
+	if dsm2.GetLastApplied() != 1 || !dsm2.AppliedCommandsEqual(101) {
+		t.Fatal(dsm2)
 	}
 
 	// Crashed follower restarts
@@ -285,17 +281,15 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	defer cm.Stop()
 
 	// Apply a command on the leader
-	ioleAC, result := cm.AppendCommand(testhelpers.DummyCommand(101))
+	cs101, err := cm.AppendCommand(testhelpers.DummyCommand(101))
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
 
-	if result != nil {
+	if err != nil {
 		t.Fatal()
 	}
-	if ioleAC != 1 {
-		t.Fatal()
-	}
+	testhelpers.AssertWillBlock(cs101)
 	if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {
 		t.Fatal()
 	}
@@ -320,6 +314,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	if !dsm.AppliedCommandsEqual(101) {
 		t.Fatal()
 	}
+	testhelpers.AssertHasValue(cs101)
 }
 
 // Real in-memory implementation of RpcService

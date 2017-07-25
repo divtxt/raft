@@ -52,7 +52,7 @@ func (iml *InMemoryLog) GetEntriesAfterIndex(
 	}
 
 	if maxEntries <= 0 {
-		panic("maxEntries must be greater than zero")
+		panic(fmt.Sprintf("maxEntries=%v must be greater than zero", maxEntries))
 	}
 
 	var numEntriesToGet uint64 = uint64(iole - afterLogIndex)

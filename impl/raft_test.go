@@ -29,7 +29,7 @@ func setupConsensusModuleR2(
 ) (*ConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
+	dsm := testhelpers.NewDummyStateMachineFromLog(0, iml) // FIXME: test with non-zero value
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo(testdata.AllServerIds, testdata.ThisServerId)
@@ -248,7 +248,7 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 		t.Fatal()
 	}
 
-	ioleAC, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
+	cs1101, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if cm.IsStopped() {
 		t.Error()
@@ -256,9 +256,7 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 	if err != nil {
 		t.Fatal()
 	}
-	if ioleAC != 11 {
-		t.Fatal()
-	}
+	testhelpers.AssertWillBlock(cs1101)
 
 	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
 	if err != nil {

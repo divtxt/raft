@@ -28,7 +28,6 @@ import (
 	"time"
 
 	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/committer"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
 	"github.com/divtxt/raft/util"
@@ -39,7 +38,6 @@ type ConsensusModule struct {
 	mutex *sync.Mutex
 
 	//
-	committer              *committer.Committer
 	passiveConsensusModule *consensus.PassiveConsensusModule
 
 	// -- External components - these fields meant to be immutable
@@ -74,12 +72,9 @@ func NewConsensusModule(
 
 	now := time.Now()
 
-	committer := committer.NewCommitter(log, stateMachine)
-
 	cm := &ConsensusModule{
 		&sync.Mutex{},
 
-		committer,
 		nil, // passiveConsensusModule - temp value, to be replaced before goroutine start
 
 		// -- External components
@@ -96,7 +91,7 @@ func NewConsensusModule(
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
-		committer,
+		stateMachine,
 		cm,
 		clusterInfo,
 		maxEntriesPerAppendEntry,
@@ -150,9 +145,7 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 
 // Process the given RpcAppendEntries message from the given peer.
 //
-// Returns nil if there was an error or if the ConsensusModule is shutdown.
-//
-// Note that an error would have shutdown the ConsensusModule.
+// See IConsensusModule for details.
 func (cm *ConsensusModule) ProcessRpcAppendEntries(
 	from ServerId,
 	rpc *RpcAppendEntries,
@@ -178,12 +171,7 @@ func (cm *ConsensusModule) ProcessRpcAppendEntries(
 // Process the given RpcRequestVote message from the given peer
 // asynchronously.
 //
-// This method sends the RPC message to the ConsensusModule's goroutine.
-// The RPC reply will be sent later on the returned channel.
-//
-// See the RpcService interface for outgoing RPC.
-//
-// See the notes on NewConsensusModule() for more details about this method's behavior.
+// See IConsensusModule for details.
 func (cm *ConsensusModule) ProcessRpcRequestVote(
 	from ServerId,
 	rpc *RpcRequestVote,
@@ -208,42 +196,21 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 
 // Append the given command as an entry in the log.
 //
-// This can only be done if the ConsensusModule is in LEADER state.
-//
-// The command will be sent to Log.AppendEntry().
-// Any errors from Log.AppendEntry() call will stop the ConsensusModule.
-//
-// The command must already have been checked to ensure that it will successfully apply to the
-// state machine in it's position in the Log.
-//
-// Returns ErrStopped if ConsensusModule is stopped.
-// Returns ErrNotLeader if not currently the leader.
-//
-// Here, we intentionally punt on some of the leader details, specifically
-// most of:
-//
-// #RFS-L2: If command received from client: append entry to local log,
-// respond after entry applied to state machine (#5.3)
-//
-// We choose not to deal with the client directly. You must implement the interaction with
-// clients and, if required, with waiting for the entry to be applied to the state machine.
-// (see delegation of lastApplied to the state machine via the StateMachine interface)
-//
-// See the notes on NewConsensusModule() for more details about this method's behavior.
-func (cm *ConsensusModule) AppendCommand(command Command) (LogIndex, error) {
+// See IConsensusModule for details.
+func (cm *ConsensusModule) AppendCommand(command Command) (CommitSignal, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
 	if cm.stopped {
-		return 0, ErrStopped
+		return nil, ErrStopped
 	}
 
-	iole, err := cm.passiveConsensusModule.AppendCommand(command)
+	cs, err := cm.passiveConsensusModule.AppendCommand(command)
 	if err != nil && err != ErrNotLeader {
 		cm.shutdownAndPanic(err)
 	}
 
-	return iole, err
+	return cs, err
 }
 
 // -- protected methods
@@ -341,12 +308,6 @@ func (cm *ConsensusModule) shutdownAndPanic(err error) {
 		// Tell the ticker to stop.
 		// This needs be async since this method could be running as part of a tick.
 		cm.ticker.StopAsync()
-		// Tell the committer to stop.
-		// No other calls will be serviced, so there's no need to worry about a race condition
-		// between this stop and a commitIndex change.
-		// (Even if this method is running as part of a tick, we should be past the actual tick code)
-		// where the actual tick code
-		cm.committer.StopSync()
 		// Panic for error
 		if err != nil {
 			panic(err)

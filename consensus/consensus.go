@@ -9,7 +9,7 @@ import (
 	. "github.com/divtxt/raft"
 	config "github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
-	util "github.com/divtxt/raft/util"
+	"github.com/divtxt/raft/util"
 )
 
 type PassiveConsensusModule struct {
@@ -19,7 +19,7 @@ type PassiveConsensusModule struct {
 	RaftPersistentState RaftPersistentState
 	LogRO               LogReadOnly
 	_log                Log
-	_cicListener        CommitIndexChangeListener
+	_stateMachine       StateMachine
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
@@ -33,6 +33,7 @@ type PassiveConsensusModule struct {
 	// (initialized to 0, increases monotonically)
 	_commitIndex           LogIndex
 	ElectionTimeoutTracker *util.ElectionTimeoutTracker
+	commitNotifier         *util.CommitNotifier
 
 	// -- State - for candidates only
 	CandidateVolatileState *consensus_state.CandidateVolatileState
@@ -44,7 +45,7 @@ type PassiveConsensusModule struct {
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
-	cicListener CommitIndexChangeListener,
+	stateMachine StateMachine,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	maxEntriesPerAppendEntry uint64,
@@ -58,8 +59,8 @@ func NewPassiveConsensusModule(
 	if log == nil {
 		return nil, errors.New("'log' cannot be nil")
 	}
-	if cicListener == nil {
-		return nil, errors.New("'cicListener' cannot be nil")
+	if stateMachine == nil {
+		return nil, errors.New("'stateMachine' cannot be nil")
 	}
 	if rpcSendOnly == nil {
 		return nil, errors.New("'rpcSendOnly' cannot be nil")
@@ -71,12 +72,14 @@ func NewPassiveConsensusModule(
 		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
 
+	lastApplied := stateMachine.GetLastApplied()
+
 	pcm := &PassiveConsensusModule{
 		// -- External components
 		raftPersistentState,
 		log,
 		log,
-		cicListener,
+		stateMachine,
 		rpcSendOnly,
 
 		// -- Config
@@ -92,6 +95,7 @@ func NewPassiveConsensusModule(
 		// (initialized to 0, increases monotonically)
 		0,
 		util.NewElectionTimeoutTracker(electionTimeoutLow, now),
+		util.NewCommitNotifier(lastApplied),
 
 		// -- State - for candidates only
 		nil,
@@ -134,29 +138,46 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	cm._cicListener.CommitIndexChanged(commitIndex)
+	cm._stateMachine.CommitIndexChanged(commitIndex)
+	cm.commitNotifier.CommitIndexChanged(commitIndex)
 	return nil
 }
 
 // Append the given command as an entry in the log.
 // #RFS-L2a: If command received from client: append entry to local log
 //
-// The command will be sent to Log.AppendEntry().
+// The command will be sent to StateMachine.CheckAndApplyCommand(),
+// and then to Log.AppendEntry() if approved.
 //
 // Returns ErrNotLeader if not currently the leader.
-func (cm *PassiveConsensusModule) AppendCommand(command Command) (LogIndex, error) {
+func (cm *PassiveConsensusModule) AppendCommand(command Command) (CommitSignal, error) {
 	if cm.GetServerState() != LEADER {
-		return 0, ErrNotLeader
+		return nil, ErrNotLeader
 	}
 
+	// send to state machine
+	iole, err := cm._log.GetIndexOfLastEntry()
+	if err != nil {
+		panic(err)
+	}
+	logIndex := iole + 1
+	err = cm._stateMachine.CheckAndApplyCommand(logIndex, command)
+	if err != nil {
+		return nil, err
+	}
+
+	// then send to log
 	termNo := cm.RaftPersistentState.GetCurrentTerm()
 	logEntry := LogEntry{termNo, command}
-	iole, err := cm._log.AppendEntry(logEntry)
+	iole, err = cm._log.AppendEntry(logEntry)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return iole, nil
+	// register for commit
+	cs := cm.commitNotifier.RegisterListener(logIndex)
+
+	return cs, nil
 }
 
 // Iterate
@@ -369,7 +390,12 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 	if li < cm._commitIndex {
 		return fmt.Errorf("FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
 	}
-	return cm._log.SetEntriesAfterIndex(li, entries)
+	err := cm._log.SetEntriesAfterIndex(li, entries)
+	if err != nil {
+		return err
+	}
+	cm.commitNotifier.ClearListenersAfterIndex(li)
+	return cm._stateMachine.SetEntriesAfterIndex(li, entries)
 }
 
 // -- rpc bridging things
