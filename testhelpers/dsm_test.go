@@ -23,18 +23,15 @@ func TestDummyStateMachine(t *testing.T) {
 	}
 
 	// Append some commands
-	resp, err := sm.CheckAndApplyCommand(1, DummyCommand(101))
+	err := sm.CheckAndApplyCommand(1, DummyCommand(101))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp != "rc101" {
-		t.Fatal(resp)
-	}
-	_, err = sm.CheckAndApplyCommand(2, DummyCommand(102))
+	err = sm.CheckAndApplyCommand(2, DummyCommand(102))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = sm.CheckAndApplyCommand(3, DummyCommand(103))
+	err = sm.CheckAndApplyCommand(3, DummyCommand(103))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +40,7 @@ func TestDummyStateMachine(t *testing.T) {
 	}
 
 	// Append rejection
-	_, err = sm.CheckAndApplyCommand(4, DummyCommand(-1))
+	err = sm.CheckAndApplyCommand(4, DummyCommand(-1))
 	if err.Error() != "Invalid command: c-1" {
 		t.Fatal(err)
 	}
@@ -55,7 +52,7 @@ func TestDummyStateMachine(t *testing.T) {
 	TestHelper_ExpectPanicMessage(
 		t,
 		func() {
-			_, _ = sm.CheckAndApplyCommand(3, DummyCommand(104))
+			_ = sm.CheckAndApplyCommand(3, DummyCommand(104))
 		},
 		"DummyStateMachine: logIndex=3 is != 1 + indexOfLastEntry=3",
 	)

@@ -160,7 +160,7 @@ type StateMachine interface {
 	// FIXME: update this language to allow application to be async with respect for ordering.
 	//
 	// This method will only be called when this ConsensusModule is the leader.
-	CheckAndApplyCommand(LogIndex, Command) (CommandResponse, error)
+	CheckAndApplyCommand(LogIndex, Command) error
 
 	// SetEntriesAfterIndex tells the state machine about Log entry changes.
 	//

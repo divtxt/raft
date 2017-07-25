@@ -21,10 +21,6 @@ func DummyCommand(N int) Command {
 	return Command("c" + strconv.Itoa(N))
 }
 
-func DummyResponse(cmd Command) CommandResponse {
-	return "r" + string(cmd)
-}
-
 func newDummyStateMachine(lastApplied LogIndex) *DummyStateMachine {
 	return &DummyStateMachine{
 		lastApplied,
@@ -62,9 +58,7 @@ func (dsm *DummyStateMachine) GetLastApplied() LogIndex {
 	return dsm.commitIndex
 }
 
-func (dsm *DummyStateMachine) CheckAndApplyCommand(
-	logIndex LogIndex, command Command,
-) (CommandResponse, error) {
+func (dsm *DummyStateMachine) CheckAndApplyCommand(logIndex LogIndex, command Command) error {
 	if logIndex < dsm.commitIndex {
 		panic(fmt.Sprintf(
 			"DummyStateMachine: logIndex=%d is < current commitIndex=%d",
@@ -87,11 +81,11 @@ func (dsm *DummyStateMachine) CheckAndApplyCommand(
 		panic(err)
 	}
 	if n <= 0 {
-		return nil, fmt.Errorf("Invalid command: %s", command)
+		return fmt.Errorf("Invalid command: %s", command)
 	}
 
 	dsm.appliedCommands = append(dsm.appliedCommands, string(command))
-	return DummyResponse(command), nil
+	return nil
 }
 
 func (dsm *DummyStateMachine) SetEntriesAfterIndex(logIndex LogIndex, entries []LogEntry) error {
@@ -111,7 +105,7 @@ func (dsm *DummyStateMachine) SetEntriesAfterIndex(logIndex LogIndex, entries []
 	// append new
 	for _, e := range entries {
 		logIndex++
-		_, err := dsm.CheckAndApplyCommand(logIndex, e.Command)
+		err := dsm.CheckAndApplyCommand(logIndex, e.Command)
 		if err != nil {
 			panic(err)
 		}
