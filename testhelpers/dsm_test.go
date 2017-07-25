@@ -54,7 +54,7 @@ func TestDummyStateMachine(t *testing.T) {
 	TestHelper_ExpectPanicMessage(
 		t,
 		func() {
-			dsm.CheckAndApplyCommand(3, DummyCommand(104))
+			_, _ = dsm.CheckAndApplyCommand(3, DummyCommand(104))
 		},
 		"DummyStateMachine: logIndex=3 is != 1 + indexOfLastEntry=3",
 	)
