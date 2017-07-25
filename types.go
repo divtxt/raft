@@ -25,6 +25,9 @@ type TermNo uint64
 // The contents of the byte slice are opaque to the ConsensusModule.
 type Command []byte
 
+// CommandResult is the result of applying a command to the state machine.
+type CommandResult interface{}
+
 // An entry in the Raft Log
 type LogEntry struct {
 	TermNo
