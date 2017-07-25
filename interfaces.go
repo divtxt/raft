@@ -106,9 +106,12 @@ type LogReadOnly interface {
 //
 // Raft will apply committed commands from the log to the state machine through this interface.
 //
-// All methods should return immediately without blocking.
+// For a given current state and a given command, the new state and returned result
+// should be completely deterministic.
 //
-// Concurrency: the ConsensusModule will only ever call one method of this interface at a time.
+// Concurrency: this interface will receive only one call at a time. However, note that this
+// will be asynchronous to the ConsensusModule. This means that the ConsensusModule can
+// commit entries faster than they are applied to the state machine.
 //
 // Raft describes two state parameters - commitIndex and lastApplied -
 // that are used to track which log entries are committed to the log and the
