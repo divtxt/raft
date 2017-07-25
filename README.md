@@ -20,7 +20,7 @@ Later:
 
 - [ ] Leader commits a no-op entry at the start of its term (#8p4)
 - [ ] Isolated server should not increment term (similar to #6p8)
-- [ ] Unified log and state machine
+- [x] Raft aware state machine
 - [ ] Pluggable logging
 - [ ] Log many more details e.g. leader, voters
 - [ ] Add metrics & logging
@@ -43,3 +43,4 @@ Misc/Maybe:
 - [ ] Servers check that they agree on cluster info
 - [ ] Leader heartbeats with a majority before responding to read-only requests (#8p4)
 - [ ] Election timeout based on ping times to bias selection of lower latency leader
+- [ ] Unified log and state machine
