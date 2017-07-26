@@ -87,11 +87,11 @@ func TestCommitter(t *testing.T) {
 	if !dsm.AppliedCommandsEqual(4, 5, 6, 7, 8) {
 		t.Fatal()
 	}
-	if v := testhelpers.GetCommandResult(crc6); v == 1006 {
-		t.Fatal()
+	if v := testhelpers.GetCommandResult(crc6); v != "rc6" {
+		t.Fatal(v)
 	}
-	if v := testhelpers.GetCommandResult(crc8); v == 1008 {
-		t.Fatal()
+	if v := testhelpers.GetCommandResult(crc8); v != "rc8" {
+		t.Fatal(v)
 	}
 	testhelpers.AssertWillBlock(crc9)
 	testhelpers.AssertWillBlock(crc10)
@@ -160,10 +160,10 @@ func TestCommitter(t *testing.T) {
 	if !dsm.AppliedCommandsEqual(4, 5, 6, 7, 8, 9, 10) {
 		t.Fatal()
 	}
-	if v := testhelpers.GetCommandResult(crc9); v == 1009 {
-		t.Fatal()
+	if v := testhelpers.GetCommandResult(crc9); v != "rc9" {
+		t.Fatal(v)
 	}
-	if v := testhelpers.GetCommandResult(crc10b); v == 1010 {
-		t.Fatal()
+	if v := testhelpers.GetCommandResult(crc10b); v != "rc10" {
+		t.Fatal(v)
 	}
 }
