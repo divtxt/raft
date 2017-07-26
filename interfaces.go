@@ -152,7 +152,7 @@ type StateMachine interface {
 	// commitIndex may NOT be persisted, and may reset to 0 on restart.
 	// However, the upstream should never send this initial 0 value to StateMachine, and
 	// should always jump to a non-decreasing value.
-	ApplyCommand(logIndex LogIndex, command Command)
+	ApplyCommand(logIndex LogIndex, command Command) CommandResult
 }
 
 // Raft persistent state on all servers.

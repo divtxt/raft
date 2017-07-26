@@ -32,7 +32,7 @@ func (dsm *DummyStateMachine) GetLastApplied() LogIndex {
 	return dsm.lastApplied
 }
 
-func (dsm *DummyStateMachine) ApplyCommand(logIndex LogIndex, command Command) {
+func (dsm *DummyStateMachine) ApplyCommand(logIndex LogIndex, command Command) CommandResult {
 	if logIndex < dsm.lastApplied {
 		panic(fmt.Sprintf(
 			"DummyStateMachine: logIndex=%d is < current lastApplied=%d",
@@ -43,6 +43,8 @@ func (dsm *DummyStateMachine) ApplyCommand(logIndex LogIndex, command Command) {
 
 	dsm.appliedCommands = append(dsm.appliedCommands, command)
 	dsm.lastApplied = logIndex
+
+	return fmt.Sprintf("r%s", command)
 }
 
 func (dsm *DummyStateMachine) AppliedCommandsEqual(cmds ...int) bool {

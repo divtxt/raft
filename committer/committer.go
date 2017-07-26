@@ -169,8 +169,7 @@ func (c *Committer) applyOnePendingCommit(indexToApply LogIndex) {
 	commandToApply := entries[0].Command
 
 	// Apply the command to the state machine.
-	c.stateMachine.ApplyCommand(indexToApply, commandToApply)
-	result := (1000 + indexToApply) // FIXME
+	commandResult := c.stateMachine.ApplyCommand(indexToApply, commandToApply)
 
 	// Send the result to the commit listener.
 	c.mutex.Lock()
@@ -178,7 +177,7 @@ func (c *Committer) applyOnePendingCommit(indexToApply LogIndex) {
 	crc, ok := c.listeners[indexToApply]
 	if ok {
 		delete(c.listeners, indexToApply)
-		crc <- result
+		crc <- commandResult
 	}
 }
 
