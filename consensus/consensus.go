@@ -371,6 +371,7 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 	if li < cm._commitIndex {
 		return fmt.Errorf("FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
 	}
+	cm._committer.RemoveListenersAfterIndex(li)
 	return cm._log.SetEntriesAfterIndex(li, entries)
 }
 

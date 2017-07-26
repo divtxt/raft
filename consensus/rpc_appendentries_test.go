@@ -225,6 +225,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			}
 		}
 		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"RemoveListenersAfterIndex", 5, nil},
 			{"CommitAsync", 7, nil},
 		})
 
@@ -327,6 +328,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			}
 		}
 		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"RemoveListenersAfterIndex", 4, nil},
 			{"CommitAsync", 6, nil},
 		})
 
