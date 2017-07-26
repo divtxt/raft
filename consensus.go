@@ -65,5 +65,5 @@ type IConsensusModule interface {
 
 // A subset of the IConsensusModule interface with just the AppendCommand method.
 type IConsensusModule_AppendCommandOnly interface {
-	AppendCommand(command Command) (LogIndex, error)
+	AppendCommand(command Command) (<-chan CommandResult, error)
 }
