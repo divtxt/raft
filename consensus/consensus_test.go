@@ -548,6 +548,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 
 	// tick advances commitIndex
+	mcm.mc.CheckCalls(nil)
 	err = mcm.Tick()
 	if err != nil {
 		t.Fatal(err)
@@ -555,6 +556,9 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 11 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"CommitAsync", 11, nil},
+	})
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
 			{8, Command("c12")},
@@ -582,6 +586,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 11 {
 		t.Fatal(mcm.pcm.GetCommitIndex())
 	}
+	mcm.mc.CheckCalls(nil)
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
 }
@@ -629,6 +634,7 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 
 	// tick will advance commitIndex to the highest match possible
+	mcm.mc.CheckCalls(nil)
 	err = mcm.Tick()
 	if err != nil {
 		t.Fatal(err)
@@ -636,6 +642,9 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 12 {
 		t.Fatal(mcm.pcm.GetCommitIndex())
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"CommitAsync", 12, nil},
+	})
 	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 	mrs.ClearSentRpcs()
 }
