@@ -10,7 +10,7 @@ import (
 type mockCommitterCall struct {
 	name  string
 	param raft.LogIndex
-	rc    chan raft.CommandResult
+	rc    <-chan raft.CommandResult
 }
 
 type mockCommitter struct {
@@ -33,7 +33,7 @@ func (mc *mockCommitter) CheckCalls(expected []mockCommitterCall) {
 
 func (mc *mockCommitter) RegisterListener(logIndex raft.LogIndex) <-chan raft.CommandResult {
 	r := make(chan raft.CommandResult, 1)
-	mc.calls = append(mc.calls, mockCommitterCall{"RegisterListener", logIndex, nil}) // r})
+	mc.calls = append(mc.calls, mockCommitterCall{"RegisterListener", logIndex, r})
 	return r
 }
 
