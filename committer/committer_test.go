@@ -25,6 +25,7 @@ func TestCommitter(t *testing.T) {
 	if dsm.GetLastApplied() != 4 {
 		t.Fatal()
 	}
+	// Only entries after lastApplied should be applied.
 	if !dsm.AppliedCommandsEqual(4) {
 		t.Fatal()
 	}
