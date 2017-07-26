@@ -192,14 +192,15 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	cm3 = nil
 
 	// Apply a command on the leader
-	ioleAC, result := cm1.AppendCommand(testhelpers.DummyCommand(101))
+	crc101, result := cm1.AppendCommand(testhelpers.DummyCommand(101))
 
 	if result != nil {
 		t.Fatal()
 	}
-	if ioleAC != 1 {
+	if crc101 == nil {
 		t.Fatal()
 	}
+	testhelpers.AssertWillBlock(crc101)
 	if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
 		t.Fatal()
 	}
@@ -235,6 +236,9 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	}
 	if !dsm1.AppliedCommandsEqual(101) {
 		t.Fatal()
+	}
+	if v := testhelpers.GetCommandResult(crc101); v != "rc101" {
+		t.Fatal(v)
 	}
 
 	// but not yet on the connected followers
@@ -285,7 +289,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	defer cm.Stop()
 
 	// Apply a command on the leader
-	ioleAC, result := cm.AppendCommand(testhelpers.DummyCommand(101))
+	crc101, result := cm.AppendCommand(testhelpers.DummyCommand(101))
 
 	// FIXME: sleep just enough!
 	time.Sleep(testdata.SleepToLetGoroutineRun)
@@ -293,7 +297,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	if result != nil {
 		t.Fatal()
 	}
-	if ioleAC != 1 {
+	if crc101 == nil {
 		t.Fatal()
 	}
 	if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {
@@ -311,6 +315,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	if dsm.GetLastApplied() != 0 {
 		t.Fatal()
 	}
+	testhelpers.AssertWillBlock(crc101)
 
 	// A tick allows command to be committed
 	time.Sleep(testdata.TickerDuration)
@@ -319,6 +324,9 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	}
 	if !dsm.AppliedCommandsEqual(101) {
 		t.Fatal()
+	}
+	if v := testhelpers.GetCommandResult(crc101); v != "rc101" {
+		t.Fatal(v)
 	}
 }
 

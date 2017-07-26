@@ -35,33 +35,32 @@ type IConsensusModule interface {
 	// See the notes on NewConsensusModule() for more details about this method's behavior.
 	ProcessRpcRequestVote(from ServerId, rpc *RpcRequestVote) *RpcRequestVoteReply
 
-	// Append the given command as an entry in the log.
+	// AppendCommand appends the given serialized command to the log.
 	//
 	// This can only be done if the ConsensusModule is in LEADER state.
 	//
-	// The command will be sent to Log.AppendEntry().
+	// The command will be sent to Log.AppendEntry() and will wait for it to finish.
 	// Any errors from Log.AppendEntry() call will stop the ConsensusModule.
 	//
-	// The command must already have been checked to ensure that it will successfully apply to the
-	// state machine in it's position in the Log.
+	// It will return a channel on which the result will later be sent.
 	//
-	// Returns the index of the new entry.
+	// This method does NOT wait for the log entry to be committed by raft.
+	//
+	// When the command is eventually committed to the raft log, it is then applied to the state
+	// machine and the value returned by the state machine will be sent on the channel.
+	//
+	// If the ConsensusModule loses leader status before this entry commits, and the new leader
+	// overwrites the given command in the log, the channel will be closed without a value
+	// being sent.
 	//
 	// Returns ErrStopped if ConsensusModule is stopped.
 	// Returns ErrNotLeader if not currently the leader.
 	//
-	// Here, we intentionally punt on some of the leader details, specifically
-	// most of:
-	//
 	// #RFS-L2: If command received from client: append entry to local log,
 	// respond after entry applied to state machine (#5.3)
 	//
-	// We choose not to deal with the client directly. You must implement the interaction with
-	// clients and, if required, with waiting for the entry to be applied to the state machine.
-	// (see delegation of lastApplied to the state machine via the StateMachine interface)
-	//
 	// See the notes on NewConsensusModule() for more details about this method's behavior.
-	AppendCommand(command Command) (LogIndex, error)
+	AppendCommand(command Command) (<-chan CommandResult, error)
 }
 
 // A subset of the IConsensusModule interface with just the AppendCommand method.

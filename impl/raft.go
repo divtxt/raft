@@ -206,49 +206,21 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 	return rpcReply
 }
 
-// Append the given command as an entry in the log.
-//
-// This can only be done if the ConsensusModule is in LEADER state.
-//
-// The command will be sent to Log.AppendEntry().
-// Any errors from Log.AppendEntry() call will stop the ConsensusModule.
-//
-// The command must already have been checked to ensure that it will successfully apply to the
-// state machine in it's position in the Log.
-//
-// Returns ErrStopped if ConsensusModule is stopped.
-// Returns ErrNotLeader if not currently the leader.
-//
-// Here, we intentionally punt on some of the leader details, specifically
-// most of:
-//
-// #RFS-L2: If command received from client: append entry to local log,
-// respond after entry applied to state machine (#5.3)
-//
-// We choose not to deal with the client directly. You must implement the interaction with
-// clients and, if required, with waiting for the entry to be applied to the state machine.
-// (see delegation of lastApplied to the state machine via the StateMachine interface)
-//
-// See the notes on NewConsensusModule() for more details about this method's behavior.
-func (cm *ConsensusModule) AppendCommand(command Command) (LogIndex, error) {
+// AppendCommand appends the given serialized command to the log.
+func (cm *ConsensusModule) AppendCommand(command Command) (<-chan CommandResult, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
 	if cm.stopped {
-		return 0, ErrStopped
+		return nil, ErrStopped
 	}
 
-	_, err := cm.passiveConsensusModule.AppendCommand(command)
+	crc, err := cm.passiveConsensusModule.AppendCommand(command)
 	if err != nil && err != ErrNotLeader {
 		cm.shutdownAndPanic(err)
 	}
 
-	iole, err2 := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
-	if err2 != nil {
-		cm.shutdownAndPanic(err2)
-	}
-
-	return iole, err
+	return crc, err
 }
 
 // -- protected methods
