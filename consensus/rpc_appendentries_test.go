@@ -187,6 +187,9 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 3, nil},
+		})
 
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
@@ -243,6 +246,9 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if mcm.pcm.GetCommitIndex() != 7 {
 			t.Error()
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 7, nil},
+		})
 
 		// #RFS-F2: (paraphrasing) AppendEntries RPC from current leader should
 		// prevent election timeout
@@ -284,6 +290,9 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 3, nil},
+		})
 
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
@@ -339,6 +348,9 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if mcm.pcm.GetCommitIndex() != 6 {
 			t.Error()
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 6, nil},
+		})
 
 		if mcm.pcm.RaftPersistentState.GetVotedFor() != expectedVotedFor {
 			t.Fatal()
