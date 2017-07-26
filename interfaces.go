@@ -136,7 +136,7 @@ type LogReadOnly interface {
 type StateMachine interface {
 	// GetLastApplied should return the value of lastApplied.
 	//
-	// On startup, the ConsensusModule may use this value to initialize commitIndex.
+	// This is used at startup to avoid replaying entries that have already been applied.
 	//
 	// If the state machine is not persisted, this value should start at 0.
 	GetLastApplied() LogIndex
