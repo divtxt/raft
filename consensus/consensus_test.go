@@ -499,17 +499,17 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
-	if err != nil || ioleAC != 11 {
+	crc11, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil || crc11 == nil {
 		t.Fatal(err)
 	}
-	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil || ioleAC != 12 {
+	crc12, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil || crc12 == nil {
 		t.Fatal()
 	}
 	mcm.mc.CheckCalls([]mockCommitterCall{
-		{"RegisterListener", 11, nil},
-		{"RegisterListener", 12, nil},
+		{"RegisterListener", 11, crc11},
+		{"RegisterListener", 12, crc12},
 	})
 
 	// tick should try to advance commitIndex but nothing should happen
@@ -626,17 +626,17 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
-	if err != nil || ioleAC != 11 {
+	crc11, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil || crc11 == nil {
 		t.Fatal()
 	}
-	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil || ioleAC != 12 {
+	crc12, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil || crc12 == nil {
 		t.Fatal()
 	}
 	mcm.mc.CheckCalls([]mockCommitterCall{
-		{"RegisterListener", 11, nil},
-		{"RegisterListener", 12, nil},
+		{"RegisterListener", 11, crc11},
+		{"RegisterListener", 12, crc12},
 	})
 
 	// commitIndex does not advance immediately
@@ -815,7 +815,8 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
 	testSetupMCM_Candidate_Figure7LeaderLine(t)
 }
 
-// #RFS-L2a: If Command received from client: append entry to local log
+// #RFS-L2: If command received from client: append entry to local log,
+// respond after entry applied to state machine (#5.3)
 func TestCM_Leader_AppendCommand(t *testing.T) {
 	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
 
@@ -829,12 +830,12 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	}
 
 	mcm.mc.CheckCalls(nil)
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
-	if err != nil || ioleAC != 11 {
+	crc1101, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+	if err != nil || crc1101 == nil {
 		t.Fatal()
 	}
 	mcm.mc.CheckCalls([]mockCommitterCall{
-		{"RegisterListener", 11, nil},
+		{"RegisterListener", 11, crc1101},
 	})
 
 	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
@@ -850,7 +851,8 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	}
 }
 
-// #RFS-L2a: If Command received from client: append entry to local log
+// #RFS-L2: If command received from client: append entry to local log,
+// respond after entry applied to state machine (#5.3)
 func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 	f := func(
 		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),

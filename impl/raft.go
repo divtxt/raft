@@ -238,9 +238,14 @@ func (cm *ConsensusModule) AppendCommand(command Command) (LogIndex, error) {
 		return 0, ErrStopped
 	}
 
-	iole, err := cm.passiveConsensusModule.AppendCommand(command)
+	_, err := cm.passiveConsensusModule.AppendCommand(command)
 	if err != nil && err != ErrNotLeader {
 		cm.shutdownAndPanic(err)
+	}
+
+	iole, err2 := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
+	if err2 != nil {
+		cm.shutdownAndPanic(err2)
 	}
 
 	return iole, err

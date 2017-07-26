@@ -138,27 +138,22 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 	return nil
 }
 
-// Append the given command as an entry in the log.
-// #RFS-L2a: If command received from client: append entry to local log
-//
-// The command will be sent to Log.AppendEntry().
-//
-// Returns ErrNotLeader if not currently the leader.
-func (cm *PassiveConsensusModule) AppendCommand(command Command) (LogIndex, error) {
+// AppendCommand appends the given serialized command to the log.
+func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan CommandResult, error) {
 	if cm.GetServerState() != LEADER {
-		return 0, ErrNotLeader
+		return nil, ErrNotLeader
 	}
 
 	termNo := cm.RaftPersistentState.GetCurrentTerm()
 	logEntry := LogEntry{termNo, command}
 	iole, err := cm._log.AppendEntry(logEntry)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	cm._committer.RegisterListener(iole)
+	crc := cm._committer.RegisterListener(iole)
 
-	return iole, nil
+	return crc, nil
 }
 
 // Iterate
