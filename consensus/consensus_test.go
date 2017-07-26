@@ -451,6 +451,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls(nil)
 	expectedRpcs := map[ServerId]interface{}{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
@@ -481,6 +482,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls(nil)
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
 			{6, Command("c10")},
@@ -505,6 +507,10 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if err != nil || ioleAC != 12 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"RegisterListener", 11, nil},
+		{"RegisterListener", 12, nil},
+	})
 
 	// tick should try to advance commitIndex but nothing should happen
 	err = mcm.Tick()
@@ -514,6 +520,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls(nil)
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
 			{6, Command("c10")},
@@ -548,7 +555,6 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 
 	// tick advances commitIndex
-	mcm.mc.CheckCalls(nil)
 	err = mcm.Tick()
 	if err != nil {
 		t.Fatal(err)
@@ -604,6 +610,7 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls(nil)
 	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 	mrs.ClearSentRpcs()
 
@@ -627,6 +634,10 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if err != nil || ioleAC != 12 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"RegisterListener", 11, nil},
+		{"RegisterListener", 12, nil},
+	})
 
 	// commitIndex does not advance immediately
 	if mcm.pcm.GetCommitIndex() != 0 {
@@ -634,7 +645,6 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	}
 
 	// tick will advance commitIndex to the highest match possible
-	mcm.mc.CheckCalls(nil)
 	err = mcm.Tick()
 	if err != nil {
 		t.Fatal(err)
@@ -649,11 +659,11 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 }
 
-func TestCM_SetCommitIndexNotifiesCommitIndexChangeListener(t *testing.T) {
+func TestCM_SetCommitIndexNotifiesCommitter(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 
-		mcm.mc.CheckCalls([]mockCommitterCall{})
+		mcm.mc.CheckCalls(nil)
 
 		err := mcm.pcm.setCommitIndex(2)
 		if err != nil {
@@ -818,10 +828,14 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
+	mcm.mc.CheckCalls(nil)
 	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
 	if err != nil || ioleAC != 11 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"RegisterListener", 11, nil},
+	})
 
 	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
 	if err != nil {
@@ -851,6 +865,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		if iole != 10 {
 			t.Fatal()
 		}
+		mcm.mc.CheckCalls(nil)
 
 		_, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
 		if err != ErrNotLeader {
@@ -864,6 +879,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		if iole != 10 {
 			t.Fatal()
 		}
+		mcm.mc.CheckCalls(nil)
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
