@@ -156,6 +156,8 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) (LogIndex, erro
 		return 0, err
 	}
 
+	cm._committer.RegisterListener(iole)
+
 	return iole, nil
 }
 

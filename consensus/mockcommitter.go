@@ -33,7 +33,7 @@ func (mc *mockCommitter) CheckCalls(expected []mockCommitterCall) {
 
 func (mc *mockCommitter) RegisterListener(logIndex raft.LogIndex) <-chan raft.CommandResult {
 	r := make(chan raft.CommandResult, 1)
-	mc.calls = append(mc.calls, mockCommitterCall{"RegisterListener", logIndex, r})
+	mc.calls = append(mc.calls, mockCommitterCall{"RegisterListener", logIndex, nil}) // r})
 	return r
 }
 
