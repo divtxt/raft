@@ -34,6 +34,7 @@ func TestCM_RpcAE_LeaderTermLessThanCurrentTerm(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls(nil)
 
 		expectedRpc := RpcAppendEntriesReply{serverTerm, false}
 		if *reply != expectedRpc {
@@ -110,6 +111,7 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+		mcm.mc.CheckCalls(nil)
 
 		expectedRpc := RpcAppendEntriesReply{senderTerm, false}
 		if *reply != expectedRpc {
@@ -187,6 +189,9 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 3, nil},
+		})
 
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
@@ -219,6 +224,10 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"RemoveListenersAfterIndex", 5, nil},
+			{"CommitAsync", 7, nil},
+		})
 
 		expectedRpc := RpcAppendEntriesReply{senderTerm, true}
 		if *reply != expectedRpc {
@@ -284,6 +293,9 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 3, nil},
+		})
 
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
@@ -315,6 +327,10 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"RemoveListenersAfterIndex", 4, nil},
+			{"CommitAsync", 6, nil},
+		})
 
 		expectedRpc := RpcAppendEntriesReply{senderTerm, true}
 		if *reply != expectedRpc {
@@ -382,6 +398,7 @@ func TestCM_RpcAE_SameServerId(t *testing.T) {
 		if err == nil || err.Error() != "FATAL: from server has same serverId: 101" {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls(nil)
 
 		return mcm, mrs
 	}
@@ -405,6 +422,7 @@ func TestCM_RpcAE_ServerIdNotInCluster(t *testing.T) {
 		if err == nil || err.Error() != "FATAL: 'from' serverId 151 is not in the cluster" {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls(nil)
 
 		return mcm, mrs
 	}
@@ -427,6 +445,9 @@ func TestCM_RpcAE_LessThanCommitIndex(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 6, nil},
+		})
 
 		appendEntries := &RpcAppendEntries{
 			senderTerm,
@@ -440,6 +461,7 @@ func TestCM_RpcAE_LessThanCommitIndex(t *testing.T) {
 		if err.Error() != "FATAL: setEntriesAfterIndex(5, ...) but commitIndex=6" {
 			t.Fatal(err)
 		}
+		mcm.mc.CheckCalls(nil)
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)

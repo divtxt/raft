@@ -26,7 +26,7 @@ func setupManagedConsensusModuleR2(
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
-	mcicl := testhelpers.NewMockCommitIndexChangeListener()
+	mc := newMockCommitter()
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
 	if solo {
@@ -42,7 +42,7 @@ func setupManagedConsensusModuleR2(
 	cm, err := NewPassiveConsensusModule(
 		ps,
 		iml,
-		mcicl,
+		mc,
 		mrs,
 		ci,
 		testdata.MaxEntriesPerAppendEntry,
@@ -57,7 +57,7 @@ func setupManagedConsensusModuleR2(
 	}
 	// Bias simulated clock to avoid exact time matches
 	now = now.Add(testdata.SleepToLetGoroutineRun)
-	mcm := &managedConsensusModule{cm, now, iml, mcicl}
+	mcm := &managedConsensusModule{cm, now, iml, mc}
 	return mcm, mrs
 }
 
@@ -451,6 +451,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls(nil)
 	expectedRpcs := map[ServerId]interface{}{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
@@ -481,6 +482,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls(nil)
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
 			{6, Command("c10")},
@@ -497,14 +499,18 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
-	if err != nil || ioleAC != 11 {
+	crc11, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil || crc11 == nil {
 		t.Fatal(err)
 	}
-	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil || ioleAC != 12 {
+	crc12, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil || crc12 == nil {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"RegisterListener", 11, crc11},
+		{"RegisterListener", 12, crc12},
+	})
 
 	// tick should try to advance commitIndex but nothing should happen
 	err = mcm.Tick()
@@ -514,6 +520,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls(nil)
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
 			{6, Command("c10")},
@@ -555,6 +562,9 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 11 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"CommitAsync", 11, nil},
+	})
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
 			{8, Command("c12")},
@@ -582,6 +592,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 11 {
 		t.Fatal(mcm.pcm.GetCommitIndex())
 	}
+	mcm.mc.CheckCalls(nil)
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
 }
@@ -599,6 +610,7 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 0 {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls(nil)
 	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 	mrs.ClearSentRpcs()
 
@@ -614,14 +626,18 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// let's make some new log entries
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
-	if err != nil || ioleAC != 11 {
+	crc11, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil || crc11 == nil {
 		t.Fatal()
 	}
-	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil || ioleAC != 12 {
+	crc12, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil || crc12 == nil {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"RegisterListener", 11, crc11},
+		{"RegisterListener", 12, crc12},
+	})
 
 	// commitIndex does not advance immediately
 	if mcm.pcm.GetCommitIndex() != 0 {
@@ -636,33 +652,34 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 12 {
 		t.Fatal(mcm.pcm.GetCommitIndex())
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"CommitAsync", 12, nil},
+	})
 	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 	mrs.ClearSentRpcs()
 }
 
-func TestCM_SetCommitIndexNotifiesCommitIndexChangeListener(t *testing.T) {
+func TestCM_SetCommitIndexNotifiesCommitter(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 
-		if mcm.mcicl.GetCommitIndex() != 0 {
-			t.Fatal()
-		}
+		mcm.mc.CheckCalls(nil)
 
 		err := mcm.pcm.setCommitIndex(2)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.mcicl.GetCommitIndex() != 2 {
-			t.Fatal()
-		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 2, nil},
+		})
 
 		err = mcm.pcm.setCommitIndex(9)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.mcicl.GetCommitIndex() != 9 {
-			t.Fatal()
-		}
+		mcm.mc.CheckCalls([]mockCommitterCall{
+			{"CommitAsync", 9, nil},
+		})
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
@@ -798,7 +815,8 @@ func TestCM_Follower_StartsElectionOnElectionTimeout_NonEmptyLog(t *testing.T) {
 	testSetupMCM_Candidate_Figure7LeaderLine(t)
 }
 
-// #RFS-L2a: If Command received from client: append entry to local log
+// #RFS-L2: If command received from client: append entry to local log,
+// respond after entry applied to state machine (#5.3)
 func TestCM_Leader_AppendCommand(t *testing.T) {
 	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
 
@@ -811,10 +829,14 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		t.Fatal()
 	}
 
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
-	if err != nil || ioleAC != 11 {
+	mcm.mc.CheckCalls(nil)
+	crc1101, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+	if err != nil || crc1101 == nil {
 		t.Fatal()
 	}
+	mcm.mc.CheckCalls([]mockCommitterCall{
+		{"RegisterListener", 11, crc1101},
+	})
 
 	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
 	if err != nil {
@@ -829,7 +851,8 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	}
 }
 
-// #RFS-L2a: If Command received from client: append entry to local log
+// #RFS-L2: If command received from client: append entry to local log,
+// respond after entry applied to state machine (#5.3)
 func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 	f := func(
 		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
@@ -844,6 +867,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		if iole != 10 {
 			t.Fatal()
 		}
+		mcm.mc.CheckCalls(nil)
 
 		_, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
 		if err != ErrNotLeader {
@@ -857,6 +881,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		if iole != 10 {
 			t.Fatal()
 		}
+		mcm.mc.CheckCalls(nil)
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
@@ -867,10 +892,10 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 // of time with helper methods. This simplifies tests and avoids concurrency
 // issues with inspecting the internals.
 type managedConsensusModule struct {
-	pcm   *PassiveConsensusModule
-	now   time.Time
-	diml  LogReadOnly
-	mcicl *testhelpers.MockCommitIndexChangeListener
+	pcm  *PassiveConsensusModule
+	now  time.Time
+	diml LogReadOnly
+	mc   *mockCommitter
 }
 
 func (mcm *managedConsensusModule) Tick() error {

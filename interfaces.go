@@ -93,15 +93,25 @@ type Log interface {
 	AppendEntry(LogEntry) (LogIndex, error)
 }
 
+// LogReadOnly is a read-only subset of the Log interface for internal use.
+type LogReadOnly interface {
+	GetIndexOfLastEntry() (LogIndex, error)
+	GetTermAtIndex(LogIndex) (TermNo, error)
+	GetEntriesAfterIndex(LogIndex, uint64) ([]LogEntry, error)
+}
+
 // StateMachine is the interface that the state machine must expose to Raft.
 //
 // You must implement this interface!
 //
 // Raft will apply committed commands from the log to the state machine through this interface.
 //
-// All methods should return immediately without blocking.
+// For a given current state and a given command, the new state and returned result
+// should be completely deterministic.
 //
-// Concurrency: the ConsensusModule will only ever call one method of this interface at a time.
+// Concurrency: this interface will receive only one call at a time. However, note that this
+// will be asynchronous to the ConsensusModule. This means that the ConsensusModule can
+// commit entries faster than they are applied to the state machine.
 //
 // Raft describes two state parameters - commitIndex and lastApplied -
 // that are used to track which log entries are committed to the log and the
@@ -126,7 +136,7 @@ type Log interface {
 type StateMachine interface {
 	// GetLastApplied should return the value of lastApplied.
 	//
-	// On startup, the ConsensusModule may use this value to initialize commitIndex.
+	// This is used at startup to avoid replaying entries that have already been applied.
 	//
 	// If the state machine is not persisted, this value should start at 0.
 	GetLastApplied() LogIndex
@@ -142,7 +152,7 @@ type StateMachine interface {
 	// commitIndex may NOT be persisted, and may reset to 0 on restart.
 	// However, the upstream should never send this initial 0 value to StateMachine, and
 	// should always jump to a non-decreasing value.
-	ApplyCommand(logIndex LogIndex, command Command)
+	ApplyCommand(logIndex LogIndex, command Command) CommandResult
 }
 
 // Raft persistent state on all servers.

@@ -19,7 +19,7 @@ type PassiveConsensusModule struct {
 	RaftPersistentState RaftPersistentState
 	LogRO               LogReadOnly
 	_log                Log
-	_cicListener        CommitIndexChangeListener
+	_committer          ICommitter
 	RpcSendOnly         RpcSendOnly
 
 	// -- Config
@@ -44,7 +44,7 @@ type PassiveConsensusModule struct {
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
-	cicListener CommitIndexChangeListener,
+	committer ICommitter,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	maxEntriesPerAppendEntry uint64,
@@ -58,8 +58,8 @@ func NewPassiveConsensusModule(
 	if log == nil {
 		return nil, errors.New("'log' cannot be nil")
 	}
-	if cicListener == nil {
-		return nil, errors.New("'cicListener' cannot be nil")
+	if committer == nil {
+		return nil, errors.New("'committer' cannot be nil")
 	}
 	if rpcSendOnly == nil {
 		return nil, errors.New("'rpcSendOnly' cannot be nil")
@@ -76,7 +76,7 @@ func NewPassiveConsensusModule(
 		raftPersistentState,
 		log,
 		log,
-		cicListener,
+		committer,
 		rpcSendOnly,
 
 		// -- Config
@@ -134,29 +134,26 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	cm._cicListener.CommitIndexChanged(commitIndex)
+	cm._committer.CommitAsync(commitIndex)
 	return nil
 }
 
-// Append the given command as an entry in the log.
-// #RFS-L2a: If command received from client: append entry to local log
-//
-// The command will be sent to Log.AppendEntry().
-//
-// Returns ErrNotLeader if not currently the leader.
-func (cm *PassiveConsensusModule) AppendCommand(command Command) (LogIndex, error) {
+// AppendCommand appends the given serialized command to the log.
+func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan CommandResult, error) {
 	if cm.GetServerState() != LEADER {
-		return 0, ErrNotLeader
+		return nil, ErrNotLeader
 	}
 
 	termNo := cm.RaftPersistentState.GetCurrentTerm()
 	logEntry := LogEntry{termNo, command}
 	iole, err := cm._log.AppendEntry(logEntry)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return iole, nil
+	crc := cm._committer.RegisterListener(iole)
+
+	return crc, nil
 }
 
 // Iterate
@@ -369,6 +366,7 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 	if li < cm._commitIndex {
 		return fmt.Errorf("FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
 	}
+	cm._committer.RemoveListenersAfterIndex(li)
 	return cm._log.SetEntriesAfterIndex(li, entries)
 }
 

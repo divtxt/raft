@@ -308,14 +308,17 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// let's make some new log entries
-	ioleAC, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
-	if err != nil || ioleAC != 11 {
+	crc11, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(11))
+	if err != nil || crc11 == nil {
 		t.Fatal(err)
 	}
-	ioleAC, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
-	if err != nil || ioleAC != 12 {
+	crc12, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(12))
+	if err != nil || crc12 == nil {
 		t.Fatal(err)
 	}
+	testhelpers.AssertWillBlock(crc11)
+	testhelpers.AssertWillBlock(crc12)
+
 	// we currently do not expect appendCommand() to send AppendEntries
 	expectedRpcs := map[ServerId]interface{}{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
