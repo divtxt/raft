@@ -1,6 +1,8 @@
 package consensus
 
 import (
+	"log"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -8,7 +10,7 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	consensus_state "github.com/divtxt/raft/consensus/state"
-	"github.com/divtxt/raft/log"
+	raft_log "github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
@@ -25,7 +27,7 @@ func setupManagedConsensusModuleR2(
 	solo bool,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
+	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	mc := newMockCommitter()
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
@@ -48,6 +50,7 @@ func setupManagedConsensusModuleR2(
 		testdata.MaxEntriesPerAppendEntry,
 		testdata.ElectionTimeoutLow,
 		now,
+		log.New(os.Stderr, "consensus_test", log.Flags()),
 	)
 	if err != nil {
 		t.Fatal(err)

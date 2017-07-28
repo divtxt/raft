@@ -1,13 +1,15 @@
 package impl
 
 import (
+	"log"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
-	"github.com/divtxt/raft/log"
+	raft_log "github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
@@ -21,16 +23,19 @@ func setupConsensusModuleR3(
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
-) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
-	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
+	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, electionTimeoutLow}
 	ci, err := config.NewClusterInfo(testClusterServerIds, thisServerId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	logger := log.New(os.Stderr, "integration_test", log.Flags())
+	cm, err := NewConsensusModule(
+		ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts, logger,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,16 +50,19 @@ func setupConsensusModuleR3_SOLO(
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
 	imrsc *inMemoryRpcServiceConnector,
-) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
-	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
+	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo([]ServerId{101}, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	logger := log.New(os.Stderr, "integration_test", log.Flags())
+	cm, err := NewConsensusModule(
+		ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts, logger,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,14 +126,14 @@ func testSetupClusterWithLeader(
 	t *testing.T,
 ) (
 	*inMemoryRpcServiceHub,
-	IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
-	IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
-	IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine,
 ) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	setupCMR3 := func(
 		thisServerId ServerId, electionTimeoutLow time.Duration,
-	) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
+	) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 		return setupConsensusModuleR3(
 			t,
 			thisServerId,
@@ -158,7 +166,7 @@ func testSetupClusterWithLeader(
 
 func testSetup_SOLO_Leader(
 	t *testing.T,
-) (IConsensusModule, *log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	cm, diml, dsm := setupConsensusModuleR3_SOLO(
 		t,

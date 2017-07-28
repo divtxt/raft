@@ -21,10 +21,13 @@ type PassiveConsensusModule struct {
 	_log                Log
 	_committer          ICommitter
 	RpcSendOnly         RpcSendOnly
+	logger              *log.Logger
 
 	// -- Config
 	ClusterInfo              *config.ClusterInfo
 	maxEntriesPerAppendEntry uint64
+
+	// ===== the following fields are mutable
 
 	// -- State - for all servers
 	serverState ServerState
@@ -50,6 +53,7 @@ func NewPassiveConsensusModule(
 	maxEntriesPerAppendEntry uint64,
 	electionTimeoutLow time.Duration,
 	now time.Time,
+	logger *log.Logger,
 ) (*PassiveConsensusModule, error) {
 	// Param checks
 	if raftPersistentState == nil {
@@ -78,6 +82,7 @@ func NewPassiveConsensusModule(
 		log,
 		committer,
 		rpcSendOnly,
+		logger,
 
 		// -- Config
 		clusterInfo,
@@ -224,7 +229,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	if err != nil {
 		return err
 	}
-	log.Println("raft: becomeCandidateAndBeginElection(): newTerm =", newTerm)
+	cm.logger.Println("[raft] becomeCandidateAndBeginElection(): newTerm =", newTerm)
 	cm.setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
@@ -260,7 +265,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
-	log.Println("raft: becomeLeader(): iole =", iole, ", commitIndex =", cm._commitIndex)
+	cm.logger.Println("[raft] becomeLeader(): iole =", iole, ", commitIndex =", cm._commitIndex)
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
@@ -277,7 +282,7 @@ func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 		// Nothing to change!
 		return nil
 	}
-	log.Println("raft: becomeFollowerWithTerm(): newTerm =", newTerm)
+	cm.logger.Println("[raft] becomeFollowerWithTerm(): newTerm =", newTerm)
 	cm.setServerState(FOLLOWER)
 	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {

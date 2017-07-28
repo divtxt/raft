@@ -23,7 +23,7 @@ Later:
 - [ ] Change AppendCommand to return error in channel
 - [ ] Change AppendCommand send ErrUnkownResult instead of closing channel
 - [ ] Allow StateMachine to delay sending of result
-- [ ] Pluggable logging
+- [x] Pluggable logging
 - [ ] Log many more details e.g. leader, voters
 - [ ] Add metrics & logging
 - [ ] Expose raft details e.g. leader, term

@@ -1,6 +1,8 @@
 package impl
 
 import (
+	"log"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -8,7 +10,7 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
-	"github.com/divtxt/raft/log"
+	raft_log "github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
@@ -28,7 +30,7 @@ func setupConsensusModuleR2(
 	logTerms []TermNo,
 ) (*ConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	iml := log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
+	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
@@ -36,7 +38,10 @@ func setupConsensusModuleR2(
 	if err != nil {
 		t.Fatal(err)
 	}
-	cm, err := NewConsensusModule(ps, iml, dsm, mrs, ci, testdata.MaxEntriesPerAppendEntry, ts)
+	logger := log.New(os.Stderr, "integration_test", log.Flags())
+	cm, err := NewConsensusModule(
+		ps, iml, dsm, mrs, ci, testdata.MaxEntriesPerAppendEntry, ts, logger,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

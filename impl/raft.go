@@ -23,7 +23,7 @@
 package impl
 
 import (
-	golog "log"
+	"log"
 	"sync"
 	"time"
 
@@ -37,6 +37,9 @@ import (
 // A ConsensusModule is an active Raft consensus module implementation.
 type ConsensusModule struct {
 	mutex *sync.Mutex
+
+	//
+	logger *log.Logger
 
 	//
 	committer              *committer.Committer
@@ -63,21 +66,24 @@ type ConsensusModule struct {
 //
 func NewConsensusModule(
 	raftPersistentState RaftPersistentState,
-	log Log,
+	raftLog Log,
 	stateMachine StateMachine,
 	rpcService RpcService,
 	clusterInfo *config.ClusterInfo,
 	maxEntriesPerAppendEntry uint64,
 	timeSettings config.TimeSettings,
+	logger *log.Logger,
 ) (*ConsensusModule, error) {
-	golog.Println("raft: NewConsensusModule()")
+	logger.Println("[raft] NewConsensusModule()")
 
 	now := time.Now()
 
-	committer := committer.NewCommitter(log, stateMachine)
+	committer := committer.NewCommitter(raftLog, stateMachine)
 
 	cm := &ConsensusModule{
 		&sync.Mutex{},
+
+		logger,
 
 		committer,
 		nil, // passiveConsensusModule - temp value, to be replaced before goroutine start
@@ -95,13 +101,14 @@ func NewConsensusModule(
 
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
-		log,
+		raftLog,
 		committer,
 		cm,
 		clusterInfo,
 		maxEntriesPerAppendEntry,
 		timeSettings.ElectionTimeoutLow,
 		now,
+		logger,
 	)
 	if err != nil {
 		return nil, err
@@ -134,7 +141,7 @@ func (cm *ConsensusModule) Stop() {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	golog.Println("raft: Stop()")
+	cm.logger.Println("[raft] Stop()")
 	cm.shutdownAndPanic(nil)
 }
 
