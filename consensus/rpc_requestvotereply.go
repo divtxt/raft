@@ -44,6 +44,7 @@ func (cm *PassiveConsensusModule) RpcReply_RpcRequestVoteReply(
 				return err
 			}
 			if haveQuorum {
+				cm.logger.Println("[raft] have quorum - won election!")
 				err = cm.becomeLeader()
 				if err != nil {
 					return err

@@ -74,7 +74,7 @@ func NewConsensusModule(
 	timeSettings config.TimeSettings,
 	logger *log.Logger,
 ) (*ConsensusModule, error) {
-	logger.Println("[raft] NewConsensusModule()")
+	logger.Println("[raft] Initializing ConsensusModule")
 
 	now := time.Now()
 
@@ -141,7 +141,7 @@ func (cm *ConsensusModule) Stop() {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	cm.logger.Println("[raft] Stop()")
+	cm.logger.Println("[raft] Stopping ConsensusModule")
 	cm.shutdownAndPanic(nil)
 }
 

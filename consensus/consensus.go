@@ -120,7 +120,29 @@ func (cm *PassiveConsensusModule) setServerState(serverState ServerState) {
 	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
-	cm.serverState = serverState
+	if cm.serverState != serverState {
+		cm.logger.Println(
+			"[raft] setServerState:",
+			_getServerStateString(cm.serverState),
+			"->",
+			_getServerStateString(serverState),
+		)
+		cm.serverState = serverState
+	}
+}
+
+// Get string values for ServerState
+func _getServerStateString(serverState ServerState) string {
+	if serverState == FOLLOWER {
+		return "FOLLOWER"
+	}
+	if serverState == CANDIDATE {
+		return "CANDIDATE"
+	}
+	if serverState == LEADER {
+		return "LEADER"
+	}
+	panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 }
 
 // Get the current commitIndex value.
@@ -182,6 +204,7 @@ func (cm *PassiveConsensusModule) Tick(now time.Time) error {
 		// start a new election by incrementing its term and initiating
 		// another round of RequestVote RPCs.
 		if cm.ElectionTimeoutTracker.ElectionTimeoutHasOccurred(now) {
+			cm.logger.Println("[raft] Election timeout - starting a new election")
 			err := cm.becomeCandidateAndBeginElection(now)
 			if err != nil {
 				return err
@@ -190,6 +213,7 @@ func (cm *PassiveConsensusModule) Tick(now time.Time) error {
 			// Single node cluster wins election immediately since it has all the votes
 			// But don't skip the election process, mainly since it increases current term!
 			if cm.ClusterInfo.GetClusterSize() == 1 {
+				cm.logger.Println("[raft] Single node cluster - win election immediately!")
 				err := cm.becomeLeader()
 				if err != nil {
 					return err
@@ -229,7 +253,8 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 	if err != nil {
 		return err
 	}
-	cm.logger.Println("[raft] becomeCandidateAndBeginElection(): newTerm =", newTerm)
+	// FIXME: return newTerm to avoid logging here
+	cm.logger.Println("[raft] becomeCandidateAndBeginElection: newTerm =", newTerm)
 	cm.setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
@@ -265,7 +290,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
-	cm.logger.Println("[raft] becomeLeader(): iole =", iole, ", commitIndex =", cm._commitIndex)
+	cm.logger.Println("[raft] becomeLeader: iole =", iole, ", commitIndex =", cm._commitIndex)
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
@@ -282,7 +307,7 @@ func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 		// Nothing to change!
 		return nil
 	}
-	cm.logger.Println("[raft] becomeFollowerWithTerm(): newTerm =", newTerm)
+	cm.logger.Println("[raft] becomeFollowerWithTerm: newTerm =", newTerm)
 	cm.setServerState(FOLLOWER)
 	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {
