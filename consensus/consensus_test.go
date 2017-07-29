@@ -40,7 +40,7 @@ func setupManagedConsensusModuleR2(
 	if err != nil {
 		t.Fatal(err)
 	}
-	now := time.Now()
+	cc := newControlledClock(time.Now())
 	cm, err := NewPassiveConsensusModule(
 		ps,
 		iml,
@@ -49,7 +49,7 @@ func setupManagedConsensusModuleR2(
 		ci,
 		testdata.MaxEntriesPerAppendEntry,
 		testdata.ElectionTimeoutLow,
-		now,
+		cc.now,
 		log.New(os.Stderr, "consensus_test", log.Flags()),
 	)
 	if err != nil {
@@ -59,8 +59,8 @@ func setupManagedConsensusModuleR2(
 		t.Fatal()
 	}
 	// Bias simulated clock to avoid exact time matches
-	now = now.Add(testdata.SleepToLetGoroutineRun)
-	mcm := &managedConsensusModule{cm, now, iml, mc}
+	cc.advance(testdata.SleepToLetGoroutineRun)
+	mcm := &managedConsensusModule{cm, cc, iml, mc}
 	return mcm, mrs
 }
 
@@ -138,7 +138,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	mrs *testhelpers.MockRpcSender,
 	expectedNewTerm TermNo,
 ) {
-	timeout1 := mcm.pcm.ElectionTimeoutTracker.GetCurrentElectionTimeout()
+	timeout1 := mcm.pcm.ElectionTimeoutTimer.GetCurrentDuration()
 	// Test that election timeout causes a new election
 	mcm.tickTilElectionTimeout(t)
 	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != expectedNewTerm {
@@ -153,7 +153,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	}
 	// a new election timeout was chosen
 	// Playing the odds here :P
-	if mcm.pcm.ElectionTimeoutTracker.GetCurrentElectionTimeout() == timeout1 {
+	if mcm.pcm.ElectionTimeoutTimer.GetCurrentDuration() == timeout1 {
 		t.Fatal()
 	}
 	// candidate state is fresh
@@ -209,7 +209,7 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 
 	var expectedNewTerm TermNo = testdata.CurrentTerm + 1
 
-	timeout1 := mcm.pcm.ElectionTimeoutTracker.GetCurrentElectionTimeout()
+	timeout1 := mcm.pcm.ElectionTimeoutTimer.GetCurrentDuration()
 	// Test that election timeout causes a new election
 	mcm.tickTilElectionTimeout(t)
 	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != expectedNewTerm {
@@ -224,7 +224,7 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 		t.Fatal()
 	}
 	// a new election timeout was chosen
-	if mcm.pcm.ElectionTimeoutTracker.GetCurrentElectionTimeout() == timeout1 {
+	if mcm.pcm.ElectionTimeoutTimer.GetCurrentDuration() == timeout1 {
 		t.Fatal()
 	}
 	// candidate state is fresh
@@ -896,17 +896,17 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 // issues with inspecting the internals.
 type managedConsensusModule struct {
 	pcm  *PassiveConsensusModule
-	now  time.Time
+	cc   *controlledClock
 	diml LogReadOnly
 	mc   *mockCommitter
 }
 
 func (mcm *managedConsensusModule) Tick() error {
-	err := mcm.pcm.Tick(mcm.now)
+	err := mcm.pcm.Tick()
 	if err != nil {
 		return err
 	}
-	mcm.now = mcm.now.Add(testdata.TickerDuration)
+	mcm.cc.advance(testdata.TickerDuration)
 	return nil
 }
 
@@ -914,28 +914,28 @@ func (mcm *managedConsensusModule) Rpc_RpcAppendEntries(
 	from ServerId,
 	rpc *RpcAppendEntries,
 ) (*RpcAppendEntriesReply, error) {
-	return mcm.pcm.Rpc_RpcAppendEntries(from, rpc, mcm.now)
+	return mcm.pcm.Rpc_RpcAppendEntries(from, rpc)
 }
 
 func (mcm *managedConsensusModule) Rpc_RpcRequestVote(
 	from ServerId,
 	rpc *RpcRequestVote,
 ) (*RpcRequestVoteReply, error) {
-	return mcm.pcm.Rpc_RpcRequestVote(from, rpc, mcm.now)
+	return mcm.pcm.Rpc_RpcRequestVote(from, rpc)
 }
 
 func (mcm *managedConsensusModule) tickTilElectionTimeout(t *testing.T) {
-	electionTimeoutTime := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
+	electionTimeoutTime := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
 	for {
 		err := mcm.Tick()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mcm.now.After(electionTimeoutTime) {
+		if mcm.cc._now.After(electionTimeoutTime) {
 			break
 		}
 	}
-	if mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime() != electionTimeoutTime {
+	if mcm.pcm.ElectionTimeoutTimer.GetExpiryTime() != electionTimeoutTime {
 		t.Fatal("electionTimeoutTime changed!")
 	}
 	// Because tick() increments "now" after calling tick(),
@@ -944,4 +944,22 @@ func (mcm *managedConsensusModule) tickTilElectionTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// --
+
+type controlledClock struct {
+	_now time.Time
+}
+
+func newControlledClock(now time.Time) *controlledClock {
+	return &controlledClock{now}
+}
+
+func (cc *controlledClock) now() time.Time {
+	return cc._now
+}
+
+func (cc *controlledClock) advance(d time.Duration) {
+	cc._now = cc._now.Add(d)
 }

@@ -4,7 +4,6 @@ package consensus
 
 import (
 	"fmt"
-	"time"
 
 	. "github.com/divtxt/raft"
 )
@@ -14,7 +13,6 @@ import (
 func (cm *PassiveConsensusModule) Rpc_RpcRequestVote(
 	from ServerId,
 	rpcRequestVote *RpcRequestVote,
-	now time.Time,
 ) (*RpcRequestVoteReply, error) {
 	if from == cm.ClusterInfo.GetThisServerId() {
 		return nil, fmt.Errorf("FATAL: from server has same serverId: %v", cm.ClusterInfo.GetThisServerId())
@@ -86,7 +84,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcRequestVote(
 			}
 		}
 		// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
-		cm.ElectionTimeoutTracker.Touch(now)
+		cm.ElectionTimeoutTimer.Restart()
 		return makeReply(true), nil
 	}
 

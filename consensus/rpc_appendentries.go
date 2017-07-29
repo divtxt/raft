@@ -6,7 +6,6 @@ package consensus
 
 import (
 	"fmt"
-	"time"
 
 	. "github.com/divtxt/raft"
 )
@@ -16,7 +15,6 @@ import (
 func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	from ServerId,
 	appendEntries *RpcAppendEntries,
-	now time.Time,
 ) (*RpcAppendEntriesReply, error) {
 	if from == cm.ClusterInfo.GetThisServerId() {
 		return nil, fmt.Errorf("FATAL: from server has same serverId: %v", cm.ClusterInfo.GetThisServerId())
@@ -52,7 +50,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 
 	// #RFS-F2: (paraphrasing) AppendEntries RPC from current leader should
 	// prevent election timeout
-	cm.ElectionTimeoutTracker.Touch(now)
+	cm.ElectionTimeoutTimer.Restart()
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
 	// set currentTerm = T, convert to follower (#5.1)

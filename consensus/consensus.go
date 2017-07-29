@@ -35,7 +35,8 @@ type PassiveConsensusModule struct {
 	// commitIndex is the index of highest log entry known to be committed
 	// (initialized to 0, increases monotonically)
 	_commitIndex           LogIndex
-	ElectionTimeoutTracker *util.ElectionTimeoutTracker
+	electionTimeoutChooser *util.ElectionTimeoutChooser
+	ElectionTimeoutTimer   *util.Timer
 
 	// -- State - for candidates only
 	CandidateVolatileState *consensus_state.CandidateVolatileState
@@ -52,7 +53,7 @@ func NewPassiveConsensusModule(
 	clusterInfo *config.ClusterInfo,
 	maxEntriesPerAppendEntry uint64,
 	electionTimeoutLow time.Duration,
-	now time.Time,
+	nowFunc func() time.Time,
 	logger *log.Logger,
 ) (*PassiveConsensusModule, error) {
 	// Param checks
@@ -75,6 +76,8 @@ func NewPassiveConsensusModule(
 		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
 
+	electionTimeoutTimer := util.NewTimer(electionTimeoutLow, nowFunc)
+
 	pcm := &PassiveConsensusModule{
 		// -- External components
 		raftPersistentState,
@@ -96,7 +99,8 @@ func NewPassiveConsensusModule(
 		// commitIndex is the index of highest log entry known to be committed
 		// (initialized to 0, increases monotonically)
 		0,
-		util.NewElectionTimeoutTracker(electionTimeoutLow, now),
+		util.NewElectionTimeoutChooser(electionTimeoutLow),
+		electionTimeoutTimer,
 
 		// -- State - for candidates only
 		nil,
@@ -184,7 +188,7 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan Command
 }
 
 // Iterate
-func (cm *PassiveConsensusModule) Tick(now time.Time) error {
+func (cm *PassiveConsensusModule) Tick() error {
 	serverState := cm.GetServerState()
 	switch serverState {
 	case FOLLOWER:
@@ -203,9 +207,9 @@ func (cm *PassiveConsensusModule) Tick(now time.Time) error {
 		// #5.2-p5s2: When this happens, each candidate will time out and
 		// start a new election by incrementing its term and initiating
 		// another round of RequestVote RPCs.
-		if cm.ElectionTimeoutTracker.ElectionTimeoutHasOccurred(now) {
+		if cm.ElectionTimeoutTimer.Expired() {
 			cm.logger.Println("[raft] Election timeout - starting a new election")
-			err := cm.becomeCandidateAndBeginElection(now)
+			err := cm.becomeCandidateAndBeginElection()
 			if err != nil {
 				return err
 			}
@@ -238,7 +242,7 @@ func (cm *PassiveConsensusModule) Tick(now time.Time) error {
 	return nil
 }
 
-func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection(now time.Time) error {
+func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	// #RFS-C1: On conversion to candidate, start election:
 	// Increment currentTerm; Vote for self; Send RequestVote RPCs
 	// to all other servers; Reset election timer
@@ -277,7 +281,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection(now time.Time)
 		return err
 	}
 	// Reset election timeout!
-	cm.ElectionTimeoutTracker.ChooseNewRandomElectionTimeoutAndTouch(now)
+	cm.ElectionTimeoutTimer.RestartWithDuration(cm.electionTimeoutChooser.ChooseRandomElectionTimeout())
 	return nil
 }
 

@@ -76,8 +76,6 @@ func NewConsensusModule(
 ) (*ConsensusModule, error) {
 	logger.Println("[raft] Initializing ConsensusModule")
 
-	now := time.Now()
-
 	committer := committer.NewCommitter(raftLog, stateMachine)
 
 	cm := &ConsensusModule{
@@ -107,7 +105,7 @@ func NewConsensusModule(
 		clusterInfo,
 		maxEntriesPerAppendEntry,
 		timeSettings.ElectionTimeoutLow,
-		now,
+		time.Now,
 		logger,
 	)
 	if err != nil {
@@ -171,9 +169,7 @@ func (cm *ConsensusModule) ProcessRpcAppendEntries(
 		return nil
 	}
 
-	now := time.Now()
-
-	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcAppendEntries(from, rpc, now)
+	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcAppendEntries(from, rpc)
 	if err != nil {
 		cm.shutdownAndPanic(err)
 		return nil // unreachable code
@@ -202,9 +198,7 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 		return nil
 	}
 
-	now := time.Now()
-
-	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcRequestVote(from, rpc, now)
+	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcRequestVote(from, rpc)
 	if err != nil {
 		cm.shutdownAndPanic(err)
 		return nil // unreachable code
@@ -306,8 +300,7 @@ func (cm *ConsensusModule) safeTick() {
 
 	if !cm.stopped {
 		// Get a fresh now since we could have been waiting
-		now := time.Now()
-		err := cm.passiveConsensusModule.Tick(now)
+		err := cm.passiveConsensusModule.Tick()
 		if err != nil {
 			cm.shutdownAndPanic(err)
 		}

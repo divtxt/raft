@@ -14,7 +14,7 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
-		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
+		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
 
 		requestVote := &RpcRequestVote{7, 9, 6}
 
@@ -29,7 +29,7 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 		}
 
 		// #RFS-F2: (paraphrasing) not granting vote should allow election timeout
-		if mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime() != electionTimeoutTime1 {
+		if mcm.pcm.ElectionTimeoutTimer.GetExpiryTime() != electionTimeoutTime1 {
 			t.Fatal()
 		}
 	}
@@ -53,7 +53,7 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		beforeState := mcm.pcm.GetServerState()
-		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
+		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
 
 		// sanity check
 		votedFor := mcm.pcm.RaftPersistentState.GetVotedFor()
@@ -81,7 +81,7 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 		}
 
 		// #RFS-F2: (paraphrasing) not granting vote should allow election timeout
-		if mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime() != electionTimeoutTime1 {
+		if mcm.pcm.ElectionTimeoutTimer.GetExpiryTime() != electionTimeoutTime1 {
 			t.Fatal()
 		}
 	}
@@ -101,7 +101,7 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
-		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
+		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
 
 		// sanity check
 		votedFor := mcm.pcm.RaftPersistentState.GetVotedFor()
@@ -122,7 +122,7 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 		}
 
 		// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
-		if mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime() == electionTimeoutTime1 {
+		if mcm.pcm.ElectionTimeoutTimer.GetExpiryTime() == electionTimeoutTime1 {
 			t.Fatal()
 		}
 	}
@@ -142,7 +142,7 @@ func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
-		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
+		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
 
 		// sanity check
 		votedFor := mcm.pcm.RaftPersistentState.GetVotedFor()
@@ -163,7 +163,7 @@ func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
 		}
 
 		// #RFS-F2: (paraphrasing) not granting vote should allow election timeout
-		if mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime() != electionTimeoutTime1 {
+		if mcm.pcm.ElectionTimeoutTimer.GetExpiryTime() != electionTimeoutTime1 {
 			t.Fatal()
 		}
 	}
@@ -256,7 +256,7 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
-		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime()
+		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
 
 		// sanity checks
 		if serverTerm != 8 {
@@ -302,12 +302,12 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 
 		if expectedVote {
 			// #RFS-F2: (paraphrasing) granting vote should prevent election timeout
-			if mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime() == electionTimeoutTime1 {
+			if mcm.pcm.ElectionTimeoutTimer.GetExpiryTime() == electionTimeoutTime1 {
 				t.Fatal()
 			}
 		} else {
 			// #RFS-F2: (paraphrasing) not granting vote should allow election timeout
-			if mcm.pcm.ElectionTimeoutTracker.GetElectionTimeoutTime() != electionTimeoutTime1 {
+			if mcm.pcm.ElectionTimeoutTimer.GetExpiryTime() != electionTimeoutTime1 {
 				t.Fatal()
 			}
 		}
