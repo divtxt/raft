@@ -115,20 +115,25 @@ func (mrs *MockRpcSender) fatalSentRpcs(t *testing.T, expectedRpcs map[ServerId]
 			t.Error(fmt.Sprintf("toServer: %v - RpcAppendEntries: %v", toServer, sentRpc.Rpc))
 		case SentRequestVote:
 			t.Error(fmt.Sprintf("toServer: %v - RpcRequestVote: %v", toServer, sentRpc.Rpc))
+		default:
+			t.Errorf("toServer: %v - %T: %#v", toServer, sentRpc, sentRpc)
+
 		}
 	}
 
 	t.Error("--- Expected:")
 	for toServer, rpc := range expectedRpcs {
 		switch rpc := rpc.(type) {
-		case RpcAppendEntries:
+		case *RpcAppendEntries:
 			t.Error(fmt.Sprintf("toServer: %v - RpcAppendEntries: %v", toServer, rpc))
-		case RpcRequestVote:
+		case *RpcRequestVote:
 			t.Error(fmt.Sprintf("toServer: %v - RpcRequestVote: %v", toServer, rpc))
+		default:
+			t.Errorf("toServer: %v - %T: %v", toServer, rpc, rpc)
 		}
 	}
 
-	t.Fatal("Sadness :(")
+	panic("Sadness :(")
 }
 
 func (mrs *MockRpcSender) SendAERepliesAndClearRpcs(reply *RpcAppendEntriesReply) int {
