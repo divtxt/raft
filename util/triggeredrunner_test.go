@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/divtxt/raft/testhelpers"
 	"github.com/divtxt/raft/util"
 )
 
@@ -73,8 +72,14 @@ func TestTriggeredRunner(t *testing.T) {
 	}
 
 	// TriggerRun & StopSync should now panic
-	testhelpers.TestHelper_ExpectPanicMessage(t, tr.TriggerRun, "send on closed channel")
-	testhelpers.TestHelper_ExpectPanicMessage(t, tr.StopSync, "close of closed channel")
+	err := util.ExpectPanicMessage(tr.TriggerRun, "send on closed channel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = util.ExpectPanicMessage(tr.StopSync, "close of closed channel")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// TestHelperFakeRestart & TestHelperRunOnceIfTriggerPending
 	tr.TestHelperFakeRestart()

@@ -14,6 +14,7 @@ import (
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
+	"github.com/divtxt/raft/util"
 )
 
 func setupManagedConsensusModule(t *testing.T, logTerms []TermNo) *managedConsensusModule {
@@ -80,13 +81,15 @@ func TestCM_InitialState(t *testing.T) {
 
 func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
-	testhelpers.TestHelper_ExpectPanic(
-		t,
+	err := util.ExpectPanic(
 		func() {
 			mcm.pcm.setServerState(42)
 		},
 		"FATAL: unknown ServerState: 42",
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 // #RFS-F2: If election timeout elapses without receiving
