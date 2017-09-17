@@ -21,6 +21,14 @@ var ErrNotLeader = errors.New("Not currently in LEADER state")
 // Initialized to 0 on first boot, increases monotonically.
 type TermNo uint64
 
+// Log entry type.
+//
+// This is used to identify if the LogEntry is meant for the state machine
+// or for internal use by the ConsensusModule.
+//
+// See util/logentry.go for values.
+type EntryType uint8
+
 // A state machine command (in serialized form).
 // The contents of the byte slice are opaque to the ConsensusModule.
 type Command []byte
@@ -31,6 +39,7 @@ type CommandResult interface{}
 // An entry in the Raft Log
 type LogEntry struct {
 	TermNo
+	EntryType
 	Command
 }
 

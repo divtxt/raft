@@ -65,14 +65,19 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 	var logEntries []LogEntry
 
 	// set test - invalid index
-	logEntries = []LogEntry{{8, Command("c12")}}
+	logEntries = []LogEntry{
+		NewLogEntry(8, Command("c12")),
+	}
 	err = log.SetEntriesAfterIndex(11, logEntries)
 	if err == nil {
 		t.Fatal()
 	}
 
 	// set test - no replacing
-	logEntries = []LogEntry{{7, Command("c11")}, {8, Command("c12")}}
+	logEntries = []LogEntry{
+		NewLogEntry(7, Command("c11")),
+		NewLogEntry(8, Command("c12")),
+	}
 	err = log.SetEntriesAfterIndex(10, logEntries)
 	if err != nil {
 		t.Fatal()
