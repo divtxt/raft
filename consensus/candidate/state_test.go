@@ -23,15 +23,18 @@ func TestCandidateVolatileState(t *testing.T) {
 	}
 
 	// Initial state
+	if cvs.ReceivedReplies != 1 {
+		t.Fatal()
+	}
 	if cvs.ReceivedVotes != 1 {
 		t.Fatal()
 	}
-	if cvs.RequiredVotes != 3 {
+	if cvs.QuorumSize != 3 {
 		t.Fatal()
 	}
 
-	addVoteFrom := func(peerId ServerId) bool {
-		r, err := cvs.AddVoteFrom(peerId)
+	addVoteFrom := func(peerId ServerId, voteGranted bool) bool {
+		r, err := cvs.AddVoteFrom(peerId, voteGranted)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -39,29 +42,68 @@ func TestCandidateVolatileState(t *testing.T) {
 	}
 
 	// Add a vote - no quorum yet
-	if addVoteFrom(102) {
+	if addVoteFrom(102, true) {
+		t.Fatal()
+	}
+	if cvs.ReceivedReplies != 2 {
+		t.Fatal()
+	}
+	if cvs.GotQuorumReplies() {
 		t.Fatal()
 	}
 
 	// Duplicate vote - no error and no quorum yet
-	if addVoteFrom(102) {
+	if addVoteFrom(102, true) {
+		t.Fatal()
+	}
+	if cvs.ReceivedReplies != 2 {
+		t.Fatal()
+	}
+	if cvs.GotQuorumReplies() {
 		t.Fatal()
 	}
 
-	// Add 2nd vote - should be at quorum
-	if !addVoteFrom(103) {
+	// Add deny vote - no vote quorum, but have reply quorum
+	if addVoteFrom(103, false) {
+		t.Fatal()
+	}
+	if cvs.ReceivedReplies != 3 {
+		t.Fatal()
+	}
+	if !cvs.GotQuorumReplies() {
 		t.Fatal()
 	}
 
-	// Add remaining votes - should stay at quorum
-	if !addVoteFrom(104) {
+	// Add another vote - should reach quorum
+	if !addVoteFrom(104, true) {
 		t.Fatal()
 	}
-	if !addVoteFrom(105) {
+	if cvs.ReceivedReplies != 4 {
 		t.Fatal()
 	}
+	if !cvs.GotQuorumReplies() {
+		t.Fatal()
+	}
+
+	// Last vote
+	if !addVoteFrom(105, false) {
+		t.Fatal()
+	}
+	if cvs.ReceivedReplies != 5 {
+		t.Fatal()
+	}
+	if !cvs.GotQuorumReplies() {
+		t.Fatal()
+	}
+
 	// Another duplicate vote - no error and stay at quorum
-	if !addVoteFrom(103) {
+	if !addVoteFrom(103, true) {
+		t.Fatal()
+	}
+	if cvs.ReceivedReplies != 5 {
+		t.Fatal()
+	}
+	if !cvs.GotQuorumReplies() {
 		t.Fatal()
 	}
 
@@ -76,22 +118,22 @@ func TestCandidateVolatileState_3nodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cvs.ReceivedVotes != 1 || cvs.RequiredVotes != 2 {
+	if cvs.ReceivedReplies != 1 || cvs.ReceivedVotes != 1 || cvs.QuorumSize != 2 {
 		t.Fatal()
 	}
 
-	addVoteFrom := func(peerId ServerId) bool {
-		r, err := cvs.AddVoteFrom(peerId)
+	addVoteFrom := func(peerId ServerId, voteGranted bool) bool {
+		r, err := cvs.AddVoteFrom(peerId, voteGranted)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return r
 	}
 
-	if !addVoteFrom(503) {
+	if !addVoteFrom(503, true) {
 		t.Fatal()
 	}
-	if !addVoteFrom(502) {
+	if !addVoteFrom(502, true) {
 		t.Fatal()
 	}
 }
@@ -106,7 +148,7 @@ func TestCandidateVolatileState_VoteFromNonMemberIsAnError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = cvs.AddVoteFrom(504)
+	_, err = cvs.AddVoteFrom(504, true)
 	if err.Error() != "CandidateVolatileState.AddVoteFrom(): unknown peer: 504" {
 		t.Fatal(err)
 	}

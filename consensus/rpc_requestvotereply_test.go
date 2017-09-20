@@ -313,3 +313,31 @@ func TestCM_RpcRVR_All_RpcTermMismatches(t *testing.T) {
 	f(testSetupMCM_Leader_Figure7LeaderLine, true)
 	f(testSetupMCM_Leader_Figure7LeaderLine, false)
 }
+
+// Extra: Isolated candidate does not increment term (similar to #6p8)
+//
+// To avoid an isolated node or subset of nodes running up the term by a large number, when an
+// election fails do NOT increment the term when the number of replying nodes would not have
+// been sufficient to form a quorum.
+//
+func TestCM_RpcRVR_Candidate_IsolatedCandidateDoesNotIncrementTermOnElectionTimeout(t *testing.T) {
+	mcm, mrs := testSetupMCM_Candidate_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
+	sentRpc := &RpcRequestVote{serverTerm, 0, 0}
+
+	// s2 grants vote - should stay as candidate
+	err := mcm.pcm.RpcReply_RpcRequestVoteReply(
+		102,
+		sentRpc,
+		&RpcRequestVoteReply{serverTerm, true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mcm.pcm.GetServerState() != CANDIDATE {
+		t.Fatal()
+	}
+
+	// no more votes - election timeout causes a new election, but term stays the same
+	testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(t, mcm, mrs, serverTerm)
+}

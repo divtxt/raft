@@ -245,15 +245,31 @@ func (cm *PassiveConsensusModule) Tick() error {
 }
 
 func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
+	var err error
+
 	// #RFS-C1: On conversion to candidate, start election:
 	// Increment currentTerm; Vote for self; Send RequestVote RPCs
 	// to all other servers; Reset election timer
 	// #5.2-p2s1: To begin an election, a follower increments its
 	// current term and transitions to candidate state.
-	newTerm := cm.RaftPersistentState.GetCurrentTerm() + 1
-	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
-	if err != nil {
-		return err
+	incrementTerm := true
+	if cm.GetServerState() == CANDIDATE {
+		// Extra: Isolated candidate does not increment term (similar to #6p8)
+		// To avoid an isolated node or subset of nodes running up the term by a large number, when
+		// an election fails do NOT increment the term when the number of replying nodes would not
+		// have been sufficient to form a quorum.
+		if !cm.CandidateVolatileState.GotQuorumReplies() {
+			incrementTerm = false
+		}
+	}
+
+	newTerm := cm.RaftPersistentState.GetCurrentTerm()
+	if incrementTerm {
+		newTerm += 1
+		err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
+		if err != nil {
+			return err
+		}
 	}
 	cm.CandidateVolatileState, err = candidate.NewCandidateVolatileState(cm.ClusterInfo)
 	if err != nil {
@@ -264,7 +280,10 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	cm.setServerState(CANDIDATE)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
-	err = cm.RaftPersistentState.SetVotedFor(cm.ClusterInfo.GetThisServerId())
+	if incrementTerm {
+		// If we're not incrementing the term, then we're voting for ourselves again!
+		err = cm.RaftPersistentState.SetVotedFor(cm.ClusterInfo.GetThisServerId())
+	}
 	if err != nil {
 		return err
 	}

@@ -19,7 +19,7 @@ See [lockd](https://github.com/divtxt/lockd) for a example of how to use this mo
 Later:
 
 - [ ] Leader commits a no-op entry at the start of its term (#8p4)
-- [ ] Isolated server should not increment term (similar to #6p8)
+- [x] Isolated server should not increment term (similar to #6p8)
 - [ ] Change AppendCommand to return error in channel
 - [ ] Change AppendCommand send ErrUnkownResult instead of closing channel
 - [ ] Allow StateMachine to delay sending of result

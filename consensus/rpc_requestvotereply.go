@@ -38,17 +38,17 @@ func (cm *PassiveConsensusModule) RpcReply_RpcRequestVoteReply(
 		// #RFS-C2: If votes received from majority of servers: become leader
 		// #5.2-p3s1: A candidate wins an election if it receives votes from a
 		// majority of the servers in the full cluster for the same term.
-		if rpcRequestVoteReply.VoteGranted {
-			haveQuorum, err := cm.CandidateVolatileState.AddVoteFrom(fromPeer)
+		haveQuorum, err := cm.CandidateVolatileState.AddVoteFrom(
+			fromPeer, rpcRequestVoteReply.VoteGranted,
+		)
+		if err != nil {
+			return err
+		}
+		if haveQuorum {
+			cm.logger.Println("[raft] have quorum - won election!")
+			err = cm.becomeLeader()
 			if err != nil {
 				return err
-			}
-			if haveQuorum {
-				cm.logger.Println("[raft] have quorum - won election!")
-				err = cm.becomeLeader()
-				if err != nil {
-					return err
-				}
 			}
 		}
 	} // else: Ignore - not a candidate
