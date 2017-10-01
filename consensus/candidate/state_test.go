@@ -1,11 +1,11 @@
-package consensus_state_test
+package candidate_test
 
 import (
 	"testing"
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
-	consensus_state "github.com/divtxt/raft/consensus/state"
+	"github.com/divtxt/raft/consensus/candidate"
 	"github.com/divtxt/raft/testdata"
 )
 
@@ -17,7 +17,7 @@ func TestCandidateVolatileState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := consensus_state.NewCandidateVolatileState(ci)
+	cvs, err := candidate.NewCandidateVolatileState(ci)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestCandidateVolatileState_3nodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := consensus_state.NewCandidateVolatileState(ci)
+	cvs, err := candidate.NewCandidateVolatileState(ci)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestCandidateVolatileState_VoteFromNonMemberIsAnError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := consensus_state.NewCandidateVolatileState(ci)
+	cvs, err := candidate.NewCandidateVolatileState(ci)
 	if err != nil {
 		t.Fatal(err)
 	}

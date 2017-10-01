@@ -1,7 +1,8 @@
-package consensus_state
+package candidate
 
 import (
 	"fmt"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 )

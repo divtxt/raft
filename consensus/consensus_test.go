@@ -9,7 +9,7 @@ import (
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
-	consensus_state "github.com/divtxt/raft/consensus/state"
+	"github.com/divtxt/raft/consensus/candidate"
 	raft_log "github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
@@ -160,7 +160,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 		t.Fatal()
 	}
 	// candidate state is fresh
-	expectedCvs, err := consensus_state.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
+	expectedCvs, err := candidate.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +231,7 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 		t.Fatal()
 	}
 	// candidate state is fresh
-	expectedCvs, err := consensus_state.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
+	expectedCvs, err := candidate.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

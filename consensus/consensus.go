@@ -7,9 +7,10 @@ import (
 	"time"
 
 	. "github.com/divtxt/raft"
-	config "github.com/divtxt/raft/config"
-	consensus_state "github.com/divtxt/raft/consensus/state"
-	util "github.com/divtxt/raft/util"
+	"github.com/divtxt/raft/config"
+	"github.com/divtxt/raft/consensus/candidate"
+	"github.com/divtxt/raft/consensus/leader"
+	"github.com/divtxt/raft/util"
 )
 
 type PassiveConsensusModule struct {
@@ -39,10 +40,10 @@ type PassiveConsensusModule struct {
 	ElectionTimeoutTimer   *util.Timer
 
 	// -- State - for candidates only
-	CandidateVolatileState *consensus_state.CandidateVolatileState
+	CandidateVolatileState *candidate.CandidateVolatileState
 
 	// -- State - for leaders only
-	LeaderVolatileState *consensus_state.LeaderVolatileState
+	LeaderVolatileState *leader.LeaderVolatileState
 }
 
 func NewPassiveConsensusModule(
@@ -253,7 +254,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	if err != nil {
 		return err
 	}
-	cm.CandidateVolatileState, err = consensus_state.NewCandidateVolatileState(cm.ClusterInfo)
+	cm.CandidateVolatileState, err = candidate.NewCandidateVolatileState(cm.ClusterInfo)
 	if err != nil {
 		return err
 	}
@@ -290,7 +291,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
-	cm.LeaderVolatileState, err = consensus_state.NewLeaderVolatileState(cm.ClusterInfo, iole)
+	cm.LeaderVolatileState, err = leader.NewLeaderVolatileState(cm.ClusterInfo, iole)
 	if err != nil {
 		return err
 	}
@@ -375,7 +376,7 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId, empty
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
 func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
-	newerCommitIndex, err := consensus_state.FindNewerCommitIndex(
+	newerCommitIndex, err := leader.FindNewerCommitIndex(
 		cm.ClusterInfo,
 		cm.LeaderVolatileState,
 		cm.LogRO,
