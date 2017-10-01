@@ -11,23 +11,15 @@ import (
 // Volatile state on leaders
 // (Reinitialized after election)
 type LeaderVolatileState struct {
-	// for each server, index of the next log entry to send to that server
-	// (initialized to leader last log index + 1)
-	NextIndex map[ServerId]LogIndex
-
-	// for each server, index of highest log entry known to be replicated
-	// on server
-	// (initialized to 0, increases monotonically)
-	MatchIndex map[ServerId]LogIndex
+	followerManagers map[ServerId]*FollowerManager
 
 	aeSender internal.IAppendEntriesSender
 }
 
 func (lvs *LeaderVolatileState) GoString() string {
 	return fmt.Sprintf(
-		"&LeaderVolatileState{NextIndex: %#v, MatchIndex: %#v}",
-		lvs.NextIndex,
-		lvs.MatchIndex,
+		"&LeaderVolatileState{followerManagers: %#v}",
+		lvs.followerManagers,
 	)
 }
 
@@ -38,8 +30,7 @@ func NewLeaderVolatileState(
 	aeSender internal.IAppendEntriesSender,
 ) (*LeaderVolatileState, error) {
 	lvs := &LeaderVolatileState{
-		make(map[ServerId]LogIndex),
-		make(map[ServerId]LogIndex),
+		make(map[ServerId]*FollowerManager),
 		aeSender,
 	}
 
@@ -48,9 +39,13 @@ func NewLeaderVolatileState(
 			// #5.3-p8s4: When a leader first comes to power, it initializes
 			// all nextIndex values to the index just after the last one in
 			// its log (11 in Figure 7).
-			lvs.NextIndex[peerId] = indexOfLastEntry + 1
-			//
-			lvs.MatchIndex[peerId] = 0
+			fm := NewFollowerManager(
+				peerId,
+				indexOfLastEntry+1,
+				0,
+				aeSender,
+			)
+			lvs.followerManagers[peerId] = fm
 
 			return nil
 		},
@@ -64,33 +59,29 @@ func NewLeaderVolatileState(
 
 // Get nextIndex for the given peer
 func (lvs *LeaderVolatileState) GetNextIndex(peerId ServerId) (LogIndex, error) {
-	nextIndex, ok := lvs.NextIndex[peerId]
+	fm, ok := lvs.followerManagers[peerId]
 	if !ok {
 		return 0, fmt.Errorf("LeaderVolatileState.GetNextIndex(): unknown peer: %v", peerId)
 	}
-	return nextIndex, nil
+	return fm.getNextIndex(), nil
 }
 
 // Decrement nextIndex for the given peer
 func (lvs *LeaderVolatileState) DecrementNextIndex(peerId ServerId) error {
-	nextIndex, ok := lvs.NextIndex[peerId]
+	fm, ok := lvs.followerManagers[peerId]
 	if !ok {
 		return fmt.Errorf("LeaderVolatileState.DecrementNextIndex(): unknown peer: %v", peerId)
 	}
-	if nextIndex <= 1 {
-		return fmt.Errorf("LeaderVolatileState.DecrementNextIndex(): nextIndex <=1 for peer: %v", peerId)
-	}
-	lvs.NextIndex[peerId] = nextIndex - 1
-	return nil
+	return fm.decrementNextIndex()
 }
 
 // Set matchIndex for the given peer and update nextIndex to matchIndex+1
 func (lvs *LeaderVolatileState) SetMatchIndexAndNextIndex(peerId ServerId, matchIndex LogIndex) error {
-	if _, ok := lvs.NextIndex[peerId]; !ok {
+	fm, ok := lvs.followerManagers[peerId]
+	if !ok {
 		return fmt.Errorf("LeaderVolatileState.SetMatchIndexAndNextIndex(): unknown peer: %v", peerId)
 	}
-	lvs.NextIndex[peerId] = matchIndex + 1
-	lvs.MatchIndex[peerId] = matchIndex
+	fm.SetMatchIndexAndNextIndex(matchIndex)
 	return nil
 }
 
@@ -116,6 +107,24 @@ func (lvs *LeaderVolatileState) SendAppendEntriesToPeerAsync(
 			commitIndex,
 		},
 	)
+}
+
+// Helper for tests
+func (lvs *LeaderVolatileState) NextIndexes() map[ServerId]LogIndex {
+	m := make(map[ServerId]LogIndex)
+	for peerId, fm := range lvs.followerManagers {
+		m[peerId] = fm.getNextIndex()
+	}
+	return m
+}
+
+// Helper for tests
+func (lvs *LeaderVolatileState) MatchIndexes() map[ServerId]LogIndex {
+	m := make(map[ServerId]LogIndex)
+	for peerId, fm := range lvs.followerManagers {
+		m[peerId] = fm.getMatchIndex()
+	}
+	return m
 }
 
 // Helper method to find potential new commitIndex.
@@ -155,8 +164,8 @@ func FindNewerCommitIndex(
 		}
 		// finally, check for majority of matchIndex
 		var foundMatches uint = 1 // 1 because we already match!
-		for _, peerMatchIndex := range lvs.MatchIndex {
-			if peerMatchIndex >= N {
+		for _, fm := range lvs.followerManagers {
+			if fm.getMatchIndex() >= N {
 				foundMatches++
 			}
 		}

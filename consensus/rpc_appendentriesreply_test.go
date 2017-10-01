@@ -33,11 +33,11 @@ func TestCM_RpcAER_All_IgnorePreviousTermRpc(t *testing.T) {
 		}
 		if beforeState == LEADER {
 			expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-			if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+			if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 				t.Fatal()
 			}
 			expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-			if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+			if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 				t.Fatal()
 			}
 			mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
@@ -87,11 +87,11 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 
@@ -114,10 +114,10 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	}
 
 	// no other changes
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 	expectedRpcs := map[ServerId]interface{}{}
@@ -139,11 +139,11 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 
@@ -170,11 +170,11 @@ func TestCM_RpcAER_Leader_ResultIsFail(t *testing.T) {
 		t.Fatal()
 	}
 	expectedNextIndex = map[ServerId]LogIndex{102: 11, 103: 10, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex = map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 	//
@@ -206,11 +206,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 
@@ -237,11 +237,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_UpToDatePeer(t *testing.T) {
 		t.Fatal()
 	}
 	expectedNextIndex = map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex = map[ServerId]LogIndex{102: 0, 103: 10, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 	// no new follow-on AppendEntries expected
@@ -264,13 +264,13 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// hack & sanity check
-	mcm.pcm.LeaderVolatileState.NextIndex[102] = 10
+	mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
 	expectedNextIndex := map[ServerId]LogIndex{102: 10, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
-		t.Fatal()
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
+		t.Fatal(mcm.pcm.LeaderVolatileState.NextIndexes())
 	}
 	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 
@@ -299,11 +299,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		t.Fatal()
 	}
 	expectedNextIndex = map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
-		t.Fatal(mcm.pcm.LeaderVolatileState.NextIndex)
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
+		t.Fatal(mcm.pcm.LeaderVolatileState.NextIndexes())
 	}
 	expectedMatchIndex = map[ServerId]LogIndex{102: 10, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 
@@ -372,12 +372,12 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 		t.Fatal()
 	}
 	expectedNextIndex = map[ServerId]LogIndex{102: 13, 103: 11, 104: 13, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
-		t.Fatal(mcm.pcm.LeaderVolatileState.NextIndex)
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
+		t.Fatal(mcm.pcm.LeaderVolatileState.NextIndexes())
 	}
 	expectedMatchIndex = map[ServerId]LogIndex{102: 12, 103: 0, 104: 12, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
-		t.Fatal(mcm.pcm.LeaderVolatileState.MatchIndex)
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
+		t.Fatal(mcm.pcm.LeaderVolatileState.MatchIndexes())
 	}
 }
 
@@ -403,11 +403,11 @@ func TestCM_RpcAER_Leader_IgnoreStateMismatch(t *testing.T) {
 		t.Fatal()
 	}
 	expectedNextIndex := map[ServerId]LogIndex{102: 10, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 	expectedRpc := &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
@@ -437,10 +437,10 @@ func TestCM_RpcAER_Leader_IgnoreStateMismatch(t *testing.T) {
 	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm {
 		t.Fatal()
 	}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})

@@ -349,7 +349,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 
@@ -780,11 +780,11 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 
 	// sanity check - before
 	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 
@@ -808,11 +808,11 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 
 	// after check
 	expectedNextIndex = map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex = map[ServerId]LogIndex{102: 10, 103: 10, 104: 10, 105: 10}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 

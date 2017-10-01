@@ -1,4 +1,4 @@
-package leader_test
+package leader
 
 import (
 	"reflect"
@@ -6,7 +6,6 @@ import (
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
-	"github.com/divtxt/raft/consensus/leader"
 	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/log"
 )
@@ -19,7 +18,7 @@ func TestLeaderVolatileState(t *testing.T) {
 
 	maes := &mockAESender{}
 
-	lvs, err := leader.NewLeaderVolatileState(ci, 42, maes)
+	lvs, err := NewLeaderVolatileState(ci, 42, maes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,12 +28,12 @@ func TestLeaderVolatileState(t *testing.T) {
 	// all nextIndex values to the index just after the last one in
 	// its log (11 in Figure 7).
 	expectedNextIndex := map[ServerId]LogIndex{101: 43, 102: 43}
-	if !reflect.DeepEqual(lvs.NextIndex, expectedNextIndex) {
-		t.Fatal(lvs.NextIndex)
+	if !reflect.DeepEqual(lvs.NextIndexes(), expectedNextIndex) {
+		t.Fatal(lvs.NextIndexes())
 	}
 	expectedMatchIndex := map[ServerId]LogIndex{101: 0, 102: 0}
-	if !reflect.DeepEqual(lvs.MatchIndex, expectedMatchIndex) {
-		t.Fatal(lvs.MatchIndex)
+	if !reflect.DeepEqual(lvs.MatchIndexes(), expectedMatchIndex) {
+		t.Fatal(lvs.MatchIndexes())
 	}
 
 	// getNextIndex
@@ -61,8 +60,8 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedNextIndex = map[ServerId]LogIndex{101: 43, 102: 42}
-	if !reflect.DeepEqual(lvs.NextIndex, expectedNextIndex) {
-		t.Fatal(lvs.NextIndex)
+	if !reflect.DeepEqual(lvs.NextIndexes(), expectedNextIndex) {
+		t.Fatal(lvs.NextIndexes())
 	}
 	idx, err = lvs.GetNextIndex(102)
 	if err != nil {
@@ -72,9 +71,9 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal()
 	}
 
-	lvs.NextIndex[101] = 1
+	lvs.followerManagers[101].nextIndex = 1
 	err = lvs.DecrementNextIndex(101)
-	if err.Error() != "LeaderVolatileState.DecrementNextIndex(): nextIndex <=1 for peer: 101" {
+	if err.Error() != "FollowerManager.DecrementNextIndex(): nextIndex already <=1 for peer: 101" {
 		t.Fatal(err)
 	}
 
@@ -84,24 +83,24 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedNextIndex = map[ServerId]LogIndex{101: 1, 102: 25}
-	if !reflect.DeepEqual(lvs.NextIndex, expectedNextIndex) {
-		t.Fatal(lvs.NextIndex)
+	if !reflect.DeepEqual(lvs.NextIndexes(), expectedNextIndex) {
+		t.Fatal(lvs.NextIndexes())
 	}
 	expectedMatchIndex = map[ServerId]LogIndex{101: 0, 102: 24}
-	if !reflect.DeepEqual(lvs.MatchIndex, expectedMatchIndex) {
-		t.Fatal(lvs.MatchIndex)
+	if !reflect.DeepEqual(lvs.MatchIndexes(), expectedMatchIndex) {
+		t.Fatal(lvs.MatchIndexes())
 	}
 	err = lvs.SetMatchIndexAndNextIndex(102, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectedNextIndex = map[ServerId]LogIndex{101: 1, 102: 1}
-	if !reflect.DeepEqual(lvs.NextIndex, expectedNextIndex) {
-		t.Fatal(lvs.NextIndex)
+	if !reflect.DeepEqual(lvs.NextIndexes(), expectedNextIndex) {
+		t.Fatal(lvs.NextIndexes())
 	}
 	expectedMatchIndex = map[ServerId]LogIndex{101: 0, 102: 0}
-	if !reflect.DeepEqual(lvs.MatchIndex, expectedMatchIndex) {
-		t.Fatal(lvs.MatchIndex)
+	if !reflect.DeepEqual(lvs.MatchIndexes(), expectedMatchIndex) {
+		t.Fatal(lvs.MatchIndexes())
 	}
 
 	// SendAppendEntriesToPeerAsync
@@ -141,13 +140,14 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 	// Figure 8, case (a)
 	terms := []TermNo{1, 2} // leader line for the case
 	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
-	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
+
+	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
-		nci, err := leader.FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		nci, err := FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -208,13 +208,13 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	// Figure 8, case (c)
 	terms := []TermNo{1, 2, 4} // leader line for the case
 	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
-	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
+	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
-		nci, err := leader.FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		nci, err := FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -327,13 +327,13 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	// Figure 8, case (e) extended with extra term 4 entry at index 4
 	terms := []TermNo{1, 2, 4, 4} // leader line for the case
 	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
-	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
+	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
-		nci, err := leader.FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		nci, err := FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -387,13 +387,13 @@ func TestFindNewerCommitIndex_SOLO(t *testing.T) {
 
 	terms := []TermNo{1, 2, 2, 2, 3, 3}
 	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
-	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
+	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
-		nci, err := leader.FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		nci, err := FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
 		if err != nil {
 			t.Fatal(err)
 		}

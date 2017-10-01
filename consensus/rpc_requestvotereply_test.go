@@ -91,11 +91,11 @@ func testIsLeaderWithTermAndSentEmptyAppendEntries(
 
 	// leader state is fresh
 	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal()
 	}
 	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 

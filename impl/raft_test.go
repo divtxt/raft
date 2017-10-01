@@ -215,7 +215,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 
 	// reply handling
 	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
-	if !reflect.DeepEqual(cm.passiveConsensusModule.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+	if !reflect.DeepEqual(cm.passiveConsensusModule.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal()
 	}
 
@@ -231,8 +231,8 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 		104: lastLogIndex,
 		105: lastLogIndex,
 	}
-	if !reflect.DeepEqual(cm.passiveConsensusModule.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
-		t.Fatal(cm.passiveConsensusModule.LeaderVolatileState.MatchIndex)
+	if !reflect.DeepEqual(cm.passiveConsensusModule.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
+		t.Fatal(cm.passiveConsensusModule.LeaderVolatileState.MatchIndexes())
 	}
 }
 
