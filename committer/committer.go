@@ -148,35 +148,37 @@ func (c *Committer) applyPendingCommits() {
 			return
 		}
 
-		// Apply one entry.
-		// TODO: get and apply multiple entries at a time
-		indexToApply := c._lastApplied + 1
-		c.applyOnePendingCommit(indexToApply)
+		// Get one entry from the raft log.
+		// TODO: get multiple entries
+		entries, err := c.log.GetEntriesAfterIndex(c._lastApplied, 1)
+		if err != nil {
+			panic(err)
+		}
+
+		// Apply the entries to the state machine.
+		indexToApply := c._lastApplied
+		for _, entry := range entries {
+			indexToApply++
+			c.applyCommand(indexToApply, entry.Command)
+		}
 		c._lastApplied = indexToApply
 	}
 }
 
-// Apply one pending commit.
+// Apply command to state machine.
 // Assumes lastApplied has not crossed commitIndex!
-func (c *Committer) applyOnePendingCommit(indexToApply LogIndex) {
+func (c *Committer) applyCommand(logIndex LogIndex, commandToApply Command) {
 	// Concurrency: see notes above for applyPendingCommits
 
-	// Get command from the raft log
-	entries, err := c.log.GetEntriesAfterIndex(indexToApply-1, 1)
-	if err != nil {
-		panic(err)
-	}
-	commandToApply := entries[0].Command
-
 	// Apply the command to the state machine.
-	commandResult := c.stateMachine.ApplyCommand(indexToApply, commandToApply)
+	commandResult := c.stateMachine.ApplyCommand(logIndex, commandToApply)
 
 	// Send the result to the commit listener.
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	crc, ok := c.listeners[indexToApply]
+	crc, ok := c.listeners[logIndex]
 	if ok {
-		delete(c.listeners, indexToApply)
+		delete(c.listeners, logIndex)
 		crc <- commandResult
 	}
 }
