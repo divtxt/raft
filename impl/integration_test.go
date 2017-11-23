@@ -25,7 +25,7 @@ func setupConsensusModuleR3(
 	imrsc *inMemoryRpcServiceConnector,
 ) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
-	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
+	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, electionTimeoutLow}
 	ci, err := config.NewClusterInfo(testClusterServerIds, thisServerId)
@@ -33,9 +33,7 @@ func setupConsensusModuleR3(
 		t.Fatal(err)
 	}
 	logger := log.New(os.Stderr, "integration_test", log.Flags())
-	cm, err := NewConsensusModule(
-		ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts, logger,
-	)
+	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, ts, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +50,7 @@ func setupConsensusModuleR3_SOLO(
 	imrsc *inMemoryRpcServiceConnector,
 ) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
-	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
+	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo([]ServerId{101}, 101)
@@ -60,9 +58,7 @@ func setupConsensusModuleR3_SOLO(
 		t.Fatal(err)
 	}
 	logger := log.New(os.Stderr, "integration_test", log.Flags())
-	cm, err := NewConsensusModule(
-		ps, iml, dsm, imrsc, ci, testdata.MaxEntriesPerAppendEntry, ts, logger,
-	)
+	cm, err := NewConsensusModule(ps, iml, dsm, imrsc, ci, ts, logger)
 	if err != nil {
 		t.Fatal(err)
 	}

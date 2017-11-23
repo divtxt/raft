@@ -70,7 +70,6 @@ func NewConsensusModule(
 	stateMachine StateMachine,
 	rpcService RpcService,
 	clusterInfo *config.ClusterInfo,
-	maxEntriesPerAppendEntry uint64,
 	timeSettings config.TimeSettings,
 	logger *log.Logger,
 ) (*ConsensusModule, error) {
@@ -103,7 +102,6 @@ func NewConsensusModule(
 		committer,
 		cm,
 		clusterInfo,
-		maxEntriesPerAppendEntry,
 		timeSettings.ElectionTimeoutLow,
 		time.Now,
 		logger,

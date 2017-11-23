@@ -1,22 +1,23 @@
 package log
 
 import (
+	"strconv"
+
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/testdata"
-	"strconv"
 )
 
 // Make an InMemoryLog with 10 entries with terms as shown in Figure 7, leader line.
 // Commands will be Command("c1"), Command("c2"), etc.
-func TestUtil_NewInMemoryLog_WithFigure7LeaderLine() *InMemoryLog {
+func TestUtil_NewInMemoryLog_WithFigure7LeaderLine(maxEntries uint64) *InMemoryLog {
 	figure7LeaderLine := testdata.TestUtil_MakeFigure7LeaderLineTerms()
-	return TestUtil_NewInMemoryLog_WithTerms(figure7LeaderLine)
+	return TestUtil_NewInMemoryLog_WithTerms(figure7LeaderLine, maxEntries)
 }
 
 // Make an InMemoryLog with entries with given terms.
 // Commands will be Command("c1"), Command("c2"), etc.
-func TestUtil_NewInMemoryLog_WithTerms(logTerms []TermNo) *InMemoryLog {
-	inmem_log := NewInMemoryLog()
+func TestUtil_NewInMemoryLog_WithTerms(logTerms []TermNo, maxEntries uint64) *InMemoryLog {
+	inmem_log := NewInMemoryLog(maxEntries)
 
 	for i, term := range logTerms {
 		command := Command("c" + strconv.Itoa(i+1))

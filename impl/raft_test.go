@@ -30,7 +30,7 @@ func setupConsensusModuleR2(
 	logTerms []TermNo,
 ) (*ConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
+	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
@@ -39,9 +39,7 @@ func setupConsensusModuleR2(
 		t.Fatal(err)
 	}
 	logger := log.New(os.Stderr, "integration_test", log.Flags())
-	cm, err := NewConsensusModule(
-		ps, iml, dsm, mrs, ci, testdata.MaxEntriesPerAppendEntry, ts, logger,
-	)
+	cm, err := NewConsensusModule(ps, iml, dsm, mrs, ci, ts, logger)
 	if err != nil {
 		t.Fatal(err)
 	}

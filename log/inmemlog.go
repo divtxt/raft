@@ -3,18 +3,22 @@ package log
 import (
 	"errors"
 	"fmt"
+
 	. "github.com/divtxt/raft"
 )
 
-// In-memory implementation of locking as raft.Log
-
+// InMemoryLog is an in-memory raft Log.
 type InMemoryLog struct {
-	entries []LogEntry
+	entries    []LogEntry
+	maxEntries uint64
 }
 
-func NewInMemoryLog() *InMemoryLog {
+func NewInMemoryLog(maxEntries uint64) *InMemoryLog {
+	if maxEntries <= 0 {
+		panic("maxEntries must be greater than zero")
+	}
 	entries := []LogEntry{}
-	iml := &InMemoryLog{entries}
+	iml := &InMemoryLog{entries, maxEntries}
 	return iml
 }
 
@@ -34,10 +38,7 @@ func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 	return iml.entries[li-1].TermNo, nil
 }
 
-func (iml *InMemoryLog) GetEntriesAfterIndex(
-	afterLogIndex LogIndex,
-	maxEntries uint64,
-) ([]LogEntry, error) {
+func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry, error) {
 	iole, err := iml.GetIndexOfLastEntry()
 	if err != nil {
 		return nil, err
@@ -51,10 +52,6 @@ func (iml *InMemoryLog) GetEntriesAfterIndex(
 		)
 	}
 
-	if maxEntries <= 0 {
-		panic("maxEntries must be greater than zero")
-	}
-
 	var numEntriesToGet uint64 = uint64(iole - afterLogIndex)
 
 	// Short-circuit allocation for no entries to return
@@ -62,8 +59,8 @@ func (iml *InMemoryLog) GetEntriesAfterIndex(
 		return []LogEntry{}, nil
 	}
 
-	if numEntriesToGet > maxEntries {
-		numEntriesToGet = maxEntries
+	if numEntriesToGet > iml.maxEntries {
+		numEntriesToGet = iml.maxEntries
 	}
 
 	logEntries := make([]LogEntry, numEntriesToGet)

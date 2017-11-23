@@ -2,9 +2,10 @@ package testhelpers
 
 import (
 	"bytes"
-	. "github.com/divtxt/raft"
 	"reflect"
 	"testing"
+
+	. "github.com/divtxt/raft"
 )
 
 // Helper
@@ -13,8 +14,10 @@ func TestCommandEquals(c Command, s string) bool {
 }
 
 // Blackbox test.
+//
 // Send a Log with 10 entries with terms as shown in Figure 7, leader line.
 // Entries should be Command("c1"), Command("c2"), etc.
+// GetEntriesAfterIndex() policy should not return more than 3 entries.
 func BlackboxTest_Log(t *testing.T, log Log) {
 	// Initial data tests
 	iole, err := log.GetIndexOfLastEntry()
@@ -42,7 +45,7 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 	}
 
 	// get multiple entries
-	entries, err := log.GetEntriesAfterIndex(4, 3)
+	entries, err := log.GetEntriesAfterIndex(4)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +152,7 @@ func TestHelper_GetLogEntryAtIndex(log LogReadOnly, li LogIndex) LogEntry {
 	if li == 0 {
 		panic("oops!")
 	}
-	entries, err := log.GetEntriesAfterIndex(li-1, 1)
+	entries, err := log.GetEntriesAfterIndex(li - 1)
 	if err != nil {
 		panic(err)
 	}

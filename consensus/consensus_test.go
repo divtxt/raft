@@ -28,7 +28,7 @@ func setupManagedConsensusModuleR2(
 	solo bool,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
+	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
 	mc := newMockCommitter()
 	mrs := testhelpers.NewMockRpcSender()
 	var allServerIds []ServerId
@@ -48,7 +48,6 @@ func setupManagedConsensusModuleR2(
 		mc,
 		mrs,
 		ci,
-		testdata.MaxEntriesPerAppendEntry,
 		testdata.ElectionTimeoutLow,
 		cc.now,
 		log.New(os.Stderr, "consensus_test", log.Flags()),

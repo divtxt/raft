@@ -12,7 +12,7 @@ import (
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
 // log[lastApplied] to state machine (#5.3)
 func TestCommitter(t *testing.T) {
-	iml := log.TestUtil_NewInMemoryLog_WithFigure7LeaderLine()
+	iml := log.TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
 	dsm := testhelpers.NewDummyStateMachine(3)
 
 	committerImpl := NewCommitter(iml, dsm)

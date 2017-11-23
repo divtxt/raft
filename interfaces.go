@@ -38,20 +38,20 @@ type Log interface {
 
 	// Get multiple entries after the given index.
 	//
-	// This method should as many entries as available after the given index up to the
-	// given count of maxEntries.
-	//
 	// The returned entries will be sent as is in an AppendEntries RPC to a follower.
+	//
+	// This method is expected to decide how many entries to return based on some policy.
+	// This interface itself has no specific requirements on the policy, but it is expected
+	// that such a policy will be based on various cluster behavior as well as RPC behavior.
+	//
+	// If there are entries after the given index, the call must return at least one entry.
 	//
 	// It is an error if the given index is beyond the end of the log.
 	// (i.e. the given index is greater than indexOfLastEntry)
 	//
-	// If there are entries after the given index, the call must return at
-	// least one entry.
-	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
-	GetEntriesAfterIndex(li LogIndex, maxEntries uint64) ([]LogEntry, error)
+	GetEntriesAfterIndex(li LogIndex) ([]LogEntry, error)
 
 	// Set the entries after the given index.
 	//
@@ -97,7 +97,7 @@ type Log interface {
 type LogReadOnly interface {
 	GetIndexOfLastEntry() (LogIndex, error)
 	GetTermAtIndex(LogIndex) (TermNo, error)
-	GetEntriesAfterIndex(LogIndex, uint64) ([]LogEntry, error)
+	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 }
 
 // StateMachine is the interface that the state machine must expose to Raft.

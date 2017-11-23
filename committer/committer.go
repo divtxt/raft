@@ -148,20 +148,21 @@ func (c *Committer) applyPendingCommits() {
 			return
 		}
 
-		// Get one entry from the raft log.
-		// TODO: get multiple entries
-		entries, err := c.log.GetEntriesAfterIndex(c._lastApplied, 1)
+		// Get a batch of entries from the raft log.
+		entries, err := c.log.GetEntriesAfterIndex(c._lastApplied)
 		if err != nil {
 			panic(err)
 		}
 
 		// Apply the entries to the state machine.
-		indexToApply := c._lastApplied
 		for _, entry := range entries {
-			indexToApply++
+			indexToApply := c._lastApplied + 1
+			if indexToApply > commitIndexSnapshot {
+				break // Don't apply uncommitted entries.
+			}
 			c.applyCommand(indexToApply, entry.Command)
+			c._lastApplied = indexToApply
 		}
-		c._lastApplied = indexToApply
 	}
 }
 
