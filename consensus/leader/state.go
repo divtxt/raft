@@ -5,6 +5,7 @@ import (
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
+	"github.com/divtxt/raft/internal"
 )
 
 // Volatile state on leaders
@@ -18,16 +19,20 @@ type LeaderVolatileState struct {
 	// on server
 	// (initialized to 0, increases monotonically)
 	MatchIndex map[ServerId]LogIndex
+
+	aeSender internal.IAppendEntriesSender
 }
 
 // New instance set up for a fresh leader
 func NewLeaderVolatileState(
 	clusterInfo *config.ClusterInfo,
 	indexOfLastEntry LogIndex,
+	aeSender internal.IAppendEntriesSender,
 ) (*LeaderVolatileState, error) {
 	lvs := &LeaderVolatileState{
 		make(map[ServerId]LogIndex),
 		make(map[ServerId]LogIndex),
+		aeSender,
 	}
 
 	err := clusterInfo.ForEachPeer(
@@ -78,6 +83,31 @@ func (lvs *LeaderVolatileState) SetMatchIndexAndNextIndex(peerId ServerId, match
 	}
 	lvs.NextIndex[peerId] = matchIndex + 1
 	lvs.MatchIndex[peerId] = matchIndex
+	return nil
+}
+
+// Construct and send RpcAppendEntries to the given peer.
+func (lvs *LeaderVolatileState) SendAppendEntriesToPeerAsync(
+	peerId ServerId,
+	empty bool,
+	currentTerm TermNo,
+	commitIndex LogIndex,
+) error {
+	//
+	peerNextIndex, err := lvs.GetNextIndex(peerId)
+	if err != nil {
+		return err
+	}
+	//
+	lvs.aeSender.SendAppendEntriesToPeerAsync(
+		internal.SendAppendEntriesParams{
+			peerId,
+			peerNextIndex,
+			empty,
+			currentTerm,
+			commitIndex,
+		},
+	)
 	return nil
 }
 

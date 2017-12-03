@@ -23,6 +23,7 @@ type PassiveConsensusModule struct {
 	_log                Log
 	_committer          internal.ICommitter
 	rpcSendOnly         internal.RpcSendOnly
+	_aeSender           internal.IAppendEntriesSender
 	logger              *log.Logger
 
 	// -- Config
@@ -78,6 +79,8 @@ func NewPassiveConsensusModule(
 
 	electionTimeoutTimer := util.NewTimer(electionTimeoutLow, nowFunc)
 
+	var aeSender internal.IAppendEntriesSender = &appendEntriesSender{log, rpcSendOnly}
+
 	pcm := &PassiveConsensusModule{
 		// -- External components
 		raftPersistentState,
@@ -85,6 +88,7 @@ func NewPassiveConsensusModule(
 		log,
 		committer,
 		rpcSendOnly,
+		aeSender,
 		logger,
 
 		// -- Config
@@ -289,7 +293,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
-	cm.LeaderVolatileState, err = leader.NewLeaderVolatileState(cm.ClusterInfo, iole)
+	cm.LeaderVolatileState, err = leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm._aeSender)
 	if err != nil {
 		return err
 	}
@@ -322,52 +326,19 @@ func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 // -- leader code
 
 func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error {
+	currentTerm := cm.RaftPersistentState.GetCurrentTerm()
+	commitIndex := cm.GetCommitIndex()
+	//
 	return cm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
-			return cm.sendAppendEntriesToPeer(serverId, empty)
+			return cm.LeaderVolatileState.SendAppendEntriesToPeerAsync(
+				serverId,
+				empty,
+				currentTerm,
+				commitIndex,
+			)
 		},
 	)
-}
-
-func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId, empty bool) error {
-	serverTerm := cm.RaftPersistentState.GetCurrentTerm()
-	//
-	peerNextIndex, err := cm.LeaderVolatileState.GetNextIndex(peerId)
-	if err != nil {
-		return err
-	}
-	peerLastLogIndex := peerNextIndex - 1
-	var peerLastLogTerm TermNo
-	if peerLastLogIndex == 0 {
-		peerLastLogTerm = 0
-	} else {
-		var err error
-		peerLastLogTerm, err = cm.LogRO.GetTermAtIndex(peerLastLogIndex)
-		if err != nil {
-			return err
-		}
-	}
-	//
-	var entriesToSend []LogEntry
-	if empty {
-		entriesToSend = []LogEntry{}
-	} else {
-		var err error
-		entriesToSend, err = cm.LogRO.GetEntriesAfterIndex(peerLastLogIndex)
-		if err != nil {
-			return err
-		}
-	}
-	//
-	rpcAppendEntries := &RpcAppendEntries{
-		serverTerm,
-		peerLastLogIndex,
-		peerLastLogTerm,
-		entriesToSend,
-		cm.GetCommitIndex(),
-	}
-	cm.rpcSendOnly.SendOnlyRpcAppendEntriesAsync(peerId, rpcAppendEntries)
-	return nil
 }
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority

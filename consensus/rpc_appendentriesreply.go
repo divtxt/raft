@@ -5,6 +5,7 @@ package consensus
 
 import (
 	"fmt"
+
 	. "github.com/divtxt/raft"
 )
 
@@ -54,7 +55,12 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 		if err != nil {
 			return err
 		}
-		err = cm.sendAppendEntriesToPeer(from, false)
+		err = cm.LeaderVolatileState.SendAppendEntriesToPeerAsync(
+			from,
+			false,
+			serverTerm,
+			cm.GetCommitIndex(),
+		)
 		if err != nil {
 			return err
 		}
