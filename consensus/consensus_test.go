@@ -351,7 +351,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	}
 
 	// nothing to send
-	err = mcm.pcm.sendAppendEntriesToPeer(102, false)
+	err = mcm.testHelper_sendAppendEntriesToPeer(102, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +373,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.sendAppendEntriesToPeer(102, true)
+	err = mcm.testHelper_sendAppendEntriesToPeer(102, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,7 +391,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// send one
-	err = mcm.pcm.sendAppendEntriesToPeer(102, false)
+	err = mcm.testHelper_sendAppendEntriesToPeer(102, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +419,7 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.sendAppendEntriesToPeer(102, false)
+	err = mcm.testHelper_sendAppendEntriesToPeer(102, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -961,6 +961,17 @@ func (mcm *managedConsensusModule) makeAEWithTerm(peer ServerId) *RpcAppendEntri
 		nil,
 		0,
 	}
+}
+
+func (mcm *managedConsensusModule) testHelper_sendAppendEntriesToPeer(peerId ServerId, empty bool) error {
+	currentTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
+	commitIndex := mcm.pcm.GetCommitIndex()
+	return mcm.pcm.LeaderVolatileState.SendAppendEntriesToPeerAsync(
+		peerId,
+		empty,
+		currentTerm,
+		commitIndex,
+	)
 }
 
 // --

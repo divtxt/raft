@@ -7,6 +7,7 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus/leader"
+	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/log"
 )
 
@@ -16,7 +17,9 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lvs, err := leader.NewLeaderVolatileState(ci, 42)
+	maes := &mockAESender{}
+
+	lvs, err := leader.NewLeaderVolatileState(ci, 42, maes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,6 +103,30 @@ func TestLeaderVolatileState(t *testing.T) {
 	if !reflect.DeepEqual(lvs.MatchIndex, expectedMatchIndex) {
 		t.Fatal(lvs.MatchIndex)
 	}
+
+	// SendAppendEntriesToPeerAsync
+	err = lvs.SendAppendEntriesToPeerAsync(102, false, 13, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedParams := internal.SendAppendEntriesParams{
+		102,
+		1,
+		false,
+		13,
+		1,
+	}
+	if *maes.params != expectedParams {
+		t.Fatal(maes.params)
+	}
+	maes.params = nil
+	err = lvs.SendAppendEntriesToPeerAsync(105, false, 13, 1)
+	if err.Error() != "LeaderVolatileState.GetNextIndex(): unknown peer: 105" {
+		t.Fatal(err)
+	}
+	if maes.params != nil {
+		t.Fatal(maes.params)
+	}
 }
 
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
@@ -114,7 +141,7 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 	// Figure 8, case (a)
 	terms := []TermNo{1, 2} // leader line for the case
 	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
-	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)))
+	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +208,7 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	// Figure 8, case (c)
 	terms := []TermNo{1, 2, 4} // leader line for the case
 	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
-	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)))
+	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -300,7 +327,7 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	// Figure 8, case (e) extended with extra term 4 entry at index 4
 	terms := []TermNo{1, 2, 4, 4} // leader line for the case
 	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
-	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)))
+	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -360,7 +387,7 @@ func TestFindNewerCommitIndex_SOLO(t *testing.T) {
 
 	terms := []TermNo{1, 2, 2, 2, 3, 3}
 	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
-	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)))
+	lvs, err := leader.NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,4 +423,17 @@ func TestFindNewerCommitIndex_SOLO(t *testing.T) {
 		t.Fatal(nci)
 	}
 
+}
+
+type mockAESender struct {
+	params *internal.SendAppendEntriesParams
+}
+
+func (maes *mockAESender) SendAppendEntriesToPeerAsync(
+	params internal.SendAppendEntriesParams,
+) {
+	if maes.params != nil {
+		panic("more than one call!")
+	}
+	maes.params = &params
 }
