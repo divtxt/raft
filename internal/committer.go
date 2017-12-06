@@ -1,4 +1,4 @@
-package consensus
+package internal
 
 import (
 	"github.com/divtxt/raft"

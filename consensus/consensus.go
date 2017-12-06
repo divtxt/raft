@@ -10,6 +10,7 @@ import (
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus/candidate"
 	"github.com/divtxt/raft/consensus/leader"
+	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/util"
 )
 
@@ -20,7 +21,7 @@ type PassiveConsensusModule struct {
 	RaftPersistentState RaftPersistentState
 	LogRO               LogReadOnly
 	_log                Log
-	_committer          ICommitter
+	_committer          internal.ICommitter
 	RpcSendOnly         RpcSendOnly
 	logger              *log.Logger
 
@@ -48,7 +49,7 @@ type PassiveConsensusModule struct {
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
-	committer ICommitter,
+	committer internal.ICommitter,
 	rpcSendOnly RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	electionTimeoutLow time.Duration,

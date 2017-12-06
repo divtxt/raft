@@ -3,7 +3,7 @@ package committer
 import (
 	"testing"
 
-	"github.com/divtxt/raft/consensus"
+	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/testhelpers"
 	"github.com/divtxt/raft/util"
@@ -16,7 +16,7 @@ func TestCommitter(t *testing.T) {
 	dsm := testhelpers.NewDummyStateMachine(3)
 
 	committerImpl := NewCommitter(iml, dsm)
-	var committer consensus.ICommitter = committerImpl
+	var committer internal.ICommitter = committerImpl
 
 	// CommitAsync should trigger run that drives commits
 	committer.CommitAsync(4)
