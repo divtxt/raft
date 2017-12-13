@@ -52,6 +52,7 @@ func NewPassiveConsensusModule(
 	log Log,
 	committer internal.ICommitter,
 	rpcSendOnly internal.RpcSendOnly,
+	aeSender internal.IAppendEntriesSender,
 	clusterInfo *config.ClusterInfo,
 	electionTimeoutLow time.Duration,
 	nowFunc func() time.Time,
@@ -78,8 +79,6 @@ func NewPassiveConsensusModule(
 	}
 
 	electionTimeoutTimer := util.NewTimer(electionTimeoutLow, nowFunc)
-
-	var aeSender internal.IAppendEntriesSender = &appendEntriesSender{log, rpcSendOnly}
 
 	pcm := &PassiveConsensusModule{
 		// -- External components

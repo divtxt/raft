@@ -1,16 +1,26 @@
-package consensus
+package aesender
 
 import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/internal"
 )
 
-type appendEntriesSender struct {
+// LogOnlyAESender is an implementation of AppendEntriesSender that can
+// only construct RpcAppendEntries from the raft log.
+// It is unable to handle raft snapshots.
+type LogOnlyAESender struct {
 	logRO       LogReadOnly
 	rpcSendOnly internal.RpcSendOnly
 }
 
-func (aes *appendEntriesSender) SendAppendEntriesToPeerAsync(
+func NewLogOnlyAESender(
+	logRO LogReadOnly,
+	rpcSendOnly internal.RpcSendOnly,
+) internal.IAppendEntriesSender {
+	return &LogOnlyAESender{logRO, rpcSendOnly}
+}
+
+func (s *LogOnlyAESender) SendAppendEntriesToPeerAsync(
 	params internal.SendAppendEntriesParams,
 ) {
 	peerLastLogIndex := params.PeerNextIndex - 1
@@ -20,7 +30,7 @@ func (aes *appendEntriesSender) SendAppendEntriesToPeerAsync(
 		peerLastLogTerm = 0
 	} else {
 		var err error
-		peerLastLogTerm, err = aes.logRO.GetTermAtIndex(peerLastLogIndex)
+		peerLastLogTerm, err = s.logRO.GetTermAtIndex(peerLastLogIndex)
 		if err != nil {
 			return
 		}
@@ -31,7 +41,7 @@ func (aes *appendEntriesSender) SendAppendEntriesToPeerAsync(
 		entriesToSend = []LogEntry{}
 	} else {
 		var err error
-		entriesToSend, err = aes.logRO.GetEntriesAfterIndex(peerLastLogIndex)
+		entriesToSend, err = s.logRO.GetEntriesAfterIndex(peerLastLogIndex)
 		if err != nil {
 			return
 		}
@@ -44,5 +54,5 @@ func (aes *appendEntriesSender) SendAppendEntriesToPeerAsync(
 		entriesToSend,
 		params.CommitIndex,
 	}
-	aes.rpcSendOnly.SendOnlyRpcAppendEntriesAsync(params.PeerId, rpcAppendEntries)
+	s.rpcSendOnly.SendOnlyRpcAppendEntriesAsync(params.PeerId, rpcAppendEntries)
 }

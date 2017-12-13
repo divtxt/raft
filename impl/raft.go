@@ -28,6 +28,7 @@ import (
 	"time"
 
 	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/aesender"
 	"github.com/divtxt/raft/committer"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
@@ -96,11 +97,14 @@ func NewConsensusModule(
 		nil,
 	}
 
+	aes := aesender.NewLogOnlyAESender(raftLog, cm)
+
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		raftLog,
 		committer,
 		cm,
+		aes,
 		clusterInfo,
 		timeSettings.ElectionTimeoutLow,
 		time.Now,
