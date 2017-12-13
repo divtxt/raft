@@ -22,7 +22,7 @@ type PassiveConsensusModule struct {
 	LogRO               LogReadOnly
 	_log                Log
 	_committer          internal.ICommitter
-	RpcSendOnly         RpcSendOnly
+	rpcSendOnly         internal.RpcSendOnly
 	logger              *log.Logger
 
 	// -- Config
@@ -50,7 +50,7 @@ func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
 	committer internal.ICommitter,
-	rpcSendOnly RpcSendOnly,
+	rpcSendOnly internal.RpcSendOnly,
 	clusterInfo *config.ClusterInfo,
 	electionTimeoutLow time.Duration,
 	nowFunc func() time.Time,
@@ -272,7 +272,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	err = cm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-			cm.RpcSendOnly.SendOnlyRpcRequestVoteAsync(serverId, rpcRequestVote)
+			cm.rpcSendOnly.SendOnlyRpcRequestVoteAsync(serverId, rpcRequestVote)
 			return nil
 		},
 	)
@@ -366,7 +366,7 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToPeer(peerId ServerId, empty
 		entriesToSend,
 		cm.GetCommitIndex(),
 	}
-	cm.RpcSendOnly.SendOnlyRpcAppendEntriesAsync(peerId, rpcAppendEntries)
+	cm.rpcSendOnly.SendOnlyRpcAppendEntriesAsync(peerId, rpcAppendEntries)
 	return nil
 }
 
@@ -401,12 +401,4 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 	}
 	cm._committer.RemoveListenersAfterIndex(li)
 	return cm._log.SetEntriesAfterIndex(li, entries)
-}
-
-// -- rpc bridging things
-
-// This is an internal equivalent to RpcService without the reply part.
-type RpcSendOnly interface {
-	SendOnlyRpcAppendEntriesAsync(toServer ServerId, rpc *RpcAppendEntries)
-	SendOnlyRpcRequestVoteAsync(toServer ServerId, rpc *RpcRequestVote)
 }
