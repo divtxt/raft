@@ -8,6 +8,7 @@ import (
 	"time"
 
 	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/aesender"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus/candidate"
 	raft_log "github.com/divtxt/raft/log"
@@ -31,6 +32,7 @@ func setupManagedConsensusModuleR2(
 	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
 	mc := newMockCommitter()
 	mrs := testhelpers.NewMockRpcSender()
+	aes := aesender.NewLogOnlyAESender(iml, mrs)
 	var allServerIds []ServerId
 	if solo {
 		allServerIds = []ServerId{testdata.ThisServerId}
@@ -47,6 +49,7 @@ func setupManagedConsensusModuleR2(
 		iml,
 		mc,
 		mrs,
+		aes,
 		ci,
 		testdata.ElectionTimeoutLow,
 		cc.now,
