@@ -99,7 +99,7 @@ func (lvs *LeaderVolatileState) SendAppendEntriesToPeerAsync(
 		return err
 	}
 	//
-	lvs.aeSender.SendAppendEntriesToPeerAsync(
+	return lvs.aeSender.SendAppendEntriesToPeerAsync(
 		internal.SendAppendEntriesParams{
 			peerId,
 			peerNextIndex,
@@ -108,7 +108,6 @@ func (lvs *LeaderVolatileState) SendAppendEntriesToPeerAsync(
 			commitIndex,
 		},
 	)
-	return nil
 }
 
 // Helper method to find potential new commitIndex.

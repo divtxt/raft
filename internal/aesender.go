@@ -16,8 +16,8 @@ type IAppendEntriesSender interface {
 	// The construction and sending of the RpcAppendEntries is expected to be asynchronous.
 	// See RpcSendOnly.SendOnlyRpcAppendEntriesAsync.
 	//
-	// Because processing is expected to be asynchronous, we do not have an error return value.
-	SendAppendEntriesToPeerAsync(params SendAppendEntriesParams)
+	// This method can return errors if the parameters are invalid.
+	SendAppendEntriesToPeerAsync(params SendAppendEntriesParams) error
 }
 
 type SendAppendEntriesParams struct {
