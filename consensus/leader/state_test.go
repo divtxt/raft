@@ -431,9 +431,10 @@ type mockAESender struct {
 
 func (maes *mockAESender) SendAppendEntriesToPeerAsync(
 	params internal.SendAppendEntriesParams,
-) {
+) error {
 	if maes.params != nil {
 		panic("more than one call!")
 	}
 	maes.params = &params
+	return nil
 }

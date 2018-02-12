@@ -22,7 +22,7 @@ func NewLogOnlyAESender(
 
 func (s *LogOnlyAESender) SendAppendEntriesToPeerAsync(
 	params internal.SendAppendEntriesParams,
-) {
+) error {
 	peerLastLogIndex := params.PeerNextIndex - 1
 	//
 	var peerLastLogTerm TermNo
@@ -32,7 +32,7 @@ func (s *LogOnlyAESender) SendAppendEntriesToPeerAsync(
 		var err error
 		peerLastLogTerm, err = s.logRO.GetTermAtIndex(peerLastLogIndex)
 		if err != nil {
-			return
+			return err
 		}
 	}
 	//
@@ -43,7 +43,7 @@ func (s *LogOnlyAESender) SendAppendEntriesToPeerAsync(
 		var err error
 		entriesToSend, err = s.logRO.GetEntriesAfterIndex(peerLastLogIndex)
 		if err != nil {
-			return
+			return err
 		}
 	}
 	//
@@ -55,4 +55,5 @@ func (s *LogOnlyAESender) SendAppendEntriesToPeerAsync(
 		params.CommitIndex,
 	}
 	s.rpcSendOnly.SendOnlyRpcAppendEntriesAsync(params.PeerId, rpcAppendEntries)
+	return nil
 }
