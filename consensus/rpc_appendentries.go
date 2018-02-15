@@ -6,6 +6,7 @@ package consensus
 
 import (
 	"fmt"
+	"log"
 
 	. "github.com/divtxt/raft"
 )
@@ -77,6 +78,11 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 		return nil, err
 	}
 	if iole < prevLogIndex {
+		log.Printf(
+			"Rpc_RpcAppendEntries: reject because iole %v is < prevLogIndex %v",
+			iole,
+			prevLogIndex,
+		)
 		return makeReply(false), nil
 	}
 

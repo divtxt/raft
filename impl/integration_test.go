@@ -288,6 +288,123 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 	}
 }
 
+func TestCluster_AllCrash(t *testing.T) {
+	imrsh, cm1, diml1, dsm1, cm2, diml2, dsm2, cm3, _, _ := testSetupClusterWithLeader(t)
+	defer cm1.Stop()
+
+	// Apply a command on the leader
+	crc101, result := cm1.AppendCommand(testhelpers.DummyCommand(101))
+
+	if result != nil {
+		t.Fatal()
+	}
+	if crc101 == nil {
+		t.Fatal()
+	}
+	testhelpers.AssertWillBlock(crc101)
+	if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
+		t.Fatal()
+	}
+
+	expectedLe := LogEntry{1, Command("c101")}
+
+	// Command is in the leader's log
+	le := testhelpers.TestHelper_GetLogEntryAtIndex(diml1, 1)
+	if !reflect.DeepEqual(le, expectedLe) {
+		t.Fatal(le)
+	}
+	// but not yet in connected follower's
+	iole, err := diml2.GetIndexOfLastEntry()
+	if err != nil || iole != 0 {
+		t.Fatal()
+	}
+
+	// A tick allows command to be replicated to connected followers
+	time.Sleep(testdata.TickerDuration)
+
+	iole, err = diml2.GetIndexOfLastEntry()
+	if err != nil || iole != 1 {
+		t.Fatal(iole)
+	}
+	le = testhelpers.TestHelper_GetLogEntryAtIndex(diml2, 1)
+	if !reflect.DeepEqual(le, expectedLe) {
+		t.Fatal(le)
+	}
+
+	// and committed on the leader
+	if dsm1.GetLastApplied() != 1 {
+		t.Fatal()
+	}
+	if !dsm1.AppliedCommandsEqual(101) {
+		t.Fatal()
+	}
+	if v := testhelpers.GetCommandResult(crc101); v != "rc101" {
+		t.Fatal(v)
+	}
+
+	// but not yet on the connected followers
+	if dsm2.GetLastApplied() != 0 {
+		t.Fatal()
+	}
+
+	// Another tick propagates the commit to the connected followers
+	time.Sleep(testdata.TickerDuration)
+	if dsm2.GetLastApplied() != 1 {
+		t.Fatal()
+	}
+	if !dsm2.AppliedCommandsEqual(101) {
+		t.Fatal()
+	}
+
+	// Simulate two followers crashing
+	time.Sleep(testdata.TickerDuration)
+	imrsh.cms[102] = nil
+	cm2.Stop()
+	cm2 = nil
+	imrsh.cms[103] = nil
+	cm3.Stop()
+	cm3 = nil
+	log.Printf("AllCrash")
+
+	// One crashed follower restarts with no log entries
+	time.Sleep(testdata.TickerDuration)
+	time.Sleep(testdata.TickerDuration)
+	cm3b, diml3b, dsm3b := setupConsensusModuleR3(
+		t,
+		103,
+		testdata.ElectionTimeoutLow,
+		nil,
+		imrsh.getRpcService(103),
+	)
+	defer cm3b.Stop()
+	imrsh.cms[103] = cm3b
+	if dsm3b.GetLastApplied() != 0 {
+		t.Fatal()
+	}
+
+	// A tick propagates the command and the commit to the recovered follower
+	time.Sleep(testdata.TickerDuration)
+	time.Sleep(testdata.TickerDuration)
+
+	if cm1.IsStopped() {
+		t.Fatal(cm1)
+	}
+
+	// FIXME: err if cm3b.GetLeader() != 101
+	le = testhelpers.TestHelper_GetLogEntryAtIndex(diml3b, 1)
+	if !reflect.DeepEqual(le, expectedLe) {
+		t.Fatal(le)
+	}
+	if dsm3b.GetLastApplied() != 1 {
+		t.Fatal()
+	}
+	if !dsm3b.AppliedCommandsEqual(101) {
+		t.Fatal()
+	}
+
+	//t.Fatal()
+}
+
 func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	cm, diml, dsm := testSetup_SOLO_Leader(t)
 	defer cm.Stop()
@@ -357,7 +474,9 @@ func (imrs *inMemoryRpcServiceConnector) RpcAppendEntries(
 ) *RpcAppendEntriesReply {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
-		return cm.ProcessRpcAppendEntries(imrs.from, rpc)
+		aer := cm.ProcessRpcAppendEntries(imrs.from, rpc)
+		log.Printf("RpcAppendEntries -> %v : %#v -> %#v", toServer, rpc, aer)
+		return aer
 	}
 	return nil
 }

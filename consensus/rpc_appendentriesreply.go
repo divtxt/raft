@@ -68,7 +68,17 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 	// #5.3-p8s6: After a rejection, the leader decrements nextIndex and
 	// retries the AppendEntries RPC.
 	if !appendEntriesReply.Success {
-		err := cm.LeaderVolatileState.DecrementNextIndex(from)
+		nextIndex, err := cm.LeaderVolatileState.GetNextIndex(from)
+		if err != nil {
+			return err
+		}
+		log.Printf(
+			"RpcReply_RpcAppendEntriesReply: DecrementNextIndex: %v\n ae: %#v\naer: %#v\n",
+			nextIndex,
+			appendEntries,
+			appendEntriesReply,
+		)
+		err = cm.LeaderVolatileState.DecrementNextIndex(from)
 		if err != nil {
 			return err
 		}
