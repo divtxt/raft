@@ -5,6 +5,8 @@ package consensus
 
 import (
 	"fmt"
+	"log"
+
 	. "github.com/divtxt/raft"
 )
 
@@ -29,6 +31,22 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 			serverTerm,
 		)
 	}
+
+	// Ignore reply for an RpcAppendEntries that does not match the current state.
+	nextIndex, err := cm.LeaderVolatileState.GetNextIndex(from)
+	if err != nil {
+		return err
+	}
+	expectedPrevLogIndex := nextIndex - 1
+	if appendEntries.PrevLogIndex != expectedPrevLogIndex {
+		log.Printf(
+			"RpcReply_RpcAppendEntriesReply: Ignore due to PrevLogIndex mismatch: %d != %d",
+			appendEntries.PrevLogIndex,
+			expectedPrevLogIndex,
+		)
+		return nil
+	}
+	// TODO: similar check for PrevLogTerm?
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
 	// set currentTerm = T, convert to follower (#5.1)
@@ -64,7 +82,7 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 	// #RFS-L3.1: If successful: update nextIndex and matchIndex for
 	// follower (#5.3)
 	newMatchIndex := appendEntries.PrevLogIndex + LogIndex(len(appendEntries.Entries))
-	err := cm.LeaderVolatileState.SetMatchIndexAndNextIndex(from, newMatchIndex)
+	err = cm.LeaderVolatileState.SetMatchIndexAndNextIndex(from, newMatchIndex)
 	if err != nil {
 		return err
 	}

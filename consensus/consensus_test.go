@@ -948,6 +948,21 @@ func (mcm *managedConsensusModule) tickTilElectionTimeout(t *testing.T) {
 	}
 }
 
+func (mcm *managedConsensusModule) makeAEWithTerm(peer ServerId) *RpcAppendEntries {
+	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
+	peerNextIndex, err := mcm.pcm.LeaderVolatileState.GetNextIndex(peer)
+	if err != nil {
+		panic(err)
+	}
+	return &RpcAppendEntries{
+		serverTerm,
+		peerNextIndex - 1,
+		0,
+		nil,
+		0,
+	}
+}
+
 // --
 
 type controlledClock struct {

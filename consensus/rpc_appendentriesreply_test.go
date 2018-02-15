@@ -83,7 +83,7 @@ func TestCM_RpcAER_FollowerOrCandidate_ReturnsErrorForSameTermReply(t *testing.T
 func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
-	sentRpc := makeAEWithTerm(serverTerm)
+	sentRpc := mcm.makeAEWithTerm(102)
 
 	// sanity check
 	expectedNextIndex := map[ServerId]LogIndex{102: 11, 103: 11, 104: 11, 105: 11}
@@ -379,4 +379,69 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
 		t.Fatal(mcm.pcm.LeaderVolatileState.MatchIndex)
 	}
+}
+
+// Ignore reply for an RpcAppendEntries that does not match the current state.
+func TestCM_RpcAER_Leader_IgnoreStateMismatch(t *testing.T) {
+	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
+	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
+	sentRpc := mcm.makeAEWithTerm(102)
+
+	// reply is handled correctly
+	err := mcm.pcm.RpcReply_RpcAppendEntriesReply(
+		102,
+		sentRpc,
+		&RpcAppendEntriesReply{serverTerm, false},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mcm.pcm.GetServerState() != LEADER {
+		t.Fatal()
+	}
+	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm {
+		t.Fatal()
+	}
+	expectedNextIndex := map[ServerId]LogIndex{102: 10, 103: 11, 104: 11, 105: 11}
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	expectedMatchIndex := map[ServerId]LogIndex{102: 0, 103: 0, 104: 0, 105: 0}
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+	expectedRpc := &RpcAppendEntries{serverTerm, 9, 6, []LogEntry{
+		{6, Command("c10")},
+	}, 0}
+	expectedRpcs := map[ServerId]interface{}{
+		102: expectedRpc,
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
+
+	// duplicate reply is ignored
+	err = mcm.pcm.RpcReply_RpcAppendEntriesReply(
+		102,
+		sentRpc,
+		&RpcAppendEntriesReply{serverTerm, false},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mcm.pcm.GetServerState() != LEADER {
+		t.Fatal()
+	}
+	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm {
+		t.Fatal()
+	}
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndex, expectedNextIndex) {
+		t.Fatal()
+	}
+	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndex, expectedMatchIndex) {
+		t.Fatal()
+	}
+	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 }
