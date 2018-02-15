@@ -20,6 +20,14 @@ type LeaderVolatileState struct {
 	MatchIndex map[ServerId]LogIndex
 }
 
+func (lvs *LeaderVolatileState) GoString() string {
+	return fmt.Sprintf(
+		"&LeaderVolatileState{NextIndex: %#v, MatchIndex: %#v}",
+		lvs.NextIndex,
+		lvs.MatchIndex,
+	)
+}
+
 // New instance set up for a fresh leader
 func NewLeaderVolatileState(
 	clusterInfo *config.ClusterInfo,

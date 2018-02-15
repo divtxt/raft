@@ -23,6 +23,7 @@
 package impl
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -324,7 +325,13 @@ func (cm *ConsensusModule) shutdownAndPanic(err error) {
 		cm.committer.StopSync()
 		// Panic for error
 		if err != nil {
-			panic(err)
+			e := fmt.Sprintf(
+				"%v\n\nrps: %#v\nlvs: %#v",
+				err,
+				cm.passiveConsensusModule.RaftPersistentState,
+				cm.passiveConsensusModule.LeaderVolatileState,
+			)
+			panic(e)
 		}
 	}
 }
