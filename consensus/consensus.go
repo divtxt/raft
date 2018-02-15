@@ -163,6 +163,17 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 			cm._commitIndex,
 		)
 	}
+	iole, err := cm.LogRO.GetIndexOfLastEntry()
+	if err != nil {
+		return err
+	}
+	if commitIndex > iole {
+		return fmt.Errorf(
+			"setCommitIndex to %v > current indexOfLastEntry %v",
+			commitIndex,
+			iole,
+		)
+	}
 	cm._commitIndex = commitIndex
 	cm._committer.CommitAsync(commitIndex)
 	return nil
