@@ -1,12 +1,16 @@
+language: go
+
+go:
+    - 1.8.x
+
 branches:
   only:
     - master
 
-language: go
-
 install:
-  - go get -u github.com/kisielk/errcheck
+  - go get github.com/kisielk/errcheck
 
 script:
   - go test ./...
   - errcheck ./...
+
