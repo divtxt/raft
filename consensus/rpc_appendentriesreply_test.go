@@ -264,7 +264,10 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// hack & sanity check
-	mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
+	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedNextIndex := map[ServerId]LogIndex{102: 10, 103: 11, 104: 11, 105: 11}
 	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
 		t.Fatal(mcm.pcm.LeaderVolatileState.NextIndexes())
