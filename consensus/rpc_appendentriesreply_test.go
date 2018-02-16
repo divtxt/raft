@@ -264,7 +264,11 @@ func TestCM_RpcAER_Leader_ResultIsSuccess_PeerJustCaughtUp(t *testing.T) {
 	}
 
 	// hack & sanity check
-	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
+	fm102, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(102)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = fm102.DecrementNextIndex()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -54,53 +54,32 @@ func NewLeaderVolatileState(
 	return lvs, nil
 }
 
-// Get nextIndex for the given peer
-func (lvs *LeaderVolatileState) GetNextIndex(peerId ServerId) (LogIndex, error) {
+func (lvs *LeaderVolatileState) GetFollowerManager(peerId ServerId) (*FollowerManager, error) {
 	fm, ok := lvs.followerManagers[peerId]
 	if !ok {
-		return 0, fmt.Errorf("LeaderVolatileState.GetNextIndex(): unknown peer: %v", peerId)
+		return nil, fmt.Errorf(
+			"LeaderVolatileState.GetFollowerManager(): unknown peer: %v",
+			peerId,
+		)
 	}
-	return fm.getNextIndex(), nil
-}
-
-// Decrement nextIndex for the given peer
-func (lvs *LeaderVolatileState) DecrementNextIndex(peerId ServerId) error {
-	fm, ok := lvs.followerManagers[peerId]
-	if !ok {
-		return fmt.Errorf("LeaderVolatileState.DecrementNextIndex(): unknown peer: %v", peerId)
-	}
-	return fm.decrementNextIndex()
+	return fm, nil
 }
 
 // Set matchIndex for the given peer and update nextIndex to matchIndex+1
-func (lvs *LeaderVolatileState) SetMatchIndexAndNextIndex(peerId ServerId, matchIndex LogIndex) error {
+func (lvs *LeaderVolatileState) setMatchIndexAndNextIndex(peerId ServerId, matchIndex LogIndex) error {
 	fm, ok := lvs.followerManagers[peerId]
 	if !ok {
-		return fmt.Errorf("LeaderVolatileState.SetMatchIndexAndNextIndex(): unknown peer: %v", peerId)
+		return fmt.Errorf("LeaderVolatileState.setMatchIndexAndNextIndex(): unknown peer: %v", peerId)
 	}
 	fm.SetMatchIndexAndNextIndex(matchIndex)
 	return nil
-}
-
-// Construct and send RpcAppendEntries to the given peer.
-func (lvs *LeaderVolatileState) SendAppendEntriesToPeerAsync(
-	peerId ServerId,
-	empty bool,
-	currentTerm TermNo,
-	commitIndex LogIndex,
-) error {
-	fm, ok := lvs.followerManagers[peerId]
-	if !ok {
-		return fmt.Errorf("LeaderVolatileState.SendAppendEntriesToPeerAsync(): unknown peer: %v", peerId)
-	}
-	return fm.SendAppendEntriesToPeerAsync(empty, currentTerm, commitIndex)
 }
 
 // Helper for tests
 func (lvs *LeaderVolatileState) NextIndexes() map[ServerId]LogIndex {
 	m := make(map[ServerId]LogIndex)
 	for peerId, fm := range lvs.followerManagers {
-		m[peerId] = fm.getNextIndex()
+		m[peerId] = fm.GetNextIndex()
 	}
 	return m
 }

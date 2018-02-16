@@ -32,11 +32,13 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 		)
 	}
 
-	// Ignore reply for an RpcAppendEntries that does not match the current state.
-	nextIndex, err := cm.LeaderVolatileState.GetNextIndex(from)
+	fm, err := cm.LeaderVolatileState.GetFollowerManager(from)
 	if err != nil {
 		return err
 	}
+
+	// Ignore reply for an RpcAppendEntries that does not match the current state.
+	nextIndex := fm.GetNextIndex()
 	expectedPrevLogIndex := nextIndex - 1
 	if appendEntries.PrevLogIndex != expectedPrevLogIndex {
 		log.Printf(
@@ -68,12 +70,11 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 	// #5.3-p8s6: After a rejection, the leader decrements nextIndex and
 	// retries the AppendEntries RPC.
 	if !appendEntriesReply.Success {
-		err := cm.LeaderVolatileState.DecrementNextIndex(from)
+		err := fm.DecrementNextIndex()
 		if err != nil {
 			return err
 		}
-		err = cm.LeaderVolatileState.SendAppendEntriesToPeerAsync(
-			from,
+		err = fm.SendAppendEntriesToPeerAsync(
 			false,
 			serverTerm,
 			cm.GetCommitIndex(),
@@ -87,10 +88,7 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 	// #RFS-L3.1: If successful: update nextIndex and matchIndex for
 	// follower (#5.3)
 	newMatchIndex := appendEntries.PrevLogIndex + LogIndex(len(appendEntries.Entries))
-	err = cm.LeaderVolatileState.SetMatchIndexAndNextIndex(from, newMatchIndex)
-	if err != nil {
-		return err
-	}
+	fm.SetMatchIndexAndNextIndex(newMatchIndex)
 
 	// #RFS-L4: If there exists an N such that N > commitIndex, a majority
 	// of matchIndex[i] >= N, and log[N].term == currentTerm:

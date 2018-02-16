@@ -36,49 +36,52 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal(lvs.MatchIndexes())
 	}
 
-	// getNextIndex
-	idx, err := lvs.GetNextIndex(102)
+	// GetFollowerManager
+	fm101, err := lvs.GetFollowerManager(101)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fm102, err := lvs.GetFollowerManager(102)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = lvs.GetFollowerManager(103)
+	if err == nil || err.Error() != "LeaderVolatileState.GetFollowerManager(): unknown peer: 103" {
+		t.Fatal(err)
+	}
+	_, err = lvs.GetFollowerManager(105)
+	if err == nil || err.Error() != "LeaderVolatileState.GetFollowerManager(): unknown peer: 105" {
+		t.Fatal(err)
+	}
+
+	// FollowerManager.GetNextIndex
+	idx := fm102.GetNextIndex()
 	if idx != 43 {
 		t.Fatal()
 	}
 
-	idx, err = lvs.GetNextIndex(105)
-	if err.Error() != "LeaderVolatileState.GetNextIndex(): unknown peer: 105" {
-		t.Fatal(err)
-	}
-
-	// DecrementNextIndex
-	err = lvs.DecrementNextIndex(102)
+	// FollowerManager.DecrementNextIndex
+	err = fm102.DecrementNextIndex()
 	if err != nil {
-		t.Fatal(err)
-	}
-	err = lvs.DecrementNextIndex(103)
-	if err.Error() != "LeaderVolatileState.DecrementNextIndex(): unknown peer: 103" {
 		t.Fatal(err)
 	}
 	expectedNextIndex = map[ServerId]LogIndex{101: 43, 102: 42}
 	if !reflect.DeepEqual(lvs.NextIndexes(), expectedNextIndex) {
 		t.Fatal(lvs.NextIndexes())
 	}
-	idx, err = lvs.GetNextIndex(102)
-	if err != nil {
-		t.Fatal(err)
-	}
+	idx = fm102.GetNextIndex()
 	if idx != 42 {
 		t.Fatal()
 	}
 
-	lvs.followerManagers[101].nextIndex = 1
-	err = lvs.DecrementNextIndex(101)
-	if err.Error() != "FollowerManager.DecrementNextIndex(): nextIndex already <=1 for peer: 101" {
+	fm101.nextIndex = 1
+	err = fm101.DecrementNextIndex()
+	if err.Error() != "FollowerManager.decrementNextIndex(): nextIndex already <=1 for peer: 101" {
 		t.Fatal(err)
 	}
 
-	// SetMatchIndexAndNextIndex
-	err = lvs.SetMatchIndexAndNextIndex(102, 24)
+	// setMatchIndexAndNextIndex
+	err = lvs.setMatchIndexAndNextIndex(102, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +93,7 @@ func TestLeaderVolatileState(t *testing.T) {
 	if !reflect.DeepEqual(lvs.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal(lvs.MatchIndexes())
 	}
-	err = lvs.SetMatchIndexAndNextIndex(102, 0)
+	err = lvs.setMatchIndexAndNextIndex(102, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,8 +106,8 @@ func TestLeaderVolatileState(t *testing.T) {
 		t.Fatal(lvs.MatchIndexes())
 	}
 
-	// SendAppendEntriesToPeerAsync
-	err = lvs.SendAppendEntriesToPeerAsync(102, false, 13, 1)
+	// FollowerManager.SendAppendEntriesToPeerAsync
+	err = fm102.SendAppendEntriesToPeerAsync(false, 13, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,14 +119,6 @@ func TestLeaderVolatileState(t *testing.T) {
 		1,
 	}
 	if *maes.params != expectedParams {
-		t.Fatal(maes.params)
-	}
-	maes.params = nil
-	err = lvs.SendAppendEntriesToPeerAsync(105, false, 13, 1)
-	if err.Error() != "LeaderVolatileState.SendAppendEntriesToPeerAsync(): unknown peer: 105" {
-		t.Fatal(err)
-	}
-	if maes.params != nil {
 		t.Fatal(maes.params)
 	}
 }
@@ -166,19 +161,19 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (a)
-	err = lvs.SetMatchIndexAndNextIndex(102, 2)
+	err = lvs.setMatchIndexAndNextIndex(102, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(103, 1)
+	err = lvs.setMatchIndexAndNextIndex(103, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(104, 1)
+	err = lvs.setMatchIndexAndNextIndex(104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(105, 1)
+	err = lvs.setMatchIndexAndNextIndex(105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,19 +228,19 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (c)
-	err = lvs.SetMatchIndexAndNextIndex(102, 2)
+	err = lvs.setMatchIndexAndNextIndex(102, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(103, 2)
+	err = lvs.setMatchIndexAndNextIndex(103, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(104, 1)
+	err = lvs.setMatchIndexAndNextIndex(104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(105, 1)
+	err = lvs.setMatchIndexAndNextIndex(105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,19 +281,19 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (e)
-	err = lvs.SetMatchIndexAndNextIndex(102, 3)
+	err = lvs.setMatchIndexAndNextIndex(102, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(103, 3)
+	err = lvs.setMatchIndexAndNextIndex(103, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(104, 1)
+	err = lvs.setMatchIndexAndNextIndex(104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(105, 1)
+	err = lvs.setMatchIndexAndNextIndex(105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,19 +336,19 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	}
 
 	// match peers
-	err = lvs.SetMatchIndexAndNextIndex(102, 4)
+	err = lvs.setMatchIndexAndNextIndex(102, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(103, 4)
+	err = lvs.setMatchIndexAndNextIndex(103, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(104, 1)
+	err = lvs.setMatchIndexAndNextIndex(104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.SetMatchIndexAndNextIndex(105, 1)
+	err = lvs.setMatchIndexAndNextIndex(105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -341,8 +341,11 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error 
 	//
 	return cm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
-			return cm.LeaderVolatileState.SendAppendEntriesToPeerAsync(
-				serverId,
+			fm, err := cm.LeaderVolatileState.GetFollowerManager(serverId)
+			if err != nil {
+				return err
+			}
+			return fm.SendAppendEntriesToPeerAsync(
 				empty,
 				currentTerm,
 				commitIndex,

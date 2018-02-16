@@ -287,14 +287,16 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	}
 
 	// repatch some peers as not caught up
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(102, 9)
+	fm102, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(102)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(105, 7)
+	fm102.SetMatchIndexAndNextIndex(9)
+	fm105, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(105)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fm105.SetMatchIndexAndNextIndex(7)
 
 	// tick should trigger check & appropriate sends
 	err = mcm.Tick()
@@ -372,7 +374,11 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// empty send
-	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
+	fm102, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(102)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = fm102.DecrementNextIndex()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,11 +420,11 @@ func TestCM_sendAppendEntriesToPeer(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// send multiple
-	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
+	err = fm102.DecrementNextIndex()
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.DecrementNextIndex(102)
+	err = fm102.DecrementNextIndex()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -465,22 +471,26 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// match peers for cases (a), (b), (c) & (d)
-	err := mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(102, 9)
+	fm102, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(102)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(103, 4)
+	fm102.SetMatchIndexAndNextIndex(9)
+	fm103, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(103)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(104, 10)
+	fm103.SetMatchIndexAndNextIndex(4)
+	fm104, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(104)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(105, 10)
+	fm104.SetMatchIndexAndNextIndex(10)
+	fm105, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(105)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fm105.SetMatchIndexAndNextIndex(10)
 
 	// tick should try to advance commitIndex but nothing should happen
 	err = mcm.Tick()
@@ -553,14 +563,8 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	mrs.ClearSentRpcs()
 
 	// 2 peers - for cases (a) & (b) - catch up
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(102, 11)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(103, 11)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fm102.SetMatchIndexAndNextIndex(11)
+	fm103.SetMatchIndexAndNextIndex(11)
 
 	// tick advances commitIndex
 	err = mcm.Tick()
@@ -795,10 +799,11 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	}
 	err = mcm.pcm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
-			err := mcm.pcm.LeaderVolatileState.SetMatchIndexAndNextIndex(serverId, lastLogIndex)
+			fm, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(serverId)
 			if err != nil {
 				return err
 			}
+			fm.SetMatchIndexAndNextIndex(lastLogIndex)
 			return nil
 		},
 	)
@@ -953,10 +958,11 @@ func (mcm *managedConsensusModule) tickTilElectionTimeout(t *testing.T) {
 
 func (mcm *managedConsensusModule) makeAEWithTerm(peer ServerId) *RpcAppendEntries {
 	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
-	peerNextIndex, err := mcm.pcm.LeaderVolatileState.GetNextIndex(peer)
+	fm, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(peer)
 	if err != nil {
 		panic(err)
 	}
+	peerNextIndex := fm.GetNextIndex()
 	return &RpcAppendEntries{
 		serverTerm,
 		peerNextIndex - 1,
@@ -969,8 +975,11 @@ func (mcm *managedConsensusModule) makeAEWithTerm(peer ServerId) *RpcAppendEntri
 func (mcm *managedConsensusModule) testHelper_sendAppendEntriesToPeer(peerId ServerId, empty bool) error {
 	currentTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 	commitIndex := mcm.pcm.GetCommitIndex()
-	return mcm.pcm.LeaderVolatileState.SendAppendEntriesToPeerAsync(
-		peerId,
+	fm, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(peerId)
+	if err != nil {
+		return err
+	}
+	return fm.SendAppendEntriesToPeerAsync(
 		empty,
 		currentTerm,
 		commitIndex,

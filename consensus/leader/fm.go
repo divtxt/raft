@@ -45,7 +45,7 @@ func NewFollowerManager(
 	}
 }
 
-func (fm *FollowerManager) getNextIndex() LogIndex {
+func (fm *FollowerManager) GetNextIndex() LogIndex {
 	return fm.nextIndex
 }
 
@@ -54,10 +54,10 @@ func (fm *FollowerManager) getMatchIndex() LogIndex {
 }
 
 // Decrement nextIndex for the given peer
-func (fm *FollowerManager) decrementNextIndex() error {
+func (fm *FollowerManager) DecrementNextIndex() error {
 	if fm.nextIndex <= 1 {
 		return fmt.Errorf(
-			"FollowerManager.DecrementNextIndex(): nextIndex already <=1 for peer: %v",
+			"FollowerManager.decrementNextIndex(): nextIndex already <=1 for peer: %v",
 			fm.peerId,
 		)
 	}

@@ -12,7 +12,7 @@ func TestFollowerManager(t *testing.T) {
 		nil,
 	)
 
-	if fm.getNextIndex() != 10 || fm.getMatchIndex() != 9 {
+	if fm.GetNextIndex() != 10 || fm.getMatchIndex() != 9 {
 		t.Fatal(fm)
 	}
 }
