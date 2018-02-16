@@ -120,7 +120,7 @@ func TestLeaderVolatileState(t *testing.T) {
 	}
 	maes.params = nil
 	err = lvs.SendAppendEntriesToPeerAsync(105, false, 13, 1)
-	if err.Error() != "LeaderVolatileState.GetNextIndex(): unknown peer: 105" {
+	if err.Error() != "LeaderVolatileState.SendAppendEntriesToPeerAsync(): unknown peer: 105" {
 		t.Fatal(err)
 	}
 	if maes.params != nil {

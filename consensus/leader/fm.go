@@ -70,3 +70,20 @@ func (fm *FollowerManager) SetMatchIndexAndNextIndex(matchIndex LogIndex) {
 	fm.nextIndex = matchIndex + 1
 	fm.matchIndex = matchIndex
 }
+
+// Construct and send RpcAppendEntries to the given peer.
+func (fm *FollowerManager) SendAppendEntriesToPeerAsync(
+	empty bool,
+	currentTerm TermNo,
+	commitIndex LogIndex,
+) error {
+	return fm.aeSender.SendAppendEntriesToPeerAsync(
+		internal.SendAppendEntriesParams{
+			fm.peerId,
+			fm.nextIndex,
+			empty,
+			currentTerm,
+			commitIndex,
+		},
+	)
+}

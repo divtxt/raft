@@ -12,8 +12,6 @@ import (
 // (Reinitialized after election)
 type LeaderVolatileState struct {
 	followerManagers map[ServerId]*FollowerManager
-
-	aeSender internal.IAppendEntriesSender
 }
 
 func (lvs *LeaderVolatileState) GoString() string {
@@ -31,7 +29,6 @@ func NewLeaderVolatileState(
 ) (*LeaderVolatileState, error) {
 	lvs := &LeaderVolatileState{
 		make(map[ServerId]*FollowerManager),
-		aeSender,
 	}
 
 	err := clusterInfo.ForEachPeer(
@@ -92,21 +89,11 @@ func (lvs *LeaderVolatileState) SendAppendEntriesToPeerAsync(
 	currentTerm TermNo,
 	commitIndex LogIndex,
 ) error {
-	//
-	peerNextIndex, err := lvs.GetNextIndex(peerId)
-	if err != nil {
-		return err
+	fm, ok := lvs.followerManagers[peerId]
+	if !ok {
+		return fmt.Errorf("LeaderVolatileState.SendAppendEntriesToPeerAsync(): unknown peer: %v", peerId)
 	}
-	//
-	return lvs.aeSender.SendAppendEntriesToPeerAsync(
-		internal.SendAppendEntriesParams{
-			peerId,
-			peerNextIndex,
-			empty,
-			currentTerm,
-			commitIndex,
-		},
-	)
+	return fm.SendAppendEntriesToPeerAsync(empty, currentTerm, commitIndex)
 }
 
 // Helper for tests
