@@ -48,7 +48,6 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 		)
 		return nil
 	}
-	// TODO: similar check for PrevLogTerm?
 
 	// #RFS-A2: If RPC request or response contains term T > currentTerm:
 	// set currentTerm = T, convert to follower (#5.1)
