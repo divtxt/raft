@@ -883,8 +883,8 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		mcm.mc.CheckCalls(nil)
 
 		_, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
-		if err != ErrNotLeader {
-			t.Fatal()
+		if !IsErrNotLeader(err) {
+			t.Fatal(err)
 		}
 
 		iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()

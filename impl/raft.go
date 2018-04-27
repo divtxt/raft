@@ -216,11 +216,11 @@ func (cm *ConsensusModule) AppendCommand(command Command) (<-chan CommandResult,
 	defer cm.mutex.Unlock()
 
 	if cm.stopped {
-		return nil, ErrStopped
+		return nil, NewErrStopped()
 	}
 
 	crc, err := cm.passiveConsensusModule.AppendCommand(command)
-	if err != nil && err != ErrNotLeader {
+	if err != nil && !IsErrNotLeader(err) {
 		cm.shutdownAndPanic(err)
 	}
 

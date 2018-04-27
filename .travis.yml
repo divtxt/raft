@@ -8,9 +8,9 @@ branches:
     - master
 
 install:
+  - go get github.com/go-errors/errors
   - go get github.com/kisielk/errcheck
 
 script:
   - go test ./...
   - errcheck ./...
-

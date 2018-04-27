@@ -185,7 +185,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 // AppendCommand appends the given serialized command to the log.
 func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan CommandResult, error) {
 	if cm.GetServerState() != LEADER {
-		return nil, ErrNotLeader
+		return nil, NewErrNotLeader()
 	}
 
 	termNo := cm.RaftPersistentState.GetCurrentTerm()

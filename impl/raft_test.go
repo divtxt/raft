@@ -292,7 +292,7 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 
 	_, err = cm.AppendCommand(testhelpers.DummyCommand(1101))
 
-	if err != ErrNotLeader {
+	if !IsErrNotLeader(err) {
 		t.Fatal()
 	}
 	if cm.IsStopped() {
@@ -314,7 +314,7 @@ func TestConsensusModule_AppendCommand_Follower_StoppedCM(t *testing.T) {
 
 	_, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
-	if err != ErrStopped {
+	if !IsErrStopped(err) {
 		t.Fatal(err)
 	}
 }
