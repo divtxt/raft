@@ -93,15 +93,14 @@ func (lvs *LeaderVolatileState) MatchIndexes() map[ServerId]LogIndex {
 	return m
 }
 
-// Helper method to find potential new commitIndex.
+// Find potential new commitIndex.
 // Returns the highest N possible that is higher than currentCommitIndex.
 // Returns 0 if no match found.
 // #RFS-L4: If there exists an N such that N > commitIndex, a majority
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
-func FindNewerCommitIndex(
+func (lvs *LeaderVolatileState) FindNewerCommitIndex(
 	ci *config.ClusterInfo,
-	lvs *LeaderVolatileState,
 	log LogReadOnly,
 	currentTerm TermNo,
 	currentCommitIndex LogIndex,

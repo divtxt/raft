@@ -358,9 +358,8 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error 
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
 func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
-	newerCommitIndex, err := leader.FindNewerCommitIndex(
+	newerCommitIndex, err := cm.LeaderVolatileState.FindNewerCommitIndex(
 		cm.ClusterInfo,
-		cm.LeaderVolatileState,
 		cm.LogRO,
 		cm.RaftPersistentState.GetCurrentTerm(),
 		cm.GetCommitIndex(),

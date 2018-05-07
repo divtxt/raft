@@ -142,7 +142,7 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
-		nci, err := FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		nci, err := lvs.FindNewerCommitIndex(ci, imle, currentTerm, commitIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -209,7 +209,7 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
-		nci, err := FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		nci, err := lvs.FindNewerCommitIndex(ci, imle, currentTerm, commitIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -328,7 +328,7 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
-		nci, err := FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		nci, err := lvs.FindNewerCommitIndex(ci, imle, currentTerm, commitIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -388,7 +388,7 @@ func TestFindNewerCommitIndex_SOLO(t *testing.T) {
 	}
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
-		nci, err := FindNewerCommitIndex(ci, lvs, imle, currentTerm, commitIndex)
+		nci, err := lvs.FindNewerCommitIndex(ci, imle, currentTerm, commitIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
