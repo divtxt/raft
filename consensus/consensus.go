@@ -18,13 +18,13 @@ type PassiveConsensusModule struct {
 	// ===== the following fields meant to be immutable
 
 	// -- External components
-	RaftPersistentState RaftPersistentState
-	LogRO               LogReadOnly
-	_log                Log
-	_committer          internal.ICommitter
-	rpcSendOnly         internal.RpcSendOnly
-	_aeSender           internal.IAppendEntriesSender
-	logger              *log.Logger
+	RaftPersistentState         RaftPersistentState
+	LogRO                       LogReadOnly
+	_log                        Log
+	_committer                  internal.ICommitter
+	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync
+	_aeSender                   internal.IAppendEntriesSender
+	logger                      *log.Logger
 
 	// -- Config
 	ClusterInfo *config.ClusterInfo
@@ -51,7 +51,7 @@ func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log Log,
 	committer internal.ICommitter,
-	rpcSendOnly internal.RpcSendOnly,
+	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync,
 	aeSender internal.IAppendEntriesSender,
 	clusterInfo *config.ClusterInfo,
 	electionTimeoutLow time.Duration,
@@ -68,8 +68,8 @@ func NewPassiveConsensusModule(
 	if committer == nil {
 		return nil, errors.New("'committer' cannot be nil")
 	}
-	if rpcSendOnly == nil {
-		return nil, errors.New("'rpcSendOnly' cannot be nil")
+	if sendOnlyRpcRequestVoteAsync == nil {
+		return nil, errors.New("'sendOnlyRpcRequestVoteAsync' cannot be nil")
 	}
 	if clusterInfo == nil {
 		return nil, errors.New("clusterInfo cannot be nil")
@@ -86,7 +86,7 @@ func NewPassiveConsensusModule(
 		log,
 		log,
 		committer,
-		rpcSendOnly,
+		sendOnlyRpcRequestVoteAsync,
 		aeSender,
 		logger,
 
@@ -286,7 +286,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	err = cm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
-			cm.rpcSendOnly.SendOnlyRpcRequestVoteAsync(serverId, rpcRequestVote)
+			cm.sendOnlyRpcRequestVoteAsync(serverId, rpcRequestVote)
 			return nil
 		},
 	)

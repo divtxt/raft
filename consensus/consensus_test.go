@@ -32,7 +32,7 @@ func setupManagedConsensusModuleR2(
 	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
 	mc := newMockCommitter()
 	mrs := testhelpers.NewMockRpcSender()
-	aes := aesender.NewLogOnlyAESender(iml, mrs)
+	aes := aesender.NewLogOnlyAESender(iml, mrs.SendOnlyRpcAppendEntriesAsync)
 	var allServerIds []ServerId
 	if solo {
 		allServerIds = []ServerId{testdata.ThisServerId}
@@ -48,7 +48,7 @@ func setupManagedConsensusModuleR2(
 		ps,
 		iml,
 		mc,
-		mrs,
+		mrs.SendOnlyRpcRequestVoteAsync,
 		aes,
 		ci,
 		testdata.ElectionTimeoutLow,

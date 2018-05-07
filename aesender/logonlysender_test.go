@@ -18,7 +18,7 @@ func TestLogOnlyAESender(t *testing.T) {
 		testdata.MaxEntriesPerAppendEntry,
 	)
 	mrs := testhelpers.NewMockRpcSender()
-	aes := aesender.NewLogOnlyAESender(iml, mrs)
+	aes := aesender.NewLogOnlyAESender(iml, mrs.SendOnlyRpcAppendEntriesAsync)
 
 	var serverTerm TermNo = testdata.CurrentTerm
 

@@ -98,13 +98,13 @@ func NewConsensusModule(
 		nil,
 	}
 
-	aes := aesender.NewLogOnlyAESender(raftLog, cm)
+	aes := aesender.NewLogOnlyAESender(raftLog, cm.SendOnlyRpcAppendEntriesAsync)
 
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		raftLog,
 		committer,
-		cm,
+		cm.SendOnlyRpcRequestVoteAsync,
 		aes,
 		clusterInfo,
 		timeSettings.ElectionTimeoutLow,
