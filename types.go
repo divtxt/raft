@@ -2,6 +2,7 @@ package raft
 
 import (
 	"errors"
+	"fmt"
 )
 
 // Raft server states.
@@ -46,3 +47,17 @@ type LogIndex uint64
 // This package also does not know about the network details - e.g. protocol/host/port -
 // since the RPC is not part of the package but is delegated to the user.
 type ServerId uint64
+
+// ServerStateToString returns a string representation of a ServerState value.
+func ServerStateToString(serverState ServerState) string {
+	switch serverState {
+	case FOLLOWER:
+		return "FOLLOWER"
+	case CANDIDATE:
+		return "CANDIDATE"
+	case LEADER:
+		return "LEADER"
+	default:
+		return fmt.Sprintf("Unknown ServerState: %v", serverState)
+	}
+}

@@ -129,26 +129,12 @@ func (cm *PassiveConsensusModule) setServerState(serverState ServerState) {
 	if cm.serverState != serverState {
 		cm.logger.Println(
 			"[raft] setServerState:",
-			_getServerStateString(cm.serverState),
+			ServerStateToString(cm.serverState),
 			"->",
-			_getServerStateString(serverState),
+			ServerStateToString(serverState),
 		)
 		cm.serverState = serverState
 	}
-}
-
-// Get string values for ServerState
-func _getServerStateString(serverState ServerState) string {
-	if serverState == FOLLOWER {
-		return "FOLLOWER"
-	}
-	if serverState == CANDIDATE {
-		return "CANDIDATE"
-	}
-	if serverState == LEADER {
-		return "LEADER"
-	}
-	panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 }
 
 // Get the current commitIndex value.
