@@ -23,7 +23,6 @@
 package impl
 
 import (
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -51,7 +50,8 @@ type ConsensusModule struct {
 	rpcService RpcService
 
 	// -- State
-	stopped bool
+	stopped   bool
+	stopError error
 
 	// -- Ticker
 	tickerDuration time.Duration
@@ -90,13 +90,14 @@ func NewConsensusModule(
 
 		// -- State
 		false, // stopped flag
+		nil,   // stopError
 
 		// -- Ticker
 		timeSettings.TickerDuration,
 		nil,
 	}
 
-	committer := committer.NewCommitter(raftLog, stateMachine, cm.safeShutdownAndPanic)
+	committer := committer.NewCommitter(raftLog, stateMachine, cm.safeShutdown)
 
 	// We can only set the value here because it's a cyclic reference
 	cm.committer = committer
@@ -146,7 +147,7 @@ func (cm *ConsensusModule) Stop() {
 	defer cm.mutex.Unlock()
 
 	cm.logger.Println("[raft] Stopping ConsensusModule")
-	cm.shutdownAndPanic(nil)
+	cm.shutdown(nil)
 }
 
 // Get the current server state.
@@ -177,8 +178,8 @@ func (cm *ConsensusModule) ProcessRpcAppendEntries(
 
 	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcAppendEntries(from, rpc)
 	if err != nil {
-		cm.shutdownAndPanic(err)
-		return nil, ErrStopped // unreachable code
+		cm.shutdown(err)
+		return nil, ErrStopped
 	}
 
 	return rpcReply, nil
@@ -202,8 +203,8 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 
 	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcRequestVote(from, rpc)
 	if err != nil {
-		cm.shutdownAndPanic(err)
-		return nil, ErrStopped // unreachable code
+		cm.shutdown(err)
+		return nil, ErrStopped
 	}
 
 	return rpcReply, nil
@@ -221,7 +222,8 @@ func (cm *ConsensusModule) AppendCommand(command Command) (<-chan CommandResult,
 
 	crc, err := cm.passiveConsensusModule.AppendCommand(command)
 	if err != nil && err != ErrNotLeader {
-		cm.shutdownAndPanic(err)
+		cm.shutdown(err)
+		return nil, ErrStopped
 	}
 
 	return crc, err
@@ -258,7 +260,7 @@ func (cm *ConsensusModule) safeProcessRpcReply_RpcAppendEntriesReply(
 	if !cm.stopped {
 		err := cm.passiveConsensusModule.RpcReply_RpcAppendEntriesReply(fromPeer, rpc, rpcReply)
 		if err != nil {
-			cm.shutdownAndPanic(err)
+			cm.shutdown(err)
 		}
 	}
 }
@@ -292,7 +294,7 @@ func (cm *ConsensusModule) safeProcessRpcReply_RpcRequestVoteReply(
 	if !cm.stopped {
 		err := cm.passiveConsensusModule.RpcReply_RpcRequestVoteReply(fromPeer, rpc, rpcReply)
 		if err != nil {
-			cm.shutdownAndPanic(err)
+			cm.shutdown(err)
 		}
 	}
 }
@@ -302,25 +304,23 @@ func (cm *ConsensusModule) safeTick() {
 	defer cm.mutex.Unlock()
 
 	if !cm.stopped {
-		// Get a fresh now since we could have been waiting
 		err := cm.passiveConsensusModule.Tick()
 		if err != nil {
-			cm.shutdownAndPanic(err)
+			cm.shutdown(err)
 		}
 	}
 }
 
-func (cm *ConsensusModule) safeShutdownAndPanic(err error) {
+func (cm *ConsensusModule) safeShutdown(err error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	cm.shutdownAndPanic(err)
+	cm.shutdown(err)
 }
 
 // Shutdown the ConsensusModule.
-// Panic if the given error is not nil.
 // It is expected that we're under mutex when this method is called.
-func (cm *ConsensusModule) shutdownAndPanic(err error) {
+func (cm *ConsensusModule) shutdown(err error) {
 	if !cm.stopped {
 		// Mark self as stopped.
 		// Since we should be under mutex, no other calls will be serviced after this line.
@@ -334,15 +334,7 @@ func (cm *ConsensusModule) shutdownAndPanic(err error) {
 		// (Even if this method is running as part of a tick, we should be past the actual tick code)
 		// where the actual tick code
 		cm.committer.StopSync()
-		// Panic for error
-		if err != nil {
-			e := fmt.Sprintf(
-				"%v\n\nrps: %#v\nlvs: %#v",
-				err,
-				cm.passiveConsensusModule.RaftPersistentState,
-				cm.passiveConsensusModule.LeaderVolatileState,
-			)
-			panic(e)
-		}
+		// Save error
+		cm.stopError = err
 	}
 }
