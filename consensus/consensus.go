@@ -168,7 +168,8 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 	return nil
 }
 
-// AppendCommand appends the given serialized command to the log.
+// AppendCommand appends the given serialized command to the Raft log and applies it
+// to the state machine once it is considered committed by the ConsensusModule.
 func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan CommandResult, error) {
 	if cm.GetServerState() != LEADER {
 		return nil, ErrNotLeader

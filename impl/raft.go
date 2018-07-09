@@ -148,7 +148,7 @@ func (cm *ConsensusModule) Stop() {
 
 // Get the current server state.
 //
-// This value is irrelevant if the ConsensusModule is stopped.
+// If the ConsensusModule is stopped this is the state when it stopped.
 func (cm *ConsensusModule) GetServerState() ServerState {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
@@ -181,15 +181,12 @@ func (cm *ConsensusModule) ProcessRpcAppendEntries(
 	return rpcReply
 }
 
-// Process the given RpcRequestVote message from the given peer
-// asynchronously.
+// Process the given RpcRequestVote message from the given peer.
 //
-// This method sends the RPC message to the ConsensusModule's goroutine.
-// The RPC reply will be sent later on the returned channel.
+// Returns nil if there was an error or if the ConsensusModule is shutdown.
 //
-// See the RpcService interface for outgoing RPC.
-//
-// See the notes on NewConsensusModule() for more details about this method's behavior.
+// Note that an error would have shutdown the ConsensusModule.
+
 func (cm *ConsensusModule) ProcessRpcRequestVote(
 	from ServerId,
 	rpc *RpcRequestVote,
@@ -210,7 +207,8 @@ func (cm *ConsensusModule) ProcessRpcRequestVote(
 	return rpcReply
 }
 
-// AppendCommand appends the given serialized command to the log.
+// AppendCommand appends the given serialized command to the Raft log and applies it
+// to the state machine once it is considered committed by the ConsensusModule.
 func (cm *ConsensusModule) AppendCommand(command Command) (<-chan CommandResult, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()

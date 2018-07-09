@@ -115,11 +115,15 @@ type LogReadOnly interface {
 //
 // Raft describes two state parameters - commitIndex and lastApplied -
 // that are used to track which log entries are committed to the log and the
-// state machine respectively. However, Raft is focussed on the log and cares
-// very little about lastAplied, other than to drive state machine commits.
+// state machine respectively. However, Raft is focused on the log and cares
+// very little about lastApplied, other than to drive state machine commits.
 //
 // Further, because lastApplied should be persisted with the state machine, we delegate
 // lastApplied to the state machine via this interface.
+//
+// Note that commitIndex may NOT be persisted, and may reset to 0 on restart. However, the
+// ConsensusModule should never send this initial 0 value to ApplyCommand(), and should always
+// jump to a valid value when calling that method.
 //
 // Relevant technical details:
 //
@@ -136,22 +140,21 @@ type LogReadOnly interface {
 type StateMachine interface {
 	// GetLastApplied should return the value of lastApplied.
 	//
-	// This is used at startup to avoid replaying entries that have already been applied.
+	// This is called by the ConsensusModule when it starts and this value is used to avoid
+	// replaying entries that have already been applied.
 	//
-	// If the state machine is not persisted, this value should start at 0.
+	// For a new state (or non-persistent) machine this value should start at 0.
 	GetLastApplied() LogIndex
 
 	// ApplyCommand should apply the given command to the state machine.
 	//
-	// The log index of the command is provided i.e. this is the new value of lastApplied
-	// corresponding to the given command.
+	// The log index of the command is given and this should become the new value of lastApplied.
 	//
 	// This method should return only after all changes have been applied.
 	//
-	// It is an error if the value of logIndex is less than lastApplied. Note that the upstream
-	// commitIndex may NOT be persisted, and may reset to 0 on restart.
-	// However, the upstream should never send this initial 0 value to StateMachine, and
-	// should always jump to a non-decreasing value.
+	// The given log index should be one more than the current value of lastApplied and this method
+	// should panic if this is not the case.
+	// FIXME: change the above once raft-related log entries are added
 	ApplyCommand(logIndex LogIndex, command Command) CommandResult
 }
 
