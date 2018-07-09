@@ -19,7 +19,7 @@ See [lockd](https://github.com/divtxt/lockd) for a example of how to use this mo
 Later:
 
 - [ ] Shutdown returns error and notifies instead of panic
-- [ ] ProcessRpcAppendEntries and ProcessRpcRequestVote return errors
+- [x] ProcessRpcAppendEntries and ProcessRpcRequestVote return errors
 - [ ] Leader commits a no-op entry at the start of its term (#8p4)
 - [ ] Isolated server should not increment term (similar to #6p8)
 - [x] Pluggable logging

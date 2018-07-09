@@ -158,53 +158,52 @@ func (cm *ConsensusModule) GetServerState() ServerState {
 
 // Process the given RpcAppendEntries message from the given peer.
 //
-// Returns nil if there was an error or if the ConsensusModule is shutdown.
+// Returns ErrStopped if ConsensusModule is stopped.
 //
-// Note that an error would have shutdown the ConsensusModule.
+// Note that a critical error with the rpc parameters will stop the ConsensusModule.
 func (cm *ConsensusModule) ProcessRpcAppendEntries(
 	from ServerId,
 	rpc *RpcAppendEntries,
-) *RpcAppendEntriesReply {
+) (*RpcAppendEntriesReply, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
 	if cm.stopped {
-		return nil
+		return nil, ErrStopped
 	}
 
 	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcAppendEntries(from, rpc)
 	if err != nil {
 		cm.shutdownAndPanic(err)
-		return nil // unreachable code
+		return nil, ErrStopped // unreachable code
 	}
 
-	return rpcReply
+	return rpcReply, nil
 }
 
 // Process the given RpcRequestVote message from the given peer.
 //
-// Returns nil if there was an error or if the ConsensusModule is shutdown.
+// Returns ErrStopped if ConsensusModule is stopped.
 //
-// Note that an error would have shutdown the ConsensusModule.
-
+// Note that a critical error with the rpc parameters will stop the ConsensusModule.
 func (cm *ConsensusModule) ProcessRpcRequestVote(
 	from ServerId,
 	rpc *RpcRequestVote,
-) *RpcRequestVoteReply {
+) (*RpcRequestVoteReply, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
 	if cm.stopped {
-		return nil
+		return nil, ErrStopped
 	}
 
 	rpcReply, err := cm.passiveConsensusModule.Rpc_RpcRequestVote(from, rpc)
 	if err != nil {
 		cm.shutdownAndPanic(err)
-		return nil // unreachable code
+		return nil, ErrStopped // unreachable code
 	}
 
-	return rpcReply
+	return rpcReply, nil
 }
 
 // AppendCommand appends the given serialized command to the Raft log and applies it

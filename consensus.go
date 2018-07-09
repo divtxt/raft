@@ -20,17 +20,17 @@ type IConsensusModule interface {
 
 	// Process the given RpcAppendEntries message from the given peer.
 	//
-	// Returns nil if there was an error or if the ConsensusModule is shutdown.
+	// Returns ErrStopped if ConsensusModule is stopped.
 	//
-	// Note that an error would have shutdown the ConsensusModule.
-	ProcessRpcAppendEntries(from ServerId, rpc *RpcAppendEntries) *RpcAppendEntriesReply
+	// Note that a critical error with the rpc parameters will stop the ConsensusModule.
+	ProcessRpcAppendEntries(from ServerId, rpc *RpcAppendEntries) (*RpcAppendEntriesReply, error)
 
 	// Process the given RpcRequestVote message from the given peer.
 	//
-	// Returns nil if there was an error or if the ConsensusModule is shutdown.
+	// Returns ErrStopped if ConsensusModule is stopped.
 	//
-	// Note that an error would have shutdown the ConsensusModule.
-	ProcessRpcRequestVote(from ServerId, rpc *RpcRequestVote) *RpcRequestVoteReply
+	// Note that a critical error with the rpc parameters will stop the ConsensusModule.
+	ProcessRpcRequestVote(from ServerId, rpc *RpcRequestVote) (*RpcRequestVoteReply, error)
 
 	// AppendCommand appends the given serialized command to the Raft log and applies it
 	// to the state machine once it is considered committed by the ConsensusModule.

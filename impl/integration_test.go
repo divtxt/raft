@@ -357,7 +357,11 @@ func (imrs *inMemoryRpcServiceConnector) RpcAppendEntries(
 ) *RpcAppendEntriesReply {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
-		return cm.ProcessRpcAppendEntries(imrs.from, rpc)
+		rpcReply, err := cm.ProcessRpcAppendEntries(imrs.from, rpc)
+		if err != nil {
+			return nil
+		}
+		return rpcReply
 	}
 	return nil
 }
@@ -368,7 +372,11 @@ func (imrs *inMemoryRpcServiceConnector) RpcRequestVote(
 ) *RpcRequestVoteReply {
 	cm := imrs.hub.cms[toServer]
 	if cm != nil {
-		return cm.ProcessRpcRequestVote(imrs.from, rpc)
+		rpcReply, err := cm.ProcessRpcRequestVote(imrs.from, rpc)
+		if err != nil {
+			return nil
+		}
+		return rpcReply
 	}
 	return nil
 }

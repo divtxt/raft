@@ -92,7 +92,10 @@ func TestConsensusModule_ProcessRpcAppendEntries(t *testing.T) {
 	defer cm.Stop()
 	var serverTerm TermNo = testdata.CurrentTerm
 
-	reply := cm.ProcessRpcAppendEntries(102, makeAEWithTerm(serverTerm-1))
+	reply, err := cm.ProcessRpcAppendEntries(102, makeAEWithTerm(serverTerm-1))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	expectedRpc := RpcAppendEntriesReply{serverTerm, false}
 	if reply == nil || *reply != expectedRpc {
@@ -104,10 +107,10 @@ func TestConsensusModule_ProcessRpcAppendEntries_StoppedCM(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 	cm.Stop()
 
-	reply := cm.ProcessRpcAppendEntries(102, makeAEWithTerm(testdata.CurrentTerm-1))
+	_, err := cm.ProcessRpcAppendEntries(102, makeAEWithTerm(testdata.CurrentTerm-1))
 
-	if reply != nil {
-		t.Fatal(reply)
+	if err != ErrStopped {
+		t.Fatal(err)
 	}
 }
 
@@ -115,7 +118,10 @@ func TestConsensusModule_ProcessRpcRequestVote(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 	defer cm.Stop()
 
-	reply := cm.ProcessRpcRequestVote(102, &RpcRequestVote{testdata.CurrentTerm - 1, 0, 0})
+	reply, err := cm.ProcessRpcRequestVote(102, &RpcRequestVote{testdata.CurrentTerm - 1, 0, 0})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	serverTerm := cm.passiveConsensusModule.RaftPersistentState.GetCurrentTerm()
 	expectedRpc := RpcRequestVoteReply{serverTerm, false}
@@ -128,13 +134,13 @@ func TestConsensusModule_ProcessRpcRequestVote_StoppedCM(t *testing.T) {
 	cm := setupConsensusModule(t, nil)
 	cm.Stop()
 
-	reply := cm.ProcessRpcRequestVote(
+	_, err := cm.ProcessRpcRequestVote(
 		102,
 		&RpcRequestVote{testdata.CurrentTerm - 1, 0, 0},
 	)
 
-	if reply != nil {
-		t.Fatal(reply)
+	if err != ErrStopped {
+		t.Fatal(err)
 	}
 }
 
