@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/util"
 )
 
@@ -24,7 +25,7 @@ type Committer struct {
 	_lastApplied LogIndex
 
 	// -- External components
-	log           LogReadOnly
+	log           internal.LogReadOnly
 	stateMachine  StateMachine
 	commitApplier *util.TriggeredRunner
 
@@ -34,7 +35,7 @@ type Committer struct {
 }
 
 // NewCommitter creates a new Committer with the given parameters.
-func NewCommitter(log LogReadOnly, stateMachine StateMachine) *Committer {
+func NewCommitter(log internal.LogReadOnly, stateMachine StateMachine) *Committer {
 	c := &Committer{
 		mutex:                  sync.Mutex{},
 		commitIndex:            0,

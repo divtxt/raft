@@ -93,13 +93,6 @@ type Log interface {
 	AppendEntry(LogEntry) (LogIndex, error)
 }
 
-// LogReadOnly is a read-only subset of the Log interface for internal use.
-type LogReadOnly interface {
-	GetIndexOfLastEntry() (LogIndex, error)
-	GetTermAtIndex(LogIndex) (TermNo, error)
-	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
-}
-
 // StateMachine is the interface that the state machine must expose to Raft.
 //
 // You must implement this interface!

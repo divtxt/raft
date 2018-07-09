@@ -19,7 +19,7 @@ type PassiveConsensusModule struct {
 
 	// -- External components
 	RaftPersistentState         RaftPersistentState
-	LogRO                       LogReadOnly
+	LogRO                       internal.LogReadOnly
 	_log                        Log
 	_committer                  internal.ICommitter
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync

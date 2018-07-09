@@ -11,6 +11,7 @@ import (
 	"github.com/divtxt/raft/aesender"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus/candidate"
+	"github.com/divtxt/raft/internal"
 	raft_log "github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
@@ -907,7 +908,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 type managedConsensusModule struct {
 	pcm  *PassiveConsensusModule
 	cc   *controlledClock
-	diml LogReadOnly
+	diml internal.LogReadOnly
 	mc   *mockCommitter
 }
 

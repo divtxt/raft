@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/internal"
 )
 
 // Helper
@@ -148,7 +149,7 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 }
 
 // Test Helper
-func TestHelper_GetLogEntryAtIndex(log LogReadOnly, li LogIndex) LogEntry {
+func TestHelper_GetLogEntryAtIndex(log internal.LogReadOnly, li LogIndex) LogEntry {
 	if li == 0 {
 		panic("oops!")
 	}
