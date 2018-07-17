@@ -19,7 +19,7 @@ type PassiveConsensusModule struct {
 
 	// -- External components
 	RaftPersistentState         RaftPersistentState
-	LogRO                       internal.LogReadOnly
+	logRO                       internal.LogReadOnly
 	_log                        Log
 	_committer                  internal.ICommitter
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync
@@ -152,7 +152,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 			cm._commitIndex,
 		)
 	}
-	iole, err := cm.LogRO.GetIndexOfLastEntry()
+	iole, err := cm.logRO.GetIndexOfLastEntry()
 	if err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	if err != nil {
 		return err
 	}
-	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.LogRO)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(cm.logRO)
 	if err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 }
 
 func (cm *PassiveConsensusModule) becomeLeader() error {
-	iole, err := cm.LogRO.GetIndexOfLastEntry()
+	iole, err := cm.logRO.GetIndexOfLastEntry()
 	if err != nil {
 		return err
 	}
@@ -347,7 +347,7 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error 
 func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
 	newerCommitIndex, err := cm.LeaderVolatileState.FindNewerCommitIndex(
 		cm.ClusterInfo,
-		cm.LogRO,
+		cm.logRO,
 		cm.RaftPersistentState.GetCurrentTerm(),
 		cm.GetCommitIndex(),
 	)

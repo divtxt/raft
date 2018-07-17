@@ -172,7 +172,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(mcm.pcm.LogRO)
+	lastLogIndex, lastLogTerm, err := GetIndexAndTermOfLastEntry(mcm.pcm.logRO)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -794,7 +794,7 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*man
 	}
 
 	// pretend peers caught up!
-	lastLogIndex, err := mcm.pcm.LogRO.GetIndexOfLastEntry()
+	lastLogIndex, err := mcm.pcm.logRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -835,7 +835,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
 
 	// pre check
-	iole, err := mcm.pcm.LogRO.GetIndexOfLastEntry()
+	iole, err := mcm.pcm.logRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -852,14 +852,14 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		{"RegisterListener", 11, crc1101},
 	})
 
-	iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
+	iole, err = mcm.pcm.logRO.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
 	if iole != 11 {
 		t.Fatal()
 	}
-	le := testhelpers.TestHelper_GetLogEntryAtIndex(mcm.pcm.LogRO, 11)
+	le := testhelpers.TestHelper_GetLogEntryAtIndex(mcm.log, 11)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
 	}
@@ -874,7 +874,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		mcm, _ := setup(t)
 
 		// pre check
-		iole, err := mcm.pcm.LogRO.GetIndexOfLastEntry()
+		iole, err := mcm.pcm.logRO.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}
@@ -888,7 +888,7 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 			t.Fatal()
 		}
 
-		iole, err = mcm.pcm.LogRO.GetIndexOfLastEntry()
+		iole, err = mcm.pcm.logRO.GetIndexOfLastEntry()
 		if err != nil {
 			t.Fatal()
 		}
@@ -906,10 +906,10 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 // of time with helper methods. This simplifies tests and avoids concurrency
 // issues with inspecting the internals.
 type managedConsensusModule struct {
-	pcm  *PassiveConsensusModule
-	cc   *controlledClock
-	diml internal.LogReadOnly
-	mc   *mockCommitter
+	pcm *PassiveConsensusModule
+	cc  *controlledClock
+	log internal.LogReadOnly
+	mc  *mockCommitter
 }
 
 func (mcm *managedConsensusModule) Tick() error {

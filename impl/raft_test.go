@@ -21,14 +21,14 @@ func makeAEWithTerm(term TermNo) *RpcAppendEntries {
 }
 
 func setupConsensusModule(t *testing.T, logTerms []TermNo) *ConsensusModule {
-	cm, _ := setupConsensusModuleR2(t, logTerms)
+	cm, _, _ := setupConsensusModuleR2(t, logTerms)
 	return cm
 }
 
 func setupConsensusModuleR2(
 	t *testing.T,
 	logTerms []TermNo,
-) (*ConsensusModule, *testhelpers.MockRpcSender) {
+) (*ConsensusModule, *testhelpers.MockRpcSender, Log) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
@@ -46,7 +46,7 @@ func setupConsensusModuleR2(
 	if cm == nil {
 		t.Fatal()
 	}
-	return cm, mrs
+	return cm, mrs, iml
 }
 
 func TestConsensusModule_StartStateAndStop(t *testing.T) {
@@ -146,16 +146,17 @@ func TestConsensusModule_ProcessRpcRequestVote_StoppedCM(t *testing.T) {
 
 // Run through an election cycle to test the rpc reply callbacks!
 func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
-	cm, mrs := setupConsensusModuleR2(t, nil)
+	cm, mrs, log := setupConsensusModuleR2(t, nil)
 	defer cm.Stop()
 
-	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
+	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs, log)
 }
 
 func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	t *testing.T,
 	cm *ConsensusModule,
 	mrs *testhelpers.MockRpcSender,
+	log Log,
 ) {
 	// FIXME: multiple unsafe concurrent accesses
 
@@ -174,7 +175,7 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 	}
 
 	// candidate has issued RequestVote RPCs to all other servers.
-	lastLogIndex, lastLogTerm, err := consensus.GetIndexAndTermOfLastEntry(cm.passiveConsensusModule.LogRO)
+	lastLogIndex, lastLogTerm, err := consensus.GetIndexAndTermOfLastEntry(log)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,13 +244,13 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 }
 
 func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
-	cm, mrs := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
+	cm, mrs, log := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	defer cm.Stop()
 
-	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs)
+	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs, log)
 
 	// pre check
-	iole, err := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
+	iole, err := log.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -270,25 +271,25 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 	}
 	testhelpers.AssertWillBlock(crc1101)
 
-	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
+	iole, err = log.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
 	if iole != 11 {
 		t.Fatal()
 	}
-	le := testhelpers.TestHelper_GetLogEntryAtIndex(cm.passiveConsensusModule.LogRO, 11)
+	le := testhelpers.TestHelper_GetLogEntryAtIndex(log, 11)
 	if !reflect.DeepEqual(le, LogEntry{8, Command("c1101")}) {
 		t.Fatal(le)
 	}
 }
 
 func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
-	cm, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
+	cm, _, log := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	defer cm.Stop()
 
 	// pre check
-	iole, err := cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
+	iole, err := log.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -305,7 +306,7 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 		t.Error()
 	}
 
-	iole, err = cm.passiveConsensusModule.LogRO.GetIndexOfLastEntry()
+	iole, err = log.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
@@ -315,7 +316,7 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 }
 
 func TestConsensusModule_AppendCommand_Follower_StoppedCM(t *testing.T) {
-	cm, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
+	cm, _, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	cm.Stop()
 
 	_, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
