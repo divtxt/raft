@@ -9,9 +9,9 @@ import (
 
 // Volatile state on candidates
 type CandidateVolatileState struct {
-	ReceivedVotes uint
-	RequiredVotes uint
-	VotedPeers    map[ServerId]bool
+	receivedVotes uint
+	requiredVotes uint
+	votedPeers    map[ServerId]bool
 }
 
 // New instance set up for a fresh election
@@ -26,7 +26,7 @@ func NewCandidateVolatileState(
 
 	err := clusterInfo.ForEachPeer(
 		func(peerId ServerId) error {
-			cvs.VotedPeers[peerId] = false
+			cvs.votedPeers[peerId] = false
 			return nil
 		},
 	)
@@ -40,13 +40,13 @@ func NewCandidateVolatileState(
 // Add a granted vote.
 // Returns true if quorum has been achieved
 func (cvs *CandidateVolatileState) AddVoteFrom(peerId ServerId) (bool, error) {
-	voted, ok := cvs.VotedPeers[peerId]
+	voted, ok := cvs.votedPeers[peerId]
 	if !ok {
 		return false, fmt.Errorf("CandidateVolatileState.AddVoteFrom(): unknown peer: %v", peerId)
 	}
 	if !voted {
-		cvs.VotedPeers[peerId] = true
-		cvs.ReceivedVotes++
+		cvs.votedPeers[peerId] = true
+		cvs.receivedVotes++
 	}
-	return cvs.ReceivedVotes >= cvs.RequiredVotes, nil
+	return cvs.receivedVotes >= cvs.requiredVotes, nil
 }

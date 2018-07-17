@@ -1,11 +1,10 @@
-package candidate_test
+package candidate
 
 import (
 	"testing"
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
-	"github.com/divtxt/raft/consensus/candidate"
 	"github.com/divtxt/raft/testdata"
 )
 
@@ -17,16 +16,16 @@ func TestCandidateVolatileState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := candidate.NewCandidateVolatileState(ci)
+	cvs, err := NewCandidateVolatileState(ci)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Initial state
-	if cvs.ReceivedVotes != 1 {
+	if cvs.receivedVotes != 1 {
 		t.Fatal()
 	}
-	if cvs.RequiredVotes != 3 {
+	if cvs.requiredVotes != 3 {
 		t.Fatal()
 	}
 
@@ -72,11 +71,11 @@ func TestCandidateVolatileState_3nodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := candidate.NewCandidateVolatileState(ci)
+	cvs, err := NewCandidateVolatileState(ci)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cvs.ReceivedVotes != 1 || cvs.RequiredVotes != 2 {
+	if cvs.receivedVotes != 1 || cvs.requiredVotes != 2 {
 		t.Fatal()
 	}
 
@@ -101,7 +100,7 @@ func TestCandidateVolatileState_VoteFromNonMemberIsAnError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := candidate.NewCandidateVolatileState(ci)
+	cvs, err := NewCandidateVolatileState(ci)
 	if err != nil {
 		t.Fatal(err)
 	}
