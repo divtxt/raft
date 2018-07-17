@@ -20,10 +20,10 @@ type PassiveConsensusModule struct {
 	// -- External components
 	RaftPersistentState         RaftPersistentState
 	logRO                       internal.LogReadOnly
-	_log                        Log
-	_committer                  internal.ICommitter
+	logRW                       Log
+	committer                   internal.ICommitter
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync
-	_aeSender                   internal.IAppendEntriesSender
+	aeSender                    internal.IAppendEntriesSender
 	logger                      *log.Logger
 
 	// -- Config
@@ -164,7 +164,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	cm._committer.CommitAsync(commitIndex)
+	cm.committer.CommitAsync(commitIndex)
 	return nil
 }
 
@@ -177,12 +177,12 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan Command
 
 	termNo := cm.RaftPersistentState.GetCurrentTerm()
 	logEntry := LogEntry{termNo, command}
-	iole, err := cm._log.AppendEntry(logEntry)
+	iole, err := cm.logRW.AppendEntry(logEntry)
 	if err != nil {
 		return nil, err
 	}
 
-	crc := cm._committer.RegisterListener(iole)
+	crc := cm.committer.RegisterListener(iole)
 
 	return crc, nil
 }
@@ -290,7 +290,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
-	cm.LeaderVolatileState, err = leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm._aeSender)
+	cm.LeaderVolatileState, err = leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm.aeSender)
 	if err != nil {
 		return err
 	}
@@ -378,6 +378,6 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 			cm._commitIndex,
 		)
 	}
-	cm._committer.RemoveListenersAfterIndex(li)
-	return cm._log.SetEntriesAfterIndex(li, entries)
+	cm.committer.RemoveListenersAfterIndex(li)
+	return cm.logRW.SetEntriesAfterIndex(li, entries)
 }
