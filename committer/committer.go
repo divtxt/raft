@@ -3,7 +3,6 @@ package committer
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/internal"
@@ -121,14 +120,6 @@ func (c *Committer) CommitAsync(commitIndex LogIndex) {
 }
 
 // ----
-
-func (c *Committer) _atomicGetCommitIndex() LogIndex {
-	return LogIndex(atomic.LoadUint64((*uint64)(&c.commitIndex)))
-}
-
-func (c *Committer) _atomicSetCommitIndex(commitIndex LogIndex) {
-	atomic.StoreUint64((*uint64)(&c.commitIndex), uint64(commitIndex))
-}
 
 // Apply pending committed entries.
 func (c *Committer) applyPendingCommits() {
