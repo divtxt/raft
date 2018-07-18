@@ -147,35 +147,34 @@ func (c *Committer) applyPendingCommits() {
 
 		// Apply the entries to the state machine.
 		for _, entry := range entries {
+			// Calculate the index that of the entry we are going to apply
 			indexToApply := lastApplied + 1
+
+			// Return if next entry is past the commitIndex
+			// (TriggeredRunner should call again if CommitAsync advanced commitIndex)
 			if indexToApply > commitIndexSnapshot {
-				break // Don't apply uncommitted entries.
+				return
 			}
-			c.applyCommand(indexToApply, entry.Command)
+
+			// Get the commit listener for this index
+			c.mutex.Lock()
+			crc, haveCrc := c.listeners[indexToApply]
+			if haveCrc {
+				delete(c.listeners, indexToApply)
+			}
+			// TODO: since we have the mutex, we could update our copy of commitIndex
+			c.mutex.Unlock()
+
+			// Apply the command to the state machine.
+			commandResult := c.stateMachine.ApplyCommand(indexToApply, entry.Command)
+
+			// Send the result to the commit listener.
+			if haveCrc {
+				crc <- commandResult
+			}
+
+			// The index of the entry we have just applied MUST be the new value of lastApplied.
 			lastApplied = indexToApply
 		}
 	}
-}
-
-// Apply command to state machine.
-// Assumes lastApplied has not crossed commitIndex!
-func (c *Committer) applyCommand(logIndex LogIndex, commandToApply Command) {
-	// Concurrency: see notes above for applyPendingCommits
-
-	// Apply the command to the state machine.
-	commandResult := c.stateMachine.ApplyCommand(logIndex, commandToApply)
-
-	// Send the result to the commit listener.
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	crc, ok := c.listeners[logIndex]
-	if ok {
-		delete(c.listeners, logIndex)
-		crc <- commandResult
-	}
-}
-
-// For test use only!
-func (c *Committer) TestHelperGetCommitApplier() *util.TriggeredRunner {
-	return c.commitApplier
 }
