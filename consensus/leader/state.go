@@ -101,7 +101,7 @@ func (lvs *LeaderVolatileState) MatchIndexes() map[ServerId]LogIndex {
 // set commitIndex = N (#5.3, #5.4)
 func (lvs *LeaderVolatileState) FindNewerCommitIndex(
 	ci *config.ClusterInfo,
-	log internal.LogReadOnly,
+	log internal.LogTailOnlyRO,
 	currentTerm TermNo,
 	currentCommitIndex LogIndex,
 ) (LogIndex, error) {

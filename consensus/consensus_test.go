@@ -342,7 +342,7 @@ func TestCM_Leader_TickSendsAppendEntriesWithLogEntries(t *testing.T) {
 	mrs.ClearSentRpcs()
 }
 
-func TestCM_sendAppendEntriesToPeer(t *testing.T) {
+func TestCM_Leader_FM_SendAppendEntriesToPeer(t *testing.T) {
 	mcm, mrs := testSetupMCM_Leader_Figure7LeaderLine(t)
 	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 	err := mcm.pcm.setCommitIndex(4)
@@ -612,7 +612,9 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 
 func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	var err error
-	mcm, mrs := testSetupMCM_SOLO_Leader_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
+	mcm, mrs := testSetupMCM_SOLO_Leader_WithTerms(
+		t, testdata.TestUtil_MakeFigure7LeaderLineTerms(), 0,
+	)
 
 	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 
@@ -714,6 +716,7 @@ func testSetupMCM_Follower_WithTerms(
 func testSetupMCM_SOLO_Follower_WithTerms(
 	t *testing.T,
 	terms []TermNo,
+	discardEntriesBeforeIndex LogIndex,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	mcm, mrs := setupManagedConsensusModuleR2(t, terms, true)
 	if mcm.pcm.GetServerState() != FOLLOWER {
@@ -759,8 +762,9 @@ func testSetupMCM_Leader_WithTerms(
 func testSetupMCM_SOLO_Leader_WithTerms(
 	t *testing.T,
 	terms []TermNo,
+	discardEntriesBeforeIndex LogIndex,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
-	mcm, mrs := testSetupMCM_SOLO_Follower_WithTerms(t, terms)
+	mcm, mrs := testSetupMCM_SOLO_Follower_WithTerms(t, terms, discardEntriesBeforeIndex)
 	testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(t, mcm, mrs)
 	if mcm.pcm.GetServerState() != LEADER {
 		t.Fatal()
@@ -973,6 +977,7 @@ func (mcm *managedConsensusModule) makeAEWithTerm(peer ServerId) *RpcAppendEntri
 	}
 }
 
+// FIXME: inline as a closure since it is only used in one place (or check for other users)
 func (mcm *managedConsensusModule) testHelper_sendAppendEntriesToPeer(peerId ServerId, empty bool) error {
 	currentTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 	commitIndex := mcm.pcm.GetCommitIndex()

@@ -13,6 +13,11 @@ import (
 // log[lastApplied] to state machine (#5.3)
 func TestCommitter(t *testing.T) {
 	iml := log.TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	err := iml.DiscardEntriesBeforeIndex(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	dsm := testhelpers.NewDummyStateMachine(3)
 
 	committerImpl := NewCommitter(iml, dsm)
@@ -35,7 +40,7 @@ func TestCommitter(t *testing.T) {
 	committerImpl.commitApplier.TestHelperFakeRestart()
 
 	// Registering for committed index should panic
-	err := util.ExpectPanicMessage(
+	err = util.ExpectPanicMessage(
 		func() {
 			committer.RegisterListener(4)
 		},

@@ -19,8 +19,8 @@ type PassiveConsensusModule struct {
 
 	// -- External components
 	RaftPersistentState         RaftPersistentState
-	logRO                       internal.LogReadOnly
-	logRW                       Log
+	logRO                       internal.LogTailOnlyRO
+	logWO                       internal.LogTailOnlyWO
 	committer                   internal.ICommitter
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync
 	aeSender                    internal.IAppendEntriesSender
@@ -49,7 +49,7 @@ type PassiveConsensusModule struct {
 
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
-	log Log,
+	log internal.LogTailOnly,
 	committer internal.ICommitter,
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync,
 	aeSender internal.IAppendEntriesSender,
@@ -152,6 +152,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 			cm._commitIndex,
 		)
 	}
+	// FIXME: check against indexOfFirstEntry as well!
 	iole, err := cm.logRO.GetIndexOfLastEntry()
 	if err != nil {
 		return err
@@ -177,7 +178,7 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan Command
 
 	termNo := cm.RaftPersistentState.GetCurrentTerm()
 	logEntry := LogEntry{termNo, command}
-	iole, err := cm.logRW.AppendEntry(logEntry)
+	iole, err := cm.logWO.AppendEntry(logEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -379,5 +380,5 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 		)
 	}
 	cm.committer.RemoveListenersAfterIndex(li)
-	return cm.logRW.SetEntriesAfterIndex(li, entries)
+	return cm.logWO.SetEntriesAfterIndex(li, entries)
 }

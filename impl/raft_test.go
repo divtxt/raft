@@ -20,17 +20,26 @@ func makeAEWithTerm(term TermNo) *RpcAppendEntries {
 	return &RpcAppendEntries{term, 0, 0, nil, 0}
 }
 
-func setupConsensusModule(t *testing.T, logTerms []TermNo) *ConsensusModule {
-	cm, _, _ := setupConsensusModuleR2(t, logTerms)
+func setupConsensusModule(t *testing.T) *ConsensusModule {
+	cm, _, _ := setupConsensusModuleR2(t, nil, 0)
 	return cm
 }
 
 func setupConsensusModuleR2(
 	t *testing.T,
 	logTerms []TermNo,
+	discardEntriesBeforeIndex LogIndex,
 ) (*ConsensusModule, *testhelpers.MockRpcSender, Log) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
+
 	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	if discardEntriesBeforeIndex > 0 {
+		err := iml.DiscardEntriesBeforeIndex(discardEntriesBeforeIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	mrs := testhelpers.NewMockRpcSender()
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
@@ -50,7 +59,7 @@ func setupConsensusModuleR2(
 }
 
 func TestConsensusModule_StartStateAndStop(t *testing.T) {
-	cm := setupConsensusModule(t, nil)
+	cm := setupConsensusModule(t)
 
 	// #5.2-p1s2: When servers start up, they begin as followers
 	if cm.GetServerState() != FOLLOWER {
@@ -71,7 +80,7 @@ func TestConsensusModule_StartStateAndStop(t *testing.T) {
 }
 
 func TestConsensusModule_CallStopMultipleTimes(t *testing.T) {
-	cm := setupConsensusModule(t, nil)
+	cm := setupConsensusModule(t)
 
 	time.Sleep(testdata.SleepJustMoreThanATick)
 	if cm.IsStopped() {
@@ -88,7 +97,7 @@ func TestConsensusModule_CallStopMultipleTimes(t *testing.T) {
 }
 
 func TestConsensusModule_ProcessRpcAppendEntries(t *testing.T) {
-	cm := setupConsensusModule(t, nil)
+	cm := setupConsensusModule(t)
 	defer cm.Stop()
 	var serverTerm TermNo = testdata.CurrentTerm
 
@@ -104,7 +113,7 @@ func TestConsensusModule_ProcessRpcAppendEntries(t *testing.T) {
 }
 
 func TestConsensusModule_ProcessRpcAppendEntries_StoppedCM(t *testing.T) {
-	cm := setupConsensusModule(t, nil)
+	cm := setupConsensusModule(t)
 	cm.Stop()
 
 	_, err := cm.ProcessRpcAppendEntries(102, makeAEWithTerm(testdata.CurrentTerm-1))
@@ -115,7 +124,7 @@ func TestConsensusModule_ProcessRpcAppendEntries_StoppedCM(t *testing.T) {
 }
 
 func TestConsensusModule_ProcessRpcRequestVote(t *testing.T) {
-	cm := setupConsensusModule(t, nil)
+	cm := setupConsensusModule(t)
 	defer cm.Stop()
 
 	reply, err := cm.ProcessRpcRequestVote(102, &RpcRequestVote{testdata.CurrentTerm - 1, 0, 0})
@@ -131,7 +140,7 @@ func TestConsensusModule_ProcessRpcRequestVote(t *testing.T) {
 }
 
 func TestConsensusModule_ProcessRpcRequestVote_StoppedCM(t *testing.T) {
-	cm := setupConsensusModule(t, nil)
+	cm := setupConsensusModule(t)
 	cm.Stop()
 
 	_, err := cm.ProcessRpcRequestVote(
@@ -146,7 +155,7 @@ func TestConsensusModule_ProcessRpcRequestVote_StoppedCM(t *testing.T) {
 
 // Run through an election cycle to test the rpc reply callbacks!
 func TestConsensusModule_RpcReplyCallbackFunction(t *testing.T) {
-	cm, mrs, log := setupConsensusModuleR2(t, nil)
+	cm, mrs, log := setupConsensusModuleR2(t, nil, 0)
 	defer cm.Stop()
 
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs, log)
@@ -244,7 +253,9 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 }
 
 func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
-	cm, mrs, log := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
+	cm, mrs, log := setupConsensusModuleR2(
+		t, testdata.TestUtil_MakeFigure7LeaderLineTerms(), 0,
+	)
 	defer cm.Stop()
 
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs, log)
@@ -285,7 +296,9 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 }
 
 func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
-	cm, _, log := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
+	cm, _, log := setupConsensusModuleR2(
+		t, testdata.TestUtil_MakeFigure7LeaderLineTerms(), 0,
+	)
 	defer cm.Stop()
 
 	// pre check
@@ -316,7 +329,10 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 }
 
 func TestConsensusModule_AppendCommand_Follower_StoppedCM(t *testing.T) {
-	cm, _, _ := setupConsensusModuleR2(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
+	cm, _, _ := setupConsensusModuleR2(
+		t, testdata.TestUtil_MakeFigure7LeaderLineTerms(), 0,
+	)
+
 	cm.Stop()
 
 	_, err := cm.AppendCommand(testhelpers.DummyCommand(1101))

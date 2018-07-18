@@ -18,6 +18,9 @@ var ErrStopped = errors.New("ConsensusModule is stopped")
 
 var ErrNotLeader = errors.New("Not currently in LEADER state")
 
+// FIXME: this needs actual values for debugging
+var ErrIndexBeforeFirstEntry = errors.New("Given index is less than indexOfFirstEntry")
+
 // Raft election term.
 // Initialized to 0 on first boot, increases monotonically.
 type TermNo uint64

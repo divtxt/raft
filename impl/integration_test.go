@@ -22,10 +22,19 @@ func setupConsensusModuleR3(
 	thisServerId ServerId,
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
+	discardEntriesBeforeIndex LogIndex,
 	imrsc *inMemoryRpcServiceConnector,
 ) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
+
 	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	if discardEntriesBeforeIndex > 0 {
+		err := iml.DiscardEntriesBeforeIndex(discardEntriesBeforeIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, electionTimeoutLow}
 	ci, err := config.NewClusterInfo(testClusterServerIds, thisServerId)
@@ -47,10 +56,19 @@ func setupConsensusModuleR3_SOLO(
 	t *testing.T,
 	electionTimeoutLow time.Duration,
 	logTerms []TermNo,
+	discardEntriesBeforeIndex LogIndex,
 	imrsc *inMemoryRpcServiceConnector,
 ) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
+
 	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	if discardEntriesBeforeIndex > 0 {
+		err := iml.DiscardEntriesBeforeIndex(discardEntriesBeforeIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	dsm := testhelpers.NewDummyStateMachine(0) // FIXME: test with non-zero value
 	ts := config.TimeSettings{testdata.TickerDuration, testdata.ElectionTimeoutLow}
 	ci, err := config.NewClusterInfo([]ServerId{101}, 101)
@@ -76,6 +94,7 @@ func TestCluster_ElectsLeader(t *testing.T) {
 			thisServerId,
 			testdata.ElectionTimeoutLow,
 			nil,
+			0,
 			imrsh.getRpcService(thisServerId),
 		)
 		return cm
@@ -135,6 +154,7 @@ func testSetupClusterWithLeader(
 			thisServerId,
 			electionTimeoutLow,
 			nil,
+			0,
 			imrsh.getRpcService(thisServerId),
 		)
 	}
@@ -168,6 +188,7 @@ func testSetup_SOLO_Leader(
 		t,
 		testdata.ElectionTimeoutLow,
 		nil,
+		0,
 		imrsh.getRpcService(101),
 	)
 	imrsh.cms = map[ServerId]IConsensusModule{
@@ -265,6 +286,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 		103,
 		testdata.ElectionTimeoutLow,
 		nil,
+		0,
 		imrsh.getRpcService(103),
 	)
 	defer cm3b.Stop()

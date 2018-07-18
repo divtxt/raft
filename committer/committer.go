@@ -23,7 +23,7 @@ type Committer struct {
 	commitIndex LogIndex
 
 	// -- External components
-	log           internal.LogReadOnly
+	log           internal.LogTailOnlyRO
 	stateMachine  StateMachine
 	commitApplier *util.TriggeredRunner
 
@@ -33,7 +33,7 @@ type Committer struct {
 }
 
 // NewCommitter creates a new Committer with the given parameters.
-func NewCommitter(log internal.LogReadOnly, stateMachine StateMachine) *Committer {
+func NewCommitter(log internal.LogTailOnlyRO, stateMachine StateMachine) *Committer {
 	c := &Committer{
 		mutex:                  sync.Mutex{},
 		commitIndex:            0,

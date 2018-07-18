@@ -11,8 +11,17 @@ import (
 // Test InMemoryLog using the Log Blackbox test.
 func TestInMemoryLog_BlackboxTest(t *testing.T) {
 	inmem_log := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	testhelpers.BlackboxTest_Log(t, inmem_log, false)
+}
 
-	testhelpers.BlackboxTest_Log(t, inmem_log)
+// Test InMemoryLog compacted log using the Log Blackbox test.
+func TestInMemoryLog_BlackboxTestWithCompaction(t *testing.T) {
+	inmem_log := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	err := inmem_log.DiscardEntriesBeforeIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testhelpers.BlackboxTest_Log(t, inmem_log, true)
 }
 
 // Tests for InMemoryLog's GetEntriesAfterIndex implementation
@@ -87,6 +96,29 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	// index more than last log entry
 	actualEntries, err = iml.GetEntriesAfterIndex(11)
 	if err.Error() != "afterLogIndex=11 is > iole=10" {
+		t.Fatal(err)
+	}
+
+	// log compaction
+	iofe, err := iml.GetIndexOfFirstEntry()
+	if iofe != 1 {
+		t.Fatal(iofe)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = iml.DiscardEntriesBeforeIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	iofe, err = iml.GetIndexOfFirstEntry()
+	if iofe != 5 || err != nil {
+		t.Fatal(iofe, err)
+	}
+
+	// Extra test for DiscardEntriesBeforeIndex
+	err = iml.DiscardEntriesBeforeIndex(4)
+	if err != ErrIndexBeforeFirstEntry {
 		t.Fatal(err)
 	}
 }

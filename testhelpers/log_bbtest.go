@@ -19,14 +19,31 @@ func TestCommandEquals(c Command, s string) bool {
 // Send a Log with 10 entries with terms as shown in Figure 7, leader line.
 // Entries should be Command("c1"), Command("c2"), etc.
 // GetEntriesAfterIndex() policy should not return more than 3 entries.
-func BlackboxTest_Log(t *testing.T, log Log) {
+//
+// To use the variant of this test with a compacted log (iofeIsFive=true), discard
+// log entries before log index 5.
+//
+func BlackboxTest_Log(t *testing.T, log Log, iofeIsFive bool) {
 	// Initial data tests
+	iofe, err := log.GetIndexOfFirstEntry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if iofeIsFive {
+		if iofe != 5 {
+			t.Fatal(iofe)
+		}
+	} else {
+		if iofe != 1 {
+			t.Fatal(iofe)
+		}
+	}
 	iole, err := log.GetIndexOfLastEntry()
 	if err != nil {
 		t.Fatal()
 	}
 	if iole != 10 {
-		t.Fatal()
+		t.Fatal(iole)
 	}
 	term, err := log.GetTermAtIndex(10)
 	if err != nil {
@@ -46,6 +63,12 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 	}
 
 	// get multiple entries
+	if iofeIsFive {
+		entries, err := log.GetEntriesAfterIndex(3)
+		if err != ErrIndexBeforeFirstEntry {
+			t.Fatal(entries, err)
+		}
+	}
 	entries, err := log.GetEntriesAfterIndex(4)
 	if err != nil {
 		t.Fatal(err)
@@ -66,6 +89,12 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 	var logEntries []LogEntry
 
 	// set test - invalid index
+	if iofeIsFive {
+		err = log.SetEntriesAfterIndex(3, logEntries)
+		if err != ErrIndexBeforeFirstEntry {
+			t.Fatal(err)
+		}
+	}
 	logEntries = []LogEntry{{8, Command("c12")}}
 	err = log.SetEntriesAfterIndex(11, logEntries)
 	if err == nil {
@@ -131,20 +160,23 @@ func BlackboxTest_Log(t *testing.T, log Log) {
 
 	// set test - no new entries with empty slice
 	logEntries = []LogEntry{}
-	err = log.SetEntriesAfterIndex(3, logEntries)
+	err = log.SetEntriesAfterIndex(5, logEntries)
 	if err != nil {
-		t.Fatal()
+		t.Fatal(err)
 	}
 	iole, err = log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
+	if iole != 5 || err != nil {
+		t.Fatal(iole, err)
 	}
-	if iole != 3 {
-		t.Fatal()
-	}
-	le = TestHelper_GetLogEntryAtIndex(log, 3)
-	if !reflect.DeepEqual(le, LogEntry{1, Command("c3")}) {
+	le = TestHelper_GetLogEntryAtIndex(log, 5)
+	if !reflect.DeepEqual(le, LogEntry{4, Command("c5")}) {
 		t.Fatal(le)
+	}
+	if iofeIsFive {
+		entries, err = log.GetEntriesAfterIndex(3)
+		if err != ErrIndexBeforeFirstEntry {
+			t.Fatal(entries, err)
+		}
 	}
 }
 

@@ -17,6 +17,12 @@ func TestLogOnlyAESender(t *testing.T) {
 		testdata.TestUtil_MakeFigure7LeaderLineTerms(),
 		testdata.MaxEntriesPerAppendEntry,
 	)
+
+	err := iml.DiscardEntriesBeforeIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	mrs := testhelpers.NewMockRpcSender()
 	aes := aesender.NewLogOnlyAESender(iml, mrs.SendOnlyRpcAppendEntriesAsync)
 
@@ -27,7 +33,7 @@ func TestLogOnlyAESender(t *testing.T) {
 	params := internal.SendAppendEntriesParams{
 		101, 12, false, serverTerm, 4,
 	}
-	err := aes.SendAppendEntriesToPeerAsync(params)
+	err = aes.SendAppendEntriesToPeerAsync(params)
 	if err == nil || err.Error() != "GetTermAtIndex(): li=11 > iole=10" {
 		t.Fatal(err)
 	}
@@ -117,5 +123,15 @@ func TestLogOnlyAESender(t *testing.T) {
 	}
 	expectedRpc.Entries = []LogEntry{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
+	mrs.ClearSentRpcs()
+
+	// Peer behind indexOfFirstEntry
+	params = internal.SendAppendEntriesParams{
+		102, 4, false, serverTerm, 4,
+	}
+	err = aes.SendAppendEntriesToPeerAsync(params)
+	if err != ErrIndexBeforeFirstEntry {
+		t.Fatal(err)
+	}
 	mrs.ClearSentRpcs()
 }
