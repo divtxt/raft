@@ -20,8 +20,7 @@ type Committer struct {
 	// -- Commit state
 	// commitIndex is the index of highest log entry known to be committed
 	// (initialized to 0, increases monotonically)
-	commitIndex  LogIndex
-	_lastApplied LogIndex
+	commitIndex LogIndex
 
 	// -- External components
 	log           internal.LogReadOnly
@@ -38,7 +37,6 @@ func NewCommitter(log internal.LogReadOnly, stateMachine StateMachine) *Committe
 	c := &Committer{
 		mutex:                  sync.Mutex{},
 		commitIndex:            0,
-		_lastApplied:           stateMachine.GetLastApplied(),
 		log:                    log,
 		stateMachine:           stateMachine,
 		commitApplier:          nil,
@@ -125,7 +123,6 @@ func (c *Committer) CommitAsync(commitIndex LogIndex) {
 func (c *Committer) applyPendingCommits() {
 	// Concurrency:
 	// - there is only one method to this call at a time
-	// - only this method drives changes to _lastApplied, so it does not need locking
 	// - commitIndex can only increase, so we can snapshot it as a low value
 
 	for {
@@ -134,26 +131,28 @@ func (c *Committer) applyPendingCommits() {
 		commitIndexSnapshot := c.commitIndex
 		c.mutex.Unlock()
 
+		lastApplied := c.stateMachine.GetLastApplied()
+
 		// Return if no more entries to apply at this time.
 		// (TriggeredRunner should call again if CommitAsync advanced commitIndex)
-		if c._lastApplied >= commitIndexSnapshot {
+		if lastApplied >= commitIndexSnapshot {
 			return
 		}
 
 		// Get a batch of entries from the raft log.
-		entries, err := c.log.GetEntriesAfterIndex(c._lastApplied)
+		entries, err := c.log.GetEntriesAfterIndex(lastApplied)
 		if err != nil {
 			panic(err)
 		}
 
 		// Apply the entries to the state machine.
 		for _, entry := range entries {
-			indexToApply := c._lastApplied + 1
+			indexToApply := lastApplied + 1
 			if indexToApply > commitIndexSnapshot {
 				break // Don't apply uncommitted entries.
 			}
 			c.applyCommand(indexToApply, entry.Command)
-			c._lastApplied = indexToApply
+			lastApplied = indexToApply
 		}
 	}
 }

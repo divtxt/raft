@@ -133,10 +133,13 @@ type Log interface {
 type StateMachine interface {
 	// GetLastApplied should return the value of lastApplied.
 	//
-	// This is called by the ConsensusModule when it starts and this value is used to avoid
-	// replaying entries that have already been applied.
+	// This is called by the ConsensusModule when it starts and during normal operation
+	// to avoid replaying entries that have already been applied.
 	//
 	// For a new state (or non-persistent) machine this value should start at 0.
+	//
+	// The ConsensusModule does not cache this value and calls this method very often so it is
+	// recommended that implementations ensure that this method is fast.
 	GetLastApplied() LogIndex
 
 	// ApplyCommand should apply the given command to the state machine.
