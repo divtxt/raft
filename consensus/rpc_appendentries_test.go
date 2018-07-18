@@ -177,7 +177,9 @@ func TestCM_RpcAE_NoMatchingLogEntry(t *testing.T) {
 // some extra entries to also test step 3
 func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 	f := func(
-		setup func(t *testing.T, terms []TermNo) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+		setup func(
+			t *testing.T, terms []TermNo,
+		) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
 		senderTermIsNewer bool,
 		expectedErr string,
 	) {
@@ -201,7 +203,10 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !testhelpers.DummyCommandEquals(testhelpers.TestHelper_GetLogEntryAtIndex(mcm.log, 6).Command, 6) {
+		if !testhelpers.DummyCommandEquals(
+			testhelpers.TestHelper_GetLogEntryAtIndex(mcm.log, 6).Command,
+			6,
+		) {
 			t.Error()
 		}
 
@@ -280,7 +285,9 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 // Note: this test case based on Figure 7, case (b) in the Raft paper
 func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 	f := func(
-		setup func(t *testing.T, terms []TermNo) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+		setup func(
+			t *testing.T, terms []TermNo,
+		) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
 		senderTermIsNewer bool,
 		expectedVotedFor ServerId,
 		expectedErr string,
@@ -305,7 +312,10 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			senderTerm += 1
 		}
 
-		if !testhelpers.DummyCommandEquals(testhelpers.TestHelper_GetLogEntryAtIndex(mcm.log, 4).Command, 4) {
+		if !testhelpers.DummyCommandEquals(
+			testhelpers.TestHelper_GetLogEntryAtIndex(mcm.log, 4).Command,
+			4,
+		) {
 			t.Error()
 		}
 

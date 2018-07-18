@@ -66,7 +66,9 @@ func (lvs *LeaderVolatileState) GetFollowerManager(peerId ServerId) (*FollowerMa
 }
 
 // Set matchIndex for the given peer and update nextIndex to matchIndex+1
-func (lvs *LeaderVolatileState) setMatchIndexAndNextIndex(peerId ServerId, matchIndex LogIndex) error {
+func (lvs *LeaderVolatileState) setMatchIndexAndNextIndex(
+	peerId ServerId, matchIndex LogIndex,
+) error {
 	fm, ok := lvs.followerManagers[peerId]
 	if !ok {
 		return fmt.Errorf("LeaderVolatileState.setMatchIndexAndNextIndex(): unknown peer: %v", peerId)

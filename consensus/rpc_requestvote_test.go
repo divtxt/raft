@@ -11,7 +11,9 @@ import (
 // 1. Reply false if term < currentTerm (#5.1)
 // Note: test based on Figure 7; server is leader line; peer is case (a)
 func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
@@ -49,7 +51,9 @@ func TestCM_RpcRV_TermLessThanCurrentTerm(t *testing.T) {
 // longer is more up-to-date.
 // Note: test based on Figure 7; server is leader line; peer is case (d)
 func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		beforeState := mcm.pcm.GetServerState()
@@ -98,7 +102,9 @@ func TestCM_RpcRV_SameTerm_All_VotedForOther(t *testing.T) {
 
 // Note: test based on Figure 7; server is leader line; peer is case (d)
 func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
@@ -139,7 +145,9 @@ func TestCM_RpcRV_SameTerm_Follower_NullVoteOrSameVote(t *testing.T) {
 
 // Note: test based on Figure 7; server is leader line; peer is case (d)
 func TestCM_RpcRV_SameTerm_CandidateOrLeader_SelfVote(t *testing.T) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
@@ -253,7 +261,9 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 	senderLastEntryTerm TermNo,
 	expectedVote bool,
 ) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, _ := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
@@ -318,7 +328,9 @@ func testCM_RpcRV_NewerTerm_SenderHasGivenLastEntryIndexAndTerm(
 	f(testSetupMCM_Leader_Figure7LeaderLine)
 }
 
-func testSetupMCM_FollowerTerm8_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
+func testSetupMCM_FollowerTerm8_Figure7LeaderLine(
+	t *testing.T,
+) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	mcm, mrs := testSetupMCM_Follower_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 	serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 
@@ -337,7 +349,9 @@ func testSetupMCM_FollowerTerm8_Figure7LeaderLine(t *testing.T) (*managedConsens
 
 // Test for another server with the same id
 func TestCM_RpcRV_SameServerId(t *testing.T) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, _ := setup(t)
 
 		requestVote := &RpcRequestVote{7, 9, 6}
@@ -355,7 +369,9 @@ func TestCM_RpcRV_SameServerId(t *testing.T) {
 
 // Test for a server with an id not in the cluster
 func TestCM_RpcRV_ServerIdNotInCluster(t *testing.T) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, _ := setup(t)
 
 		requestVote := &RpcRequestVote{7, 9, 6}

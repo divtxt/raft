@@ -15,7 +15,9 @@ func (cm *PassiveConsensusModule) Rpc_RpcRequestVote(
 	rpcRequestVote *RpcRequestVote,
 ) (*RpcRequestVoteReply, error) {
 	if from == cm.ClusterInfo.GetThisServerId() {
-		return nil, fmt.Errorf("FATAL: from server has same serverId: %v", cm.ClusterInfo.GetThisServerId())
+		return nil, fmt.Errorf(
+			"FATAL: from server has same serverId: %v", cm.ClusterInfo.GetThisServerId(),
+		)
 	}
 	if !cm.ClusterInfo.IsPeer(from) {
 		return nil, fmt.Errorf("FATAL: 'from' serverId %v is not in the cluster", from)

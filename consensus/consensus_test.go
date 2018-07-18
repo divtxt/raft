@@ -135,7 +135,9 @@ func testCM_Follower_StartsElectionOnElectionTimeout(
 		t.Fatal()
 	}
 
-	testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(t, mcm, mrs, testdata.CurrentTerm+1)
+	testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
+		t, mcm, mrs, testdata.CurrentTerm+1,
+	)
 }
 
 func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
@@ -675,7 +677,9 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 }
 
 func TestCM_SetCommitIndexNotifiesCommitter(t *testing.T) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, _ := setup(t)
 
 		mcm.mc.CheckCalls(nil)
@@ -772,19 +776,27 @@ func testSetupMCM_SOLO_Leader_WithTerms(
 	return mcm, mrs
 }
 
-func testSetupMCM_Follower_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
+func testSetupMCM_Follower_Figure7LeaderLine(
+	t *testing.T,
+) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	return testSetupMCM_Follower_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 }
 
-func testSetupMCM_Candidate_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
+func testSetupMCM_Candidate_Figure7LeaderLine(
+	t *testing.T,
+) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	return testSetupMCM_Candidate_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 }
 
-func testSetupMCM_Leader_Figure7LeaderLine(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
+func testSetupMCM_Leader_Figure7LeaderLine(
+	t *testing.T,
+) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	return testSetupMCM_Leader_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 }
 
-func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(t *testing.T) (*managedConsensusModule, *testhelpers.MockRpcSender) {
+func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(
+	t *testing.T,
+) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	mcm, mrs := testSetupMCM_Leader_WithTerms(t, testdata.TestUtil_MakeFigure7LeaderLineTerms())
 
 	// sanity check - before
@@ -978,7 +990,9 @@ func (mcm *managedConsensusModule) makeAEWithTerm(peer ServerId) *RpcAppendEntri
 }
 
 // FIXME: inline as a closure since it is only used in one place (or check for other users)
-func (mcm *managedConsensusModule) testHelper_sendAppendEntriesToPeer(peerId ServerId, empty bool) error {
+func (mcm *managedConsensusModule) testHelper_sendAppendEntriesToPeer(
+	peerId ServerId, empty bool,
+) error {
 	currentTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 	commitIndex := mcm.pcm.GetCommitIndex()
 	fm, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(peerId)

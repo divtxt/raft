@@ -34,7 +34,9 @@ func (imps *InMemoryRaftPersistentState) SetCurrentTerm(currentTerm TermNo) erro
 		return errors.New("FATAL: attempt to set currentTerm to 0")
 	}
 	if currentTerm < imps.currentTerm {
-		return fmt.Errorf("FATAL: attempt to decrease currentTerm: %v to %v", imps.currentTerm, currentTerm)
+		return fmt.Errorf(
+			"FATAL: attempt to decrease currentTerm: %v to %v", imps.currentTerm, currentTerm,
+		)
 	}
 	if currentTerm > imps.currentTerm {
 		imps.votedFor = 0
@@ -53,7 +55,9 @@ func (imps *InMemoryRaftPersistentState) SetVotedFor(votedFor ServerId) error {
 		return errors.New("FATAL: attempt to set votedFor to 0")
 	}
 	if imps.votedFor != 0 {
-		return fmt.Errorf("FATAL: attempt to change non-zero votedFor: %v to %v", imps.votedFor, votedFor)
+		return fmt.Errorf(
+			"FATAL: attempt to change non-zero votedFor: %v to %v", imps.votedFor, votedFor,
+		)
 	}
 	imps.votedFor = votedFor
 	return nil

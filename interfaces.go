@@ -20,8 +20,8 @@ package raft
 // error handling behavior:
 //
 // Concurrency:
-// All methods should be concurrent safe (including during log compaction) and a call to one method
-// should try to avoid blocking a call to any other method.
+// All methods should be concurrent safe (including during log compaction) and a call to
+// one method should try to avoid blocking a call to any other method.
 //
 // Errors:
 // All errors should be indicated in the return value, and any such error returned by this

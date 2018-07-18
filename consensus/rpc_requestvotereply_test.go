@@ -164,7 +164,9 @@ func TestCM_RpcRVR_Candidate_StartNewElectionOnElectionTimeout(t *testing.T) {
 
 // Extra: follower or leader ignores vote
 func TestCM_RpcRVR_FollowerOrLeader_Ignores(t *testing.T) {
-	f := func(setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender)) {
+	f := func(
+		setup func(t *testing.T) (mcm *managedConsensusModule, mrs *testhelpers.MockRpcSender),
+	) {
 		mcm, mrs := setup(t)
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		sentRpc := &RpcRequestVote{serverTerm, 0, 0}

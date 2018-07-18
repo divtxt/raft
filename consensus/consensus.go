@@ -282,7 +282,9 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 		return err
 	}
 	// Reset election timeout!
-	cm.ElectionTimeoutTimer.RestartWithDuration(cm.electionTimeoutChooser.ChooseRandomElectionTimeout())
+	cm.ElectionTimeoutTimer.RestartWithDuration(
+		cm.electionTimeoutChooser.ChooseRandomElectionTimeout(),
+	)
 	return nil
 }
 
@@ -368,7 +370,9 @@ func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
 func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []LogEntry) error {
 	// Check that we're not trying to rewind past commitIndex
 	if li < cm._commitIndex {
-		return fmt.Errorf("FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex)
+		return fmt.Errorf(
+			"FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex,
+		)
 	}
 	newIole := li + LogIndex(len(entries))
 	if newIole < cm._commitIndex {
