@@ -32,8 +32,8 @@ func TestCommitter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Test StopSync() - this also waits for the first run to complete.
-	committerImpl.StopSync()
+	// Stop the TriggeredRunner directly - this also waits for the first run to complete.
+	committerImpl.commitApplier.StopSync()
 	if dsm.GetLastApplied() != 4 {
 		t.Fatal()
 	}
@@ -232,6 +232,10 @@ func TestCommitter(t *testing.T) {
 	if err.Error() != "FATAL: commitIndex=14 is > current iole=13" {
 		t.Fatal(err)
 	}
+
+	// Stop the committer
+	committerImpl.StopSync()
+
 }
 
 // TODO: tests for fceListener

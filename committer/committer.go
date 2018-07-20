@@ -19,6 +19,8 @@ type FatalErrorHandler func(err error)
 type Committer struct {
 	mutex sync.Mutex
 
+	stopRequest bool
+
 	// -- Commit state
 	// commitIndex is the index of highest log entry known to be committed
 	// (initialized to 0, increases monotonically)
@@ -55,6 +57,7 @@ func NewCommitter(
 
 	c := &Committer{
 		mutex:                  sync.Mutex{},
+		stopRequest:            false,
 		commitIndex:            0,
 		log:                    log,
 		stateMachine:           stateMachine,
@@ -72,7 +75,10 @@ func NewCommitter(
 //
 // Will panic if called more than once.
 func (c *Committer) StopSync() {
-	// FIXME: should other methods be checking stopped state?
+	c.mutex.Lock()
+	c.stopRequest = true
+	c.mutex.Unlock()
+
 	c.commitApplier.StopSync()
 }
 
@@ -173,11 +179,20 @@ func (c *Committer) applyPendingCommits() {
 	// - there is only one method to this call at a time
 	// - commitIndex can only increase, so we can snapshot it as a low value
 
+	var stopRequestSnapshot bool
+	var commitIndexSnapshot LogIndex
+
 	for {
 		// safely get commitIndex
 		c.mutex.Lock()
-		commitIndexSnapshot := c.commitIndex
+		stopRequestSnapshot = c.stopRequest
+		commitIndexSnapshot = c.commitIndex
 		c.mutex.Unlock()
+
+		// return early if we're trying to stop
+		if stopRequestSnapshot {
+			return
+		}
 
 		lastApplied := c.stateMachine.GetLastApplied()
 
@@ -207,12 +222,19 @@ func (c *Committer) applyPendingCommits() {
 
 			// Get the commit listener for this index
 			c.mutex.Lock()
+			stopRequestSnapshot = c.stopRequest
+			// since we have the mutex, update our copy of commitIndex
+			commitIndexSnapshot = c.commitIndex
 			crc, haveCrc := c.listeners[indexToApply]
 			if haveCrc {
 				delete(c.listeners, indexToApply)
 			}
-			// TODO: since we have the mutex, we could update our copy of commitIndex
 			c.mutex.Unlock()
+
+			// return early if we're trying to stop
+			if stopRequestSnapshot {
+				return
+			}
 
 			// Apply the command to the state machine.
 			commandResult := c.stateMachine.ApplyCommand(indexToApply, entry.Command)
