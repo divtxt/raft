@@ -104,7 +104,15 @@ func (c *Committer) RemoveListenersAfterIndex(afterIndex LogIndex) {
 //
 // Will return an error if commitIndex decreases or if StopSync has been called.
 func (c *Committer) CommitAsync(commitIndex LogIndex) error {
-	// FIXME: check that commitIndex is not past end of the log
+	iole, err := c.log.GetIndexOfLastEntry()
+	if err != nil {
+		return err
+	}
+	if commitIndex > iole {
+		return fmt.Errorf(
+			"FATAL: commitIndex=%v is > current iole=%v", commitIndex, iole,
+		)
+	}
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()

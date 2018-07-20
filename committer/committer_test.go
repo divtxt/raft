@@ -194,4 +194,10 @@ func TestCommitter(t *testing.T) {
 	if v := testhelpers.GetCommandResult(crc10b); v != "rc10" {
 		t.Fatal(v)
 	}
+
+	// Committing past the end of the log should be an error
+	err = committer.CommitAsync(11)
+	if err.Error() != "FATAL: commitIndex=11 is > current iole=10" {
+		t.Fatal(err)
+	}
 }
