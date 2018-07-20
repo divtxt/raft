@@ -34,7 +34,7 @@ type ICommitter interface {
 	//
 	// Note that a listener may not be registered for every log index.
 	//
-	RegisterListener(logIndex raft.LogIndex) <-chan raft.CommandResult
+	RegisterListener(logIndex raft.LogIndex) (<-chan raft.CommandResult, error)
 
 	// Remove existing listeners for all log indexes after the given log index.
 	//
@@ -71,5 +71,5 @@ type ICommitter interface {
 	//
 	// It is an error if the value is beyond the end of the log.
 	// (i.e. the given index is greater than indexOfLastEntry)
-	CommitAsync(commitIndex raft.LogIndex)
+	CommitAsync(commitIndex raft.LogIndex) error
 }

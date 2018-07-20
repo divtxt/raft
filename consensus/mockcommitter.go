@@ -31,16 +31,19 @@ func (mc *mockCommitter) CheckCalls(expected []mockCommitterCall) {
 	mc.calls = nil
 }
 
-func (mc *mockCommitter) RegisterListener(logIndex raft.LogIndex) <-chan raft.CommandResult {
+func (mc *mockCommitter) RegisterListener(
+	logIndex raft.LogIndex,
+) (<-chan raft.CommandResult, error) {
 	r := make(chan raft.CommandResult, 1)
 	mc.calls = append(mc.calls, mockCommitterCall{"RegisterListener", logIndex, r})
-	return r
+	return r, nil
 }
 
 func (mc *mockCommitter) RemoveListenersAfterIndex(afterIndex raft.LogIndex) {
 	mc.calls = append(mc.calls, mockCommitterCall{"RemoveListenersAfterIndex", afterIndex, nil})
 }
 
-func (mc *mockCommitter) CommitAsync(commitIndex raft.LogIndex) {
+func (mc *mockCommitter) CommitAsync(commitIndex raft.LogIndex) error {
 	mc.calls = append(mc.calls, mockCommitterCall{"CommitAsync", commitIndex, nil})
+	return nil
 }

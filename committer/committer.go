@@ -58,19 +58,21 @@ func (c *Committer) StopSync() {
 
 // ---- Implement ICommitter
 
-func (c *Committer) RegisterListener(logIndex LogIndex) <-chan CommandResult {
+func (c *Committer) RegisterListener(logIndex LogIndex) (<-chan CommandResult, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	if logIndex <= c.commitIndex {
-		panic(fmt.Sprintf("FATAL: logIndex=%v is <= commitIndex=%v", logIndex, c.commitIndex))
+		return nil, fmt.Errorf(
+			"FATAL: logIndex=%v is <= commitIndex=%v", logIndex, c.commitIndex,
+		)
 	}
 	if logIndex <= c.highestRegisteredIndex {
-		panic(fmt.Sprintf(
+		return nil, fmt.Errorf(
 			"FATAL: logIndex=%v is <= highestRegisteredIndex=%v",
 			logIndex,
 			c.highestRegisteredIndex,
-		))
+		)
 	}
 
 	crc := make(chan CommandResult, 1)
@@ -78,7 +80,7 @@ func (c *Committer) RegisterListener(logIndex LogIndex) <-chan CommandResult {
 	c.listeners[logIndex] = crc
 	c.highestRegisteredIndex = logIndex
 
-	return crc
+	return crc, nil
 }
 
 func (c *Committer) RemoveListenersAfterIndex(afterIndex LogIndex) {
@@ -100,21 +102,25 @@ func (c *Committer) RemoveListenersAfterIndex(afterIndex LogIndex) {
 //
 // Commits are applied asynchronously by the Committer's goroutine.
 //
-// Will panic if commitIndex decreases or if StopSync has been called.
-func (c *Committer) CommitAsync(commitIndex LogIndex) {
+// Will return an error if commitIndex decreases or if StopSync has been called.
+func (c *Committer) CommitAsync(commitIndex LogIndex) error {
+	// FIXME: check that commitIndex is not past end of the log
+
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	// Check commitIndex is not going backward
 	if commitIndex < c.commitIndex {
-		panic(fmt.Sprintf(
+		return fmt.Errorf(
 			"FATAL: commitIndex=%v is < current commitIndex=%v", commitIndex, c.commitIndex,
-		))
+		)
 	}
 
 	// Update commitIndex and then trigger a run of the applier goroutine
 	c.commitIndex = commitIndex
 	c.commitApplier.TriggerRun()
+
+	return nil
 }
 
 // ----
@@ -142,6 +148,7 @@ func (c *Committer) applyPendingCommits() {
 		// Get a batch of entries from the raft log.
 		entries, err := c.log.GetEntriesAfterIndex(lastApplied)
 		if err != nil {
+			// TODO: signal this is some way instead of panicking
 			panic(err)
 		}
 

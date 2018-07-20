@@ -6,7 +6,6 @@ import (
 	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/testhelpers"
-	"github.com/divtxt/raft/util"
 )
 
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
@@ -27,7 +26,10 @@ func TestCommitter(t *testing.T) {
 	var committer internal.ICommitter = committerImpl
 
 	// CommitAsync should trigger run that drives commits
-	committer.CommitAsync(4)
+	err = committer.CommitAsync(4)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Test StopSync() - this also waits for the first run to complete.
 	committerImpl.StopSync()
@@ -42,33 +44,40 @@ func TestCommitter(t *testing.T) {
 	// Enable TriggeredRunner test mode for the rest of the test.
 	committerImpl.commitApplier.TestHelperFakeRestart()
 
-	// Registering for committed index should panic
-	err = util.ExpectPanicMessage(
-		func() {
-			committer.RegisterListener(4)
-		},
-		"FATAL: logIndex=4 is <= commitIndex=4",
-	)
-	if err != nil {
+	// Registering for committed index should be an error
+	_, err = committer.RegisterListener(4)
+	if err.Error() != "FATAL: logIndex=4 is <= commitIndex=4" {
 		t.Fatal(err)
 	}
 
 	// Register for new notifications.
 	// Intentionally not registering for some indexes to test that gaps are allowed.
 	// We're cheating a bit here in this test since these entries are already in the log.
-	crc6 := committer.RegisterListener(6)
+	crc6, err := committer.RegisterListener(6)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if crc6 == nil {
 		t.Fatal()
 	}
-	crc8 := committer.RegisterListener(8)
+	crc8, err := committer.RegisterListener(8)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if crc8 == nil {
 		t.Fatal()
 	}
-	crc9 := committer.RegisterListener(9)
+	crc9, err := committer.RegisterListener(9)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if crc9 == nil {
 		t.Fatal()
 	}
-	crc10 := committer.RegisterListener(10)
+	crc10, err := committer.RegisterListener(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if crc10 == nil {
 		t.Fatal()
 	}
@@ -77,20 +86,18 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc9)
 	testhelpers.AssertWillBlock(crc10)
 
-	// Trying to register for an older index should panic
-	err = util.ExpectPanicMessage(
-		func() {
-			committer.RegisterListener(7)
-		},
-		"FATAL: logIndex=7 is <= highestRegisteredIndex=10",
-	)
-	if err != nil {
+	// Trying to register for an older index should be an error
+	_, err = committer.RegisterListener(7)
+	if err.Error() != "FATAL: logIndex=7 is <= highestRegisteredIndex=10" {
 		t.Fatal(err)
 	}
 
 	// Advancing commitIndex by multiple values should drive as many commits
 	// and notify relevant listeners with the results.
-	committer.CommitAsync(8)
+	err = committer.CommitAsync(8)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !committerImpl.commitApplier.TestHelperRunOnceIfTriggerPending() {
 		t.Fatal()
 	}
@@ -109,22 +116,25 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc9)
 	testhelpers.AssertWillBlock(crc10)
 
-	// Regressing commitIndex should panic
-	err = util.ExpectPanic(
-		func() { committer.CommitAsync(7) },
-		"FATAL: commitIndex=7 is < current commitIndex=8",
-	)
-	if err != nil {
+	// Regressing commitIndex should be an error
+	err = committer.CommitAsync(7)
+	if err.Error() != "FATAL: commitIndex=7 is < current commitIndex=8" {
 		t.Fatal(err)
 	}
 
 	// Register a few more listeners
 	// We're cheating a bit here in this test since these entries are never put in the log.
-	crc12 := committer.RegisterListener(12)
+	crc12, err := committer.RegisterListener(12)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if crc12 == nil {
 		t.Fatal()
 	}
-	crc13 := committer.RegisterListener(13)
+	crc13, err := committer.RegisterListener(13)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if crc13 == nil {
 		t.Fatal()
 	}
@@ -132,13 +142,8 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc13)
 
 	// Allowed index for register should have moved up
-	err = util.ExpectPanicMessage(
-		func() {
-			committer.RegisterListener(12)
-		},
-		"FATAL: logIndex=12 is <= highestRegisteredIndex=13",
-	)
-	if err != nil {
+	_, err = committer.RegisterListener(12)
+	if err.Error() != "FATAL: logIndex=12 is <= highestRegisteredIndex=13" {
 		t.Fatal(err)
 	}
 
@@ -150,16 +155,14 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertIsClosed(crc13)
 
 	// Should now be allowed to register listeners after the remove index
-	err = util.ExpectPanicMessage(
-		func() {
-			committer.RegisterListener(9)
-		},
-		"FATAL: logIndex=9 is <= highestRegisteredIndex=9",
-	)
+	_, err = committer.RegisterListener(9)
+	if err.Error() != "FATAL: logIndex=9 is <= highestRegisteredIndex=9" {
+		t.Fatal(err)
+	}
+	crc10b, err := committer.RegisterListener(10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	crc10b := committer.RegisterListener(10)
 	if crc10b == nil {
 		t.Fatal()
 	}
@@ -168,8 +171,14 @@ func TestCommitter(t *testing.T) {
 
 	// Advancing commitIndex should drive new commits.
 	// We're cheating a bit here in this test since we never removed and re-added entry at 10.
-	committer.CommitAsync(9)
-	committer.CommitAsync(10)
+	err = committer.CommitAsync(9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = committer.CommitAsync(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !committerImpl.commitApplier.TestHelperRunOnceIfTriggerPending() {
 		t.Fatal()
 	}

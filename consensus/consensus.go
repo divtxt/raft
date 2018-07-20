@@ -165,8 +165,8 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	cm.committer.CommitAsync(commitIndex)
-	return nil
+	err = cm.committer.CommitAsync(commitIndex)
+	return err
 }
 
 // AppendCommand appends the given serialized command to the Raft log and applies it
@@ -183,7 +183,10 @@ func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan Command
 		return nil, err
 	}
 
-	crc := cm.committer.RegisterListener(iole)
+	crc, err := cm.committer.RegisterListener(iole)
+	if err != nil {
+		return nil, err
+	}
 
 	return crc, nil
 }
