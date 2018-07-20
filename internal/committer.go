@@ -19,33 +19,43 @@ type ICommitter interface {
 
 	// Register the listener for a future commit at the given log index.
 	//
-	// After a command at the given log index is committed and applied to the state machine,
-	// the value returned by the state machine should be sent on this channel.
+	// When the command at the given log index is later committed and applied to the state machine
+	// by this Committer, the value returned by the state machine must be sent on this channel.
 	//
-	// The channel should be closed instead if affected by RemoveListenersAfterIndex.
+	// A call to RemoveListenersAfterIndex that affects this index must close this channel instead.
 	//
-	// The log index to this method will generally strictly increase, except that a call to
-	// ClearListenersAfterIndex rewinds the expected minimum for the next log index.
+	// The log index must be greater than the current highestRegisteredIndex and becomes the new
+	// value of highestRegisteredIndex. This means that the log index must strictly increase,
+	// except when a call to RemoveListenersAfterIndex rewinds the value of highestRegisteredIndex.
+	// This also means that no more than one listener can be registered for a given log index,
+	// except when an existing listener is closed by RemoveListenersAfterIndex.
 	//
-	// The log index should always be more than the latest commitIndex.
+	// The log index must be greater than commitIndex.
 	//
-	// No more than one listener should be registered for a given log index, except in the case
-	// where the existing listener is closed by ClearListenersAfterIndex.
+	// The log index must be less than or equal to the log's indexOfLastEntry.
+	//
+	// The intent of this method is that an entry at the given index is expected to be appended to
+	// the log before a listener is registered for that index.
+	//
+	// On startup, the Committer can consider the initial value of highestRegisteredIndex to be
+	// either 0 or the log's indexOfLastEntry.
 	//
 	// Note that a listener may not be registered for every log index.
 	//
 	RegisterListener(logIndex raft.LogIndex) (<-chan raft.CommandResult, error)
 
-	// Remove existing listeners for all log indexes after the given log index.
+	// Remove and close existing listeners for all log indexes after the given log index.
 	//
-	// The channels for those listeners should be closed.
+	// If the given index is less than highestRegisteredIndex, then highestRegisteredIndex must
+	// be set to the given index.
 	//
-	// This method should remove all listeners before returning.
+	// This means that we must be able to register listeners after the given index, even if
+	// listeners were previously registered for such indexes.
 	//
-	// The given index should always be greater than or equal to the latest commitIndex.
+	// The log index must be greater than or equal to the latest commitIndex.
 	//
-	// This situation occurs due to the ConsensusModule loses leadership, and the new leader
-	// replacing the log entries after the given log index.
+	// The intent of this method is to handle the case where a ConsensusModule loses leadership,
+	// and the new leader replaces the log entries after the given log index.
 	//
 	RemoveListenersAfterIndex(afterIndex raft.LogIndex)
 
