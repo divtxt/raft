@@ -134,7 +134,10 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 
 	// Figure 8, case (a)
 	terms := []TermNo{1, 2} // leader line for the case
-	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
+	imle, err := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
@@ -202,7 +205,10 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 
 	// Figure 8, case (c)
 	terms := []TermNo{1, 2, 4} // leader line for the case
-	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
+	imle, err := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -321,7 +327,10 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 
 	// Figure 8, case (e) extended with extra term 4 entry at index 4
 	terms := []TermNo{1, 2, 4, 4} // leader line for the case
-	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
+	imle, err := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -381,7 +390,10 @@ func TestFindNewerCommitIndex_SOLO(t *testing.T) {
 	}
 
 	terms := []TermNo{1, 2, 2, 2, 3, 3}
-	imle := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
+	imle, err := log.TestUtil_NewInMemoryLog_WithTerms(terms, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 	if err != nil {
 		t.Fatal(err)

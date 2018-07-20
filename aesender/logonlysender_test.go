@@ -13,12 +13,15 @@ import (
 )
 
 func TestLogOnlyAESender(t *testing.T) {
-	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(
+	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
 		testdata.TestUtil_MakeFigure7LeaderLineTerms(),
 		testdata.MaxEntriesPerAppendEntry,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	err := iml.DiscardEntriesBeforeIndex(5)
+	err = iml.DiscardEntriesBeforeIndex(5)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,24 +10,36 @@ import (
 
 // Test InMemoryLog using the Log Blackbox test.
 func TestInMemoryLog_BlackboxTest(t *testing.T) {
-	inmem_log := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	inmem_log, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testhelpers.BlackboxTest_Log(t, inmem_log, false)
 }
 
 // Test InMemoryLog compacted log using the Log Blackbox test.
 func TestInMemoryLog_BlackboxTestWithCompaction(t *testing.T) {
-	inmem_log := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
-	err := inmem_log.DiscardEntriesBeforeIndex(5)
+	inmem_log, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	err = inmem_log.DiscardEntriesBeforeIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testhelpers.BlackboxTest_Log(t, inmem_log, true)
 }
 
 // Tests for InMemoryLog's GetEntriesAfterIndex implementation
 func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	// Log with 10 entries with terms as shown in Figure 7, leader line
-	iml := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	iml, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// none
 	actualEntries, err := iml.GetEntriesAfterIndex(10)
@@ -126,7 +138,10 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 // Tests for InMemoryLog's maxEntries policy implementation
 func TestInMemoryLog_AlternateMaxEntries(t *testing.T) {
 	// Log with 10 entries with terms as shown in Figure 7, leader line
-	iml := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(2)
+	iml, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(2)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// max
 	actualEntries, err := iml.GetEntriesAfterIndex(2)

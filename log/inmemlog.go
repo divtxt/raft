@@ -14,9 +14,9 @@ type InMemoryLog struct {
 	maxEntries        uint64
 }
 
-func NewInMemoryLog(maxEntries uint64) *InMemoryLog {
+func NewInMemoryLog(maxEntries uint64) (*InMemoryLog, error) {
 	if maxEntries <= 0 {
-		panic("maxEntries must be greater than zero")
+		return nil, fmt.Errorf("maxEntries =%v must be greater than zero", maxEntries)
 	}
 	entries := []LogEntry{}
 	iml := &InMemoryLog{
@@ -24,7 +24,7 @@ func NewInMemoryLog(maxEntries uint64) *InMemoryLog {
 		entries,
 		maxEntries,
 	}
-	return iml
+	return iml, nil
 }
 
 func (iml *InMemoryLog) GetIndexOfFirstEntry() (LogIndex, error) {

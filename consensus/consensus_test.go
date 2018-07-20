@@ -30,7 +30,14 @@ func setupManagedConsensusModuleR2(
 	solo bool,
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
-	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+
+	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
+		logTerms, testdata.MaxEntriesPerAppendEntry,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	mc := newMockCommitter()
 	mrs := testhelpers.NewMockRpcSender()
 	aes := aesender.NewLogOnlyAESender(iml, mrs.SendOnlyRpcAppendEntriesAsync)

@@ -27,7 +27,12 @@ func setupConsensusModuleR3(
 ) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 
-	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
+		logTerms, testdata.MaxEntriesPerAppendEntry,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if discardEntriesBeforeIndex > 0 {
 		err := iml.DiscardEntriesBeforeIndex(discardEntriesBeforeIndex)
 		if err != nil {
@@ -61,7 +66,12 @@ func setupConsensusModuleR3_SOLO(
 ) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 
-	iml := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms, testdata.MaxEntriesPerAppendEntry)
+	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
+		logTerms, testdata.MaxEntriesPerAppendEntry,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if discardEntriesBeforeIndex > 0 {
 		err := iml.DiscardEntriesBeforeIndex(discardEntriesBeforeIndex)
 		if err != nil {
