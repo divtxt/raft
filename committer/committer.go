@@ -9,6 +9,8 @@ import (
 	"github.com/divtxt/raft/util"
 )
 
+type FatalErrorHandler func(err error)
+
 // Committer is an implementation of the ICommitter internal interface.
 //
 // It is a goroutine that applies committed log entries to the state machine
@@ -23,8 +25,11 @@ type Committer struct {
 	commitIndex LogIndex
 
 	// -- External components
-	log           internal.LogTailOnlyRO
-	stateMachine  StateMachine
+	log          internal.LogTailOnlyRO
+	stateMachine StateMachine
+	feHandler    FatalErrorHandler
+
+	// -- Internal components
 	commitApplier *util.TriggeredRunner
 
 	// -- Commit listeners
@@ -33,12 +38,27 @@ type Committer struct {
 }
 
 // NewCommitter creates a new Committer with the given parameters.
-func NewCommitter(log internal.LogTailOnlyRO, stateMachine StateMachine) *Committer {
+//
+// A goroutine is started that applies committed log entries to the state machine and notifies
+// clients that are waiting for those entries to be committed.
+//
+// If the goroutine sees an error this is fatal for it, and it will call fceListener instead of
+// calling panic(). fceListener is expected to call the committer's StopSync() method before it
+// returns!
+//
+func NewCommitter(
+	log internal.LogTailOnlyRO,
+	stateMachine StateMachine,
+	feHandler FatalErrorHandler,
+) *Committer {
+	// TODO: check that parameters are not nil?!
+
 	c := &Committer{
 		mutex:                  sync.Mutex{},
 		commitIndex:            0,
 		log:                    log,
 		stateMachine:           stateMachine,
+		feHandler:              feHandler,
 		commitApplier:          nil,
 		listeners:              make(map[LogIndex]chan CommandResult),
 		highestRegisteredIndex: 0,
@@ -170,8 +190,8 @@ func (c *Committer) applyPendingCommits() {
 		// Get a batch of entries from the raft log.
 		entries, err := c.log.GetEntriesAfterIndex(lastApplied)
 		if err != nil {
-			// TODO: signal this is some way instead of panicking
-			panic(err)
+			c.feHandler(err)
+			return
 		}
 
 		// Apply the entries to the state machine.

@@ -77,14 +77,12 @@ func NewConsensusModule(
 ) (*ConsensusModule, error) {
 	logger.Println("[raft] Initializing ConsensusModule")
 
-	committer := committer.NewCommitter(raftLog, stateMachine)
-
 	cm := &ConsensusModule{
 		&sync.Mutex{},
 
 		logger,
 
-		committer,
+		nil, // committer - temp value, to be replaced before goroutine start
 		nil, // passiveConsensusModule - temp value, to be replaced before goroutine start
 
 		// -- External components
@@ -97,6 +95,11 @@ func NewConsensusModule(
 		timeSettings.TickerDuration,
 		nil,
 	}
+
+	committer := committer.NewCommitter(raftLog, stateMachine, cm.shutdownAndPanic)
+
+	// We can only set the value here because it's a cyclic reference
+	cm.committer = committer
 
 	aes := aesender.NewLogOnlyAESender(raftLog, cm.SendOnlyRpcAppendEntriesAsync)
 

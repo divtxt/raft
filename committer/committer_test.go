@@ -23,7 +23,7 @@ func TestCommitter(t *testing.T) {
 
 	dsm := testhelpers.NewDummyStateMachine(3)
 
-	committerImpl := NewCommitter(iml, dsm)
+	committerImpl := NewCommitter(iml, dsm, nil)
 	var committer internal.ICommitter = committerImpl
 
 	// CommitAsync should trigger run that drives commits
@@ -233,3 +233,5 @@ func TestCommitter(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TODO: tests for fceListener
