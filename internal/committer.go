@@ -54,10 +54,13 @@ type ICommitter interface {
 	//
 	// The log index must be greater than or equal to the latest commitIndex.
 	//
+	// The log index may be greater than the log's indexOfLastEntry. This is because the log
+	// may already have been truncated before this call.
+	//
 	// The intent of this method is to handle the case where a ConsensusModule loses leadership,
 	// and the new leader replaces the log entries after the given log index.
 	//
-	RemoveListenersAfterIndex(afterIndex raft.LogIndex)
+	RemoveListenersAfterIndex(afterIndex raft.LogIndex) error
 
 	// Commit log entries to the state machine asynchronously up to the given index.
 	//

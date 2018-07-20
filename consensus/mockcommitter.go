@@ -39,8 +39,9 @@ func (mc *mockCommitter) RegisterListener(
 	return r, nil
 }
 
-func (mc *mockCommitter) RemoveListenersAfterIndex(afterIndex raft.LogIndex) {
+func (mc *mockCommitter) RemoveListenersAfterIndex(afterIndex raft.LogIndex) error {
 	mc.calls = append(mc.calls, mockCommitterCall{"RemoveListenersAfterIndex", afterIndex, nil})
+	return nil
 }
 
 func (mc *mockCommitter) CommitAsync(commitIndex raft.LogIndex) error {

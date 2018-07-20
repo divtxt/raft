@@ -386,6 +386,9 @@ func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []Lo
 			cm._commitIndex,
 		)
 	}
-	cm.committer.RemoveListenersAfterIndex(li)
+	err := cm.committer.RemoveListenersAfterIndex(li)
+	if err != nil {
+		return nil
+	}
 	return cm.logWO.SetEntriesAfterIndex(li, entries)
 }

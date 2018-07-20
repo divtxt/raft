@@ -3,6 +3,7 @@ package committer
 import (
 	"testing"
 
+	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/testhelpers"
@@ -122,8 +123,24 @@ func TestCommitter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Register a few more listeners
-	// We're cheating a bit here in this test since these entries are never put in the log.
+	// Add some more log entries...
+	_, err = iml.AppendEntry(LogEntry{8, Command("c11")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = iml.AppendEntry(LogEntry{8, Command("c12")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ioleC13, err := iml.AppendEntry(LogEntry{8, Command("c13")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ioleC13 != 13 {
+		t.Fatal(ioleC13)
+	}
+
+	// Register a few more listeners.
 	crc12, err := committer.RegisterListener(12)
 	if err != nil {
 		t.Fatal(err)
@@ -131,6 +148,18 @@ func TestCommitter(t *testing.T) {
 	if crc12 == nil {
 		t.Fatal()
 	}
+	testhelpers.AssertWillBlock(crc12)
+
+	// Remove index later than highestRegisteredIndex and indexOfLastEntry should be allowed
+	err = committer.RemoveListenersAfterIndex(14)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testhelpers.AssertWillBlock(crc9)
+	testhelpers.AssertWillBlock(crc10)
+	testhelpers.AssertWillBlock(crc12)
+
+	// Remove with later index should not affect highestRegisteredIndex.
 	crc13, err := committer.RegisterListener(13)
 	if err != nil {
 		t.Fatal(err)
@@ -138,7 +167,6 @@ func TestCommitter(t *testing.T) {
 	if crc13 == nil {
 		t.Fatal()
 	}
-	testhelpers.AssertWillBlock(crc12)
 	testhelpers.AssertWillBlock(crc13)
 
 	// Allowed index for register should have moved up
@@ -148,17 +176,21 @@ func TestCommitter(t *testing.T) {
 	}
 
 	// Remove should close only relevant listeners
-	committer.RemoveListenersAfterIndex(9)
+	err = committer.RemoveListenersAfterIndex(9)
+	if err != nil {
+		t.Fatal(err)
+	}
 	testhelpers.AssertWillBlock(crc9)
 	testhelpers.AssertIsClosed(crc10)
 	testhelpers.AssertIsClosed(crc12)
 	testhelpers.AssertIsClosed(crc13)
 
-	// Should now be allowed to register listeners after the remove index
+	// Should not be allowed to register listeners equal to the index sent to remove
 	_, err = committer.RegisterListener(9)
 	if err.Error() != "FATAL: logIndex=9 is <= highestRegisteredIndex=9" {
 		t.Fatal(err)
 	}
+	// Should be allowed to register listener greater than the index sent to remove
 	crc10b, err := committer.RegisterListener(10)
 	if err != nil {
 		t.Fatal(err)
@@ -196,8 +228,8 @@ func TestCommitter(t *testing.T) {
 	}
 
 	// Committing past the end of the log should be an error
-	err = committer.CommitAsync(11)
-	if err.Error() != "FATAL: commitIndex=11 is > current iole=10" {
+	err = committer.CommitAsync(14)
+	if err.Error() != "FATAL: commitIndex=14 is > current iole=13" {
 		t.Fatal(err)
 	}
 }

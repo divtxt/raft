@@ -59,6 +59,16 @@ func (c *Committer) StopSync() {
 // ---- Implement ICommitter
 
 func (c *Committer) RegisterListener(logIndex LogIndex) (<-chan CommandResult, error) {
+	iole, err := c.log.GetIndexOfLastEntry()
+	if err != nil {
+		return nil, err
+	}
+	if logIndex > iole {
+		return nil, fmt.Errorf(
+			"FATAL: logIndex=%v is > current iole=%v", logIndex, iole,
+		)
+	}
+
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -83,7 +93,7 @@ func (c *Committer) RegisterListener(logIndex LogIndex) (<-chan CommandResult, e
 	return crc, nil
 }
 
-func (c *Committer) RemoveListenersAfterIndex(afterIndex LogIndex) {
+func (c *Committer) RemoveListenersAfterIndex(afterIndex LogIndex) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -95,7 +105,11 @@ func (c *Committer) RemoveListenersAfterIndex(afterIndex LogIndex) {
 		}
 	}
 
-	c.highestRegisteredIndex = afterIndex
+	if afterIndex < c.highestRegisteredIndex {
+		c.highestRegisteredIndex = afterIndex
+	}
+
+	return nil
 }
 
 // Commit log entries to the state machine asynchronously up to the given index.
