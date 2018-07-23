@@ -1,7 +1,6 @@
 package log
 
 import (
-	"reflect"
 	"testing"
 
 	. "github.com/divtxt/raft"
@@ -10,7 +9,7 @@ import (
 
 // Test InMemoryLog using the Log Blackbox test.
 func TestInMemoryLog_BlackboxTest(t *testing.T) {
-	inmem_log, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	inmem_log, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +19,7 @@ func TestInMemoryLog_BlackboxTest(t *testing.T) {
 
 // Test InMemoryLog compacted log using the Log Blackbox test.
 func TestInMemoryLog_BlackboxTestWithCompaction(t *testing.T) {
-	inmem_log, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	inmem_log, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,82 +32,54 @@ func TestInMemoryLog_BlackboxTestWithCompaction(t *testing.T) {
 	testhelpers.BlackboxTest_Log(t, inmem_log, true)
 }
 
-// Tests for InMemoryLog's GetEntriesAfterIndex implementation
-func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
+// Tests for InMemoryLog's GetEntryAtIndex implementation
+func TestInMemoryLog_GetEntryAtIndex(t *testing.T) {
 	// Log with 10 entries with terms as shown in Figure 7, leader line
-	iml, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	iml, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine()
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	// none
-	actualEntries, err := iml.GetEntriesAfterIndex(10)
-	if err != nil {
-		t.Fatal()
-	}
-	expectedEntries := []LogEntry{}
-	if !reflect.DeepEqual(actualEntries, expectedEntries) {
-		t.Fatal(actualEntries)
-	}
-
-	// one
-	actualEntries, err = iml.GetEntriesAfterIndex(9)
-	if err != nil {
-		t.Fatal()
-	}
-	expectedEntries = []LogEntry{
-		{6, Command("c10")},
-	}
-	if !reflect.DeepEqual(actualEntries, expectedEntries) {
-		t.Fatal(actualEntries)
-	}
-
-	// multiple
-	actualEntries, err = iml.GetEntriesAfterIndex(7)
-	if err != nil {
-		t.Fatal()
-	}
-	expectedEntries = []LogEntry{
-		{6, Command("c8")},
-		{6, Command("c9")},
-		{6, Command("c10")},
-	}
-	if !reflect.DeepEqual(actualEntries, expectedEntries) {
-		t.Fatal(actualEntries)
-	}
-
-	// max
-	actualEntries, err = iml.GetEntriesAfterIndex(2)
-	if err != nil {
-		t.Fatal()
-	}
-	expectedEntries = []LogEntry{
-		{1, Command("c3")},
-		{4, Command("c4")},
-		{4, Command("c5")},
-	}
-	if !reflect.DeepEqual(actualEntries, expectedEntries) {
-		t.Fatal(actualEntries)
 	}
 
 	// index of 0
-	actualEntries, err = iml.GetEntriesAfterIndex(0)
+	actualEntry, err := iml.GetEntryAtIndex(0)
+	if err != ErrIndexBeforeFirstEntry {
+		t.Fatal(err)
+	}
+
+	// index = 1
+	actualEntry, err = iml.GetEntryAtIndex(1)
 	if err != nil {
 		t.Fatal()
 	}
-	expectedEntries = []LogEntry{
-		{1, Command("c1")},
-		{1, Command("c2")},
-		{1, Command("c3")},
-	}
-	if !reflect.DeepEqual(actualEntries, expectedEntries) {
-		t.Fatal(actualEntries)
+	expectedEntry := LogEntry{1, Command("c1")}
+	if !actualEntry.Equals(expectedEntry) {
+		t.Fatal(actualEntry)
 	}
 
-	// index more than last log entry
-	actualEntries, err = iml.GetEntriesAfterIndex(11)
-	if err.Error() != "afterLogIndex=11 is > iole=10" {
-		t.Fatal(err)
+	// index < iole
+	actualEntry, err = iml.GetEntryAtIndex(8)
+	if err != nil {
+		t.Fatal()
+	}
+	expectedEntry = LogEntry{6, Command("c8")}
+	if !actualEntry.Equals(expectedEntry) {
+		t.Fatal(actualEntry)
+	}
+
+	// index = iole
+	actualEntry, err = iml.GetEntryAtIndex(10)
+	if err != nil {
+		t.Fatal()
+	}
+	expectedEntry = LogEntry{6, Command("c10")}
+	if !actualEntry.Equals(expectedEntry) {
+		t.Fatal(actualEntry)
+	}
+
+	// index > iole
+	actualEntry, err = iml.GetEntryAtIndex(11)
+	if err != ErrIndexAfterLastEntry {
+		t.Fatal()
 	}
 
 	// log compaction
@@ -128,31 +99,25 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 		t.Fatal(iofe, err)
 	}
 
+	// index < iofe
+	actualEntry, err = iml.GetEntryAtIndex(3)
+	if err != ErrIndexBeforeFirstEntry {
+		t.Fatal(err)
+	}
+
+	// index = iofe
+	actualEntry, err = iml.GetEntryAtIndex(5)
+	if err != nil {
+		t.Fatal()
+	}
+	expectedEntry = LogEntry{4, Command("c5")}
+	if !actualEntry.Equals(expectedEntry) {
+		t.Fatal(actualEntry)
+	}
+
 	// Extra test for DiscardEntriesBeforeIndex
 	err = iml.DiscardEntriesBeforeIndex(4)
 	if err != ErrIndexBeforeFirstEntry {
 		t.Fatal(err)
-	}
-}
-
-// Tests for InMemoryLog's maxEntries policy implementation
-func TestInMemoryLog_AlternateMaxEntries(t *testing.T) {
-	// Log with 10 entries with terms as shown in Figure 7, leader line
-	iml, err := TestUtil_NewInMemoryLog_WithFigure7LeaderLine(2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// max
-	actualEntries, err := iml.GetEntriesAfterIndex(2)
-	if err != nil {
-		t.Fatal()
-	}
-	expectedEntries := []LogEntry{
-		{1, Command("c3")},
-		{4, Command("c4")},
-	}
-	if !reflect.DeepEqual(actualEntries, expectedEntries) {
-		t.Fatal(actualEntries)
 	}
 }

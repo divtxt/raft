@@ -15,7 +15,6 @@ import (
 func TestLogOnlyAESender(t *testing.T) {
 	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
 		testdata.TestUtil_MakeFigure7LeaderLineTerms(),
-		testdata.MaxEntriesPerAppendEntry,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -108,8 +107,6 @@ func TestLogOnlyAESender(t *testing.T) {
 		5,
 		[]LogEntry{
 			{6, Command("c8")},
-			{6, Command("c9")},
-			{6, Command("c10")},
 		},
 		4,
 	}

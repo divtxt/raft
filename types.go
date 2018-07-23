@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 )
@@ -20,6 +21,7 @@ var ErrNotLeader = errors.New("Not currently in LEADER state")
 
 // FIXME: this needs actual values for debugging
 var ErrIndexBeforeFirstEntry = errors.New("Given index is less than indexOfFirstEntry")
+var ErrIndexAfterLastEntry = errors.New("Given index is greater than indexOfLastEntry")
 
 // Raft election term.
 // Initialized to 0 on first boot, increases monotonically.
@@ -37,6 +39,10 @@ type CommandResult interface{}
 type LogEntry struct {
 	TermNo
 	Command
+}
+
+func (le LogEntry) Equals(le2 LogEntry) bool {
+	return le.TermNo == le2.TermNo && bytes.Compare(le.Command, le2.Command) == 0
 }
 
 // Log entry index. First index is 1.

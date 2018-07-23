@@ -18,8 +18,6 @@ const (
 
 	SleepToLetGoroutineRun = 10 * time.Millisecond
 	SleepJustMoreThanATick = TickerDuration + SleepToLetGoroutineRun
-
-	MaxEntriesPerAppendEntry = 3
 )
 
 var AllServerIds = []ServerId{ThisServerId, 102, 103, 104, 105}

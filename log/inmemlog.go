@@ -11,18 +11,13 @@ import (
 type InMemoryLog struct {
 	indexOfFirstEntry LogIndex
 	entries           []LogEntry
-	maxEntries        uint64
 }
 
-func NewInMemoryLog(maxEntries uint64) (*InMemoryLog, error) {
-	if maxEntries <= 0 {
-		return nil, fmt.Errorf("maxEntries =%v must be greater than zero", maxEntries)
-	}
+func NewInMemoryLog() (*InMemoryLog, error) {
 	entries := []LogEntry{}
 	iml := &InMemoryLog{
 		1,
 		entries,
-		maxEntries,
 	}
 	return iml, nil
 }
@@ -47,46 +42,28 @@ func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 	return iml.entries[li-1].TermNo, nil
 }
 
-func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry, error) {
-	if afterLogIndex+1 < iml.indexOfFirstEntry {
-		return nil, ErrIndexBeforeFirstEntry
+func (iml *InMemoryLog) GetEntryAtIndex(li LogIndex) (LogEntry, error) {
+	if li < iml.indexOfFirstEntry {
+		return LogEntry{}, ErrIndexBeforeFirstEntry
 	}
 
 	iole, err := iml.GetIndexOfLastEntry()
 	if err != nil {
-		return nil, err
+		return LogEntry{}, err
 	}
 
-	if iole < afterLogIndex {
-		return nil, fmt.Errorf(
-			"afterLogIndex=%v is > iole=%v",
-			afterLogIndex,
-			iole,
-		)
+	if iole < li {
+		return LogEntry{}, ErrIndexAfterLastEntry
+		//fmt.Errorf(
+		//	"li=%v is > iole=%v",
+		//	li,
+		//	iole,
+		//)
 	}
 
-	var numEntriesToGet uint64 = uint64(iole - afterLogIndex)
+	entry := iml.entries[li-1]
 
-	// Short-circuit allocation for no entries to return
-	if numEntriesToGet == 0 {
-		return []LogEntry{}, nil
-	}
-
-	if numEntriesToGet > iml.maxEntries {
-		numEntriesToGet = iml.maxEntries
-	}
-
-	logEntries := make([]LogEntry, numEntriesToGet)
-	var i uint64 = 0
-	nextIndexToGet := afterLogIndex + 1
-
-	for i < numEntriesToGet {
-		logEntries[i] = iml.entries[nextIndexToGet-1]
-		i++
-		nextIndexToGet++
-	}
-
-	return logEntries, nil
+	return entry, nil
 }
 
 func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) error {

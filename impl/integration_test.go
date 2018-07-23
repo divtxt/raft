@@ -27,9 +27,7 @@ func setupConsensusModuleR3(
 ) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 
-	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
-		logTerms, testdata.MaxEntriesPerAppendEntry,
-	)
+	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,9 +64,7 @@ func setupConsensusModuleR3_SOLO(
 ) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 
-	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
-		logTerms, testdata.MaxEntriesPerAppendEntry,
-	)
+	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	if err != nil {
 		t.Fatal(err)
 	}

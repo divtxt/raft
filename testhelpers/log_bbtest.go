@@ -64,26 +64,17 @@ func BlackboxTest_Log(t *testing.T, log Log, iofeIsFive bool) {
 
 	// get multiple entries
 	if iofeIsFive {
-		entries, err := log.GetEntriesAfterIndex(3)
+		entry, err := log.GetEntryAtIndex(4)
 		if err != ErrIndexBeforeFirstEntry {
-			t.Fatal(entries, err)
+			t.Fatal(entry, err)
 		}
 	}
-	entries, err := log.GetEntriesAfterIndex(4)
+	entry, err := log.GetEntryAtIndex(5)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) != 3 {
-		t.Fatal()
-	}
-	if !TestCommandEquals(entries[0].Command, "c5") {
-		t.Fatal()
-	}
-	if !TestCommandEquals(entries[1].Command, "c6") {
-		t.Fatal()
-	}
-	if !TestCommandEquals(entries[2].Command, "c7") {
-		t.Fatal()
+	if !TestCommandEquals(entry.Command, "c5") {
+		t.Fatal(entry)
 	}
 
 	var logEntries []LogEntry
@@ -173,9 +164,9 @@ func BlackboxTest_Log(t *testing.T, log Log, iofeIsFive bool) {
 		t.Fatal(le)
 	}
 	if iofeIsFive {
-		entries, err = log.GetEntriesAfterIndex(3)
+		entry, err = log.GetEntryAtIndex(3)
 		if err != ErrIndexBeforeFirstEntry {
-			t.Fatal(entries, err)
+			t.Fatal(entry, err)
 		}
 	}
 }
@@ -185,9 +176,9 @@ func TestHelper_GetLogEntryAtIndex(log internal.LogReadOnly, li LogIndex) LogEnt
 	if li == 0 {
 		panic("oops!")
 	}
-	entries, err := log.GetEntriesAfterIndex(li - 1)
+	entry, err := log.GetEntryAtIndex(li)
 	if err != nil {
 		panic(err)
 	}
-	return entries[0]
+	return entry
 }

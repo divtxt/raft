@@ -9,7 +9,7 @@ type LogReadOnly interface {
 	GetIndexOfFirstEntry() (LogIndex, error)
 	GetIndexOfLastEntry() (LogIndex, error)
 	GetTermAtIndex(LogIndex) (TermNo, error)
-	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
+	GetEntryAtIndex(LogIndex) (LogEntry, error)
 }
 
 // LogTailOnly is the subset of the Log interface used by components that will only access the
@@ -22,7 +22,7 @@ type LogReadOnly interface {
 type LogTailOnly interface {
 	GetIndexOfLastEntry() (LogIndex, error)
 	GetTermAtIndex(LogIndex) (TermNo, error)
-	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
+	GetEntryAtIndex(LogIndex) (LogEntry, error)
 	SetEntriesAfterIndex(LogIndex, []LogEntry) error
 	AppendEntry(LogEntry) (LogIndex, error)
 }
@@ -31,7 +31,7 @@ type LogTailOnly interface {
 type LogTailOnlyRO interface {
 	GetIndexOfLastEntry() (LogIndex, error)
 	GetTermAtIndex(LogIndex) (TermNo, error)
-	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
+	GetEntryAtIndex(LogIndex) (LogEntry, error)
 }
 
 // LogTailOnlyWO is the write-only subset of LogTailOnly

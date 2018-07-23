@@ -32,9 +32,7 @@ func setupConsensusModuleR2(
 ) (*ConsensusModule, *testhelpers.MockRpcSender, Log) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 
-	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
-		logTerms, testdata.MaxEntriesPerAppendEntry,
-	)
+	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(logTerms)
 	if err != nil {
 		t.Fatal(err)
 	}

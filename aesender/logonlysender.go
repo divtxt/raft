@@ -41,7 +41,20 @@ func (s *LogOnlyAESender) SendAppendEntriesToPeerAsync(
 		entriesToSend = []LogEntry{}
 	} else {
 		var err error
-		entriesToSend, err = s.logRO.GetEntriesAfterIndex(peerLastLogIndex)
+		iole, err := s.logRO.GetIndexOfLastEntry()
+		if err != nil {
+			return err
+		}
+		indexToSend := peerLastLogIndex + 1
+		if indexToSend > iole {
+			entriesToSend = []LogEntry{}
+		} else {
+			entry, err := s.logRO.GetEntryAtIndex(indexToSend)
+			if err != nil {
+				return err
+			}
+			entriesToSend = []LogEntry{entry}
+		}
 		if err != nil {
 			return err
 		}

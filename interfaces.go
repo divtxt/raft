@@ -54,35 +54,27 @@ type Log interface {
 
 	// Get the term of the entry at the given index.
 	//
-	// It is an error if the given index is beyond the end of the log.
-	// (i.e. the given index is greater than indexOfLastEntry)
+	// Should return ErrIndexBeforeFirstEntry if the given index is less than indexOfFirstEntry.
+	// Should return ErrIndexAfterLastEntry if the given index is greater than indexOfLastEntry.
 	//
-	// This method must return ErrIndexBeforeFirstEntry if the given index is less than
-	// indexOfFirstEntry, and the calling ConsensusModule will handle this gracefully.
+	// The calling ConsensusModule is expected to handle ErrIndexBeforeFirstEntry gracefully.
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
 	GetTermAtIndex(LogIndex) (TermNo, error)
 
-	// Get multiple entries after the given index.
+	// Get the entry at the given index.
 	//
-	// The returned entries will be sent as is in an AppendEntries RPC to a follower.
+	// The returned entry will be sent as is in an AppendEntries RPC to a follower.
 	//
-	// This method is expected to decide how many entries to return based on some policy.
-	// This interface itself has no specific requirements on the policy, but it is expected
-	// that such a policy will be based on various cluster behavior as well as RPC behavior.
+	// Should return ErrIndexBeforeFirstEntry if the given index is less than indexOfFirstEntry.
+	// Should return ErrIndexAfterLastEntry if the given index is greater than indexOfLastEntry.
 	//
-	// If there are entries after the given index, the call must return at least one entry.
-	//
-	// It is an error if the given index is beyond the end of the log.
-	// (i.e. the given index is greater than indexOfLastEntry)
-	//
-	// This method must return ErrIndexBeforeFirstEntry if the given index is less than
-	// indexOfFirstEntry, and the calling ConsensusModule will handle this gracefully.
+	// The calling ConsensusModule is expected to handle ErrIndexBeforeFirstEntry gracefully.
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
-	GetEntriesAfterIndex(li LogIndex) ([]LogEntry, error)
+	GetEntryAtIndex(li LogIndex) (LogEntry, error)
 
 	// Set the entries after the given index.
 	//
