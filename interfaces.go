@@ -30,12 +30,25 @@ package raft
 //
 type Log interface {
 	// Get the index of the first entry in the log.
-	// An index of 0 indicates no entries present.
-	// This should be 0 for the Log of a new server.
+	//
+	// Must be less than or equal to indexOfLastEntry+1.
+	// However note that both values may change between a call to GetIndexOfFirstEntry()
+	// and a call to GetIndexOfLastEntry().
+	//
+	// A value of indexOfLastEntry+1 indicates no entries present.
+	//
+	// This should be 1 for the Log of a new server.
 	GetIndexOfFirstEntry() (LogIndex, error)
 
 	// Get the index of the last entry in the log.
-	// An index of 0 indicates no entries present.
+	//
+	// Must be greater than or equal to indexOfFirstEntry-1.
+	// However note that both values may change between a call to GetIndexOfFirstEntry()
+	// and a call to GetIndexOfLastEntry().
+	//
+	// Note that the last entry may actually have been compacted away and not actually
+	// be present in the log. In this case, indexOfFirstEntry will be this index + 1.
+	//
 	// This should be 0 for the Log of a new server.
 	GetIndexOfLastEntry() (LogIndex, error)
 
