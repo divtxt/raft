@@ -17,12 +17,13 @@ type FatalErrorHandler func(err error)
 // and notifying clients that are waiting for those entries to be committed.
 //
 type Committer struct {
-	mutex sync.Mutex
-
 	// -- Commit state
 	// commitIndex is the index of highest log entry known to be committed
 	// (initialized to 0, increases monotonically)
-	commitIndex LogIndex
+	mutex                  sync.Mutex
+	commitIndex            LogIndex
+	listeners              map[LogIndex]chan CommandResult // Commit listeners
+	highestRegisteredIndex LogIndex
 
 	// -- External components
 	log          internal.LogTailOnlyRO
@@ -31,20 +32,17 @@ type Committer struct {
 
 	// -- Internal components
 	commitApplier *util.TriggeredRunner
-
-	// -- Commit listeners
-	listeners              map[LogIndex]chan CommandResult
-	highestRegisteredIndex LogIndex
 }
 
 // NewCommitter creates a new Committer with the given parameters.
 //
-// A goroutine is started that applies committed log entries to the state machine and notifies
-// clients that are waiting for those entries to be committed.
+// A goroutine is started that applies committed log entries to the state machine one at a time
+// in order, and notifies the client that is waiting for that entry to be committed. This is
+// driven asynchronously by calls to the CommitAsync method. See ICommitter for more details.
 //
-// If the goroutine sees an error this is fatal for it, and it will call fceListener instead of
-// calling panic(). fceListener is expected to call the committer's StopSync() method before it
-// returns!
+// If the goroutine sees an error, this is fatal for it. In this case, it will call feHandler
+// with the encountered error. The feHandler callback is expected to call the Committer's
+// StopSync() method before it returns. (or panics)
 //
 func NewCommitter(
 	log internal.LogTailOnlyRO,
@@ -54,7 +52,6 @@ func NewCommitter(
 	// TODO: check that parameters are not nil?!
 
 	c := &Committer{
-		mutex:                  sync.Mutex{},
 		commitIndex:            0,
 		log:                    log,
 		stateMachine:           stateMachine,
