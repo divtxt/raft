@@ -1,35 +1,30 @@
 package util
 
-import (
-	"sync"
-)
-
-// A TriggeredRunner is a goroutine that runs a configured function every time it is triggered.
 type TriggeredRunner struct {
-	f       func()
-	trigger chan struct{}
-	wg      sync.WaitGroup
+	*StoppableGoroutine
+	f func()
 }
 
-// NewTriggeredRunner creates a TriggeredRunner for the given function.
+// NewTriggeredRunner starts a goroutine that runs the given function every time it is triggered.
 //
-// The TriggeredRunner's goroutine is started immediately.
+// It uses StoppableGoroutine so that the underlying goroutine can be stopped.
+//
 func NewTriggeredRunner(f func()) *TriggeredRunner {
 	tr := &TriggeredRunner{
+		nil,
 		f,
-		make(chan struct{}, 1),
-		sync.WaitGroup{},
 	}
-	tr.wg.Add(1)
-	go tr.run()
+
+	tr.StoppableGoroutine = StartGoroutine(tr.run)
+
 	return tr
 }
 
-func (tr *TriggeredRunner) run() {
-	defer tr.wg.Done()
+func (tr *TriggeredRunner) run(stop <-chan struct{}) {
 	for {
 		select {
-		case _, ok := <-tr.trigger:
+		// Use stop channel as trigger channel so that pending runs don't lose to channel close.
+		case _, ok := <-stop:
 			if !ok {
 				return
 			}
@@ -46,33 +41,26 @@ func (tr *TriggeredRunner) run() {
 // and will result in the another run of the function once the current run completes.
 // However, multiple such pending triggers will be collapsed into a single pending trigger.
 //
-// Will panic if StopSync() has been called.
+// Will panic if the underlying StoppableGoroutine's StopAsync or StopSync has been called.
+//
 func (tr *TriggeredRunner) TriggerRun() {
 	select {
-	case tr.trigger <- struct{}{}:
+	case tr.stop <- struct{}{}:
 	default: // avoid blocking
 	}
-}
-
-// StopSync will stop the goroutine, waiting for any current run to complete.
-//
-// Will panic if called more than once.
-func (tr *TriggeredRunner) StopSync() {
-	close(tr.trigger)
-	tr.wg.Wait()
 }
 
 // TestHelperFakeRestart is meant for testing use only.
 //
 // It resets the state so that TriggerRun() calls will succeed but does not start a new goroutine
 // to actually run the function when triggered.
-// Use TestHelperRunOnceIfTriggerPending() to actually run the function.
+// Use TestHelperRunOnceIfTriggerPending() to actually run the function if a trigger is pending.
 //
 // You should have called StopSync() before using this.
 //
 // See TestTriggeredRunner() for a usage example.
 func (tr *TriggeredRunner) TestHelperFakeRestart() {
-	tr.trigger = make(chan struct{}, 1)
+	tr.stop = make(chan struct{}, 1)
 }
 
 // TestHelperRunOnceIfTriggerPending is meant for testing use only.
@@ -84,7 +72,7 @@ func (tr *TriggeredRunner) TestHelperFakeRestart() {
 // See TestTriggeredRunner() for a usage example.
 func (tr *TriggeredRunner) TestHelperRunOnceIfTriggerPending() bool {
 	select {
-	case <-tr.trigger:
+	case <-tr.stop:
 		tr.f()
 		return true
 	default:

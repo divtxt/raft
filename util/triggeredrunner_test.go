@@ -93,3 +93,23 @@ func TestTriggeredRunner(t *testing.T) {
 		t.Fatal()
 	}
 }
+
+func TestTriggeredRunner_StopClearsPending(t *testing.T) {
+	fRunning := false
+	fRunCount := 0
+	f := func() {
+		fRunning = true
+		time.Sleep(20 * time.Millisecond)
+		fRunning = false
+		fRunCount++
+	}
+
+	tr := util.NewTriggeredRunner(f)
+
+	tr.TriggerRun()
+	tr.StopSync()
+
+	if fRunning || fRunCount != 1 {
+		t.Fatal()
+	}
+}

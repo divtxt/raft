@@ -5,44 +5,36 @@ import (
 )
 
 type Ticker struct {
-	f          func()
-	d          time.Duration
-	ticker     *time.Ticker
-	stopSignal chan struct{}
+	*StoppableGoroutine
+	f      func()
+	ticker *time.Ticker
 }
 
-// Create a Ticker that calls the given function at the given interval.
+// NewTicker starts a goroutine that calls the given function at the given interval.
 //
-// A goroutine is started that will call the given function.
 // Drops ticks for slow receivers.
+//
+// Ticker uses StoppableGoroutine to support stopping the goroutine.
+//
 func NewTicker(f func(), d time.Duration) *Ticker {
 	t := &Ticker{
-		f:          f,
-		d:          d,
-		ticker:     time.NewTicker(d),
-		stopSignal: make(chan struct{}, 1),
+		f:      f,
+		ticker: time.NewTicker(d),
 	}
 
-	go t.runTicks()
+	t.StoppableGoroutine = StartGoroutine(t.runTicks)
 
 	return t
 }
 
-// Stop the ticker asynchronously.
-//
-// Should only be called once.
-func (t *Ticker) StopAsync() {
-	close(t.stopSignal)
-}
-
-func (t *Ticker) runTicks() {
+func (t *Ticker) runTicks(stop <-chan struct{}) {
 	defer t.ticker.Stop()
 
 	for {
 		select {
 		case <-t.ticker.C:
 			t.f()
-		case <-t.stopSignal:
+		case <-stop:
 			return
 		}
 	}
