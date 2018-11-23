@@ -71,6 +71,7 @@ func NewCommitter(
 func (c *Committer) StopSync() {
 	// FIXME: should other methods be checking stopped state?
 	c.commitApplier.StopSync()
+	// FIXME: close pending listeners under lock!?
 }
 
 // ---- Implement ICommitter
