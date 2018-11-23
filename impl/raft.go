@@ -96,7 +96,7 @@ func NewConsensusModule(
 		nil,
 	}
 
-	committer := committer.NewCommitter(raftLog, stateMachine, cm.shutdownAndPanic)
+	committer := committer.NewCommitter(raftLog, stateMachine, cm.safeShutdownAndPanic)
 
 	// We can only set the value here because it's a cyclic reference
 	cm.committer = committer
@@ -308,6 +308,13 @@ func (cm *ConsensusModule) safeTick() {
 			cm.shutdownAndPanic(err)
 		}
 	}
+}
+
+func (cm *ConsensusModule) safeShutdownAndPanic(err error) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	cm.shutdownAndPanic(err)
 }
 
 // Shutdown the ConsensusModule.
