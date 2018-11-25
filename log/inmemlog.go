@@ -9,9 +9,9 @@ import (
 
 // InMemoryLog is an in-memory raft Log.
 type InMemoryLog struct {
-	indexOfFirstEntry LogIndex
-	entries           []LogEntry
-	maxEntries        uint64
+	lastCompacted LogIndex
+	entries       []LogEntry
+	maxEntries    uint64
 }
 
 func NewInMemoryLog(maxEntries uint64) (*InMemoryLog, error) {
@@ -20,15 +20,15 @@ func NewInMemoryLog(maxEntries uint64) (*InMemoryLog, error) {
 	}
 	entries := []LogEntry{}
 	iml := &InMemoryLog{
-		1,
+		0,
 		entries,
 		maxEntries,
 	}
 	return iml, nil
 }
 
-func (iml *InMemoryLog) GetIndexOfFirstEntry() (LogIndex, error) {
-	return iml.indexOfFirstEntry, nil
+func (iml *InMemoryLog) GetLastCompacted() (LogIndex, error) {
+	return iml.lastCompacted, nil
 }
 
 func (iml *InMemoryLog) GetIndexOfLastEntry() (LogIndex, error) {
@@ -48,8 +48,8 @@ func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 }
 
 func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry, error) {
-	if afterLogIndex+1 < iml.indexOfFirstEntry {
-		return nil, ErrIndexBeforeFirstEntry
+	if afterLogIndex < iml.lastCompacted {
+		return nil, ErrIndexCompacted
 	}
 
 	iole, err := iml.GetIndexOfLastEntry()
@@ -90,8 +90,8 @@ func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry
 }
 
 func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) error {
-	if li+1 < iml.indexOfFirstEntry {
-		return ErrIndexBeforeFirstEntry
+	if li < iml.lastCompacted {
+		return ErrIndexCompacted
 	}
 	iole, err := iml.GetIndexOfLastEntry()
 	if err != nil {
@@ -110,10 +110,10 @@ func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) er
 }
 
 func (iml *InMemoryLog) DiscardEntriesBeforeIndex(li LogIndex) error {
-	if li < iml.indexOfFirstEntry {
-		return ErrIndexBeforeFirstEntry
+	if li <= iml.lastCompacted {
+		return ErrIndexCompacted
 	}
-	iml.indexOfFirstEntry = li
+	iml.lastCompacted = li - 1
 	// FIXME: actually throw away entries!
 	return nil
 }

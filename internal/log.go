@@ -6,7 +6,7 @@ import (
 
 // LogReadOnly is a read-only subset of the Log interface for internal use.
 type LogReadOnly interface {
-	GetIndexOfFirstEntry() (LogIndex, error)
+	GetLastCompacted() (LogIndex, error)
 	GetIndexOfLastEntry() (LogIndex, error)
 	GetTermAtIndex(LogIndex) (TermNo, error)
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
@@ -15,9 +15,10 @@ type LogReadOnly interface {
 // LogTailOnly is the subset of the Log interface used by components that will only access the
 // non-compacted tail of the raft log.
 //
+// FIXME: is this correct?! need to check all components & calls, and edge cases/values!
 // By this we mean that they will never call Log methods with an index that is less than the value
 // of lastApplied. This means that we don't need to worry about log compaction, don't expect calls
-// to GetIndexOfFirstEntry(), and should never be returned an ErrIndexBeforeFirstEntry error.
+// to GetLastCompacted(), and should never be returned an ErrIndexCompacted error.
 //
 type LogTailOnly interface {
 	GetIndexOfLastEntry() (LogIndex, error)

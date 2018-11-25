@@ -10,11 +10,14 @@ package raft
 // A LogEntry is a tuple of a Raft term number and a command to be applied
 // to the state machine.
 //
-// The Log may discard entries before a certain index due to Log Compaction (see the Raft paper).
-// This interface only exposes the results i.e. that entries before a certain index may not be
+// The Log may discard entries up to a certain index due to Log Compaction (see the Raft paper).
+// This interface only exposes the results i.e. that entries up to a certain index may not be
 // available and this index may change at any time.
 // However, note that compaction should never advance past the state machine's lastApplied index
-// (which in turn should never advance past the Consensus module's commitIndex).
+// (which in turn should never advance past the Consensus module's commitIndex):
+//
+// FIXME: is compaction allowed to delete last entry? may need term of last entry!
+// lastCompacted <= lastApplied <= commitIndex <= indexOfLastEntry
 //
 // If you are writing your own implementation, please understand the concurrency requirements and
 // error handling behavior:
@@ -25,29 +28,29 @@ package raft
 //
 // Errors:
 // All errors should be indicated in the return value, and any such error returned by this
-// interface - except ErrIndexBeforeFirstEntry where indicated - will shutdown the calling
+// interface - except ErrIndexCompacted where indicated - will shutdown the calling
 // ConsensusModule.
 //
 type Log interface {
-	// Get the index of the first entry in the log.
+	// Get the index of the last entry deleted by compaction.
 	//
-	// Must be less than or equal to indexOfLastEntry+1.
-	// However note that both values may change between a call to GetIndexOfFirstEntry()
+	// Must be less than or equal to indexOfLastEntry.
+	// However note that both values may change between a call to GetLastCompacted()
 	// and a call to GetIndexOfLastEntry().
 	//
-	// A value of indexOfLastEntry+1 indicates no entries present.
+	// A value equal to indexOfLastEntry indicates no entries present.
 	//
-	// This should be 1 for the Log of a new server.
-	GetIndexOfFirstEntry() (LogIndex, error)
+	// This should be 0 for the Log of a new server.
+	GetLastCompacted() (LogIndex, error)
 
 	// Get the index of the last entry in the log.
 	//
-	// Must be greater than or equal to indexOfFirstEntry-1.
-	// However note that both values may change between a call to GetIndexOfFirstEntry()
+	// Must be greater than or equal to lastCompacted.
+	// However note that both values may change between a call to GetLastCompacted()
 	// and a call to GetIndexOfLastEntry().
 	//
 	// Note that the last entry may actually have been compacted away and not actually
-	// be present in the log. In this case, indexOfFirstEntry will be this index + 1.
+	// be present in the log. In this case, lastCompacted will be equal to this index.
 	//
 	// This should be 0 for the Log of a new server.
 	GetIndexOfLastEntry() (LogIndex, error)
@@ -57,8 +60,8 @@ type Log interface {
 	// It is an error if the given index is beyond the end of the log.
 	// (i.e. the given index is greater than indexOfLastEntry)
 	//
-	// This method must return ErrIndexBeforeFirstEntry if the given index is less than
-	// indexOfFirstEntry, and the calling ConsensusModule will handle this gracefully.
+	// This method must return ErrIndexCompacted if the given index is less than or equal to
+	// lastCompacted, and the calling ConsensusModule will handle this gracefully.
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
@@ -77,8 +80,8 @@ type Log interface {
 	// It is an error if the given index is beyond the end of the log.
 	// (i.e. the given index is greater than indexOfLastEntry)
 	//
-	// This method must return ErrIndexBeforeFirstEntry if the given index is less than
-	// indexOfFirstEntry, and the calling ConsensusModule will handle this gracefully.
+	// This method must return ErrIndexCompacted if the given index is less than or equal
+	// to lastCompacted, and the calling ConsensusModule will handle this gracefully.
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
@@ -114,10 +117,10 @@ type Log interface {
 	// A zero length slice and nil both indicate no new entries to be added
 	// after deleting.
 	//
-	// This method must return ErrIndexBeforeFirstEntry if the given index is less than
-	// indexOfFirstEntry, and *this is a fatal error* that will shutdown the calling
+	// This method must return ErrIndexCompacted if the given index is less than or equal
+	// to lastCompacted, and *this is a fatal error* that will shutdown the calling
 	// ConsensusModule. This is because the given log index must be higher than the commitIndex
-	// and log compaction must not advance indexOfFirstEntry past commitIndex.
+	// and log compaction must not advance lastCompacted past commitIndex.
 	//
 	SetEntriesAfterIndex(LogIndex, []LogEntry) error
 

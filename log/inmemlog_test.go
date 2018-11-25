@@ -112,9 +112,9 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	}
 
 	// log compaction
-	iofe, err := iml.GetIndexOfFirstEntry()
-	if iofe != 1 {
-		t.Fatal(iofe)
+	lastCompacted, err := iml.GetLastCompacted()
+	if lastCompacted != 0 {
+		t.Fatal(lastCompacted)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -123,14 +123,14 @@ func TestInMemoryLog_GetEntriesAfterIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	iofe, err = iml.GetIndexOfFirstEntry()
-	if iofe != 5 || err != nil {
-		t.Fatal(iofe, err)
+	lastCompacted, err = iml.GetLastCompacted()
+	if lastCompacted != 4 || err != nil {
+		t.Fatal(lastCompacted, err)
 	}
 
 	// Extra test for DiscardEntriesBeforeIndex
 	err = iml.DiscardEntriesBeforeIndex(4)
-	if err != ErrIndexBeforeFirstEntry {
+	if err != ErrIndexCompacted {
 		t.Fatal(err)
 	}
 }

@@ -20,22 +20,22 @@ func TestCommandEquals(c Command, s string) bool {
 // Entries should be Command("c1"), Command("c2"), etc.
 // GetEntriesAfterIndex() policy should not return more than 3 entries.
 //
-// To use the variant of this test with a compacted log (iofeIsFive=true), discard
-// log entries before log index 5.
+// To use the variant of this test with a compacted log (lastCompcatedIsFour=true), discard
+// log entries up to log index 4.
 //
-func BlackboxTest_Log(t *testing.T, log Log, iofeIsFive bool) {
+func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	// Initial data tests
-	iofe, err := log.GetIndexOfFirstEntry()
+	lastCompacted, err := log.GetLastCompacted()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if iofeIsFive {
-		if iofe != 5 {
-			t.Fatal(iofe)
+	if lastCompcatedIsFour {
+		if lastCompacted != 4 {
+			t.Fatal(lastCompacted)
 		}
 	} else {
-		if iofe != 1 {
-			t.Fatal(iofe)
+		if lastCompacted != 0 {
+			t.Fatal(lastCompacted)
 		}
 	}
 	iole, err := log.GetIndexOfLastEntry()
@@ -63,9 +63,9 @@ func BlackboxTest_Log(t *testing.T, log Log, iofeIsFive bool) {
 	}
 
 	// get multiple entries
-	if iofeIsFive {
+	if lastCompcatedIsFour {
 		entries, err := log.GetEntriesAfterIndex(3)
-		if err != ErrIndexBeforeFirstEntry {
+		if err != ErrIndexCompacted {
 			t.Fatal(entries, err)
 		}
 	}
@@ -89,9 +89,9 @@ func BlackboxTest_Log(t *testing.T, log Log, iofeIsFive bool) {
 	var logEntries []LogEntry
 
 	// set test - invalid index
-	if iofeIsFive {
+	if lastCompcatedIsFour {
 		err = log.SetEntriesAfterIndex(3, logEntries)
-		if err != ErrIndexBeforeFirstEntry {
+		if err != ErrIndexCompacted {
 			t.Fatal(err)
 		}
 	}
@@ -172,9 +172,9 @@ func BlackboxTest_Log(t *testing.T, log Log, iofeIsFive bool) {
 	if !reflect.DeepEqual(le, LogEntry{4, Command("c5")}) {
 		t.Fatal(le)
 	}
-	if iofeIsFive {
+	if lastCompcatedIsFour {
 		entries, err = log.GetEntriesAfterIndex(3)
-		if err != ErrIndexBeforeFirstEntry {
+		if err != ErrIndexCompacted {
 			t.Fatal(entries, err)
 		}
 	}

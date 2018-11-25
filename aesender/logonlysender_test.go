@@ -128,12 +128,12 @@ func TestLogOnlyAESender(t *testing.T) {
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
 
-	// Peer behind indexOfFirstEntry
+	// Peer is behind log compaction
 	params = internal.SendAppendEntriesParams{
 		102, 4, false, serverTerm, 4,
 	}
 	err = aes.SendAppendEntriesToPeerAsync(params)
-	if err != ErrIndexBeforeFirstEntry {
+	if err != ErrIndexCompacted {
 		t.Fatal(err)
 	}
 	mrs.ClearSentRpcs()

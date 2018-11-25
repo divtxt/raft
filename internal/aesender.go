@@ -24,7 +24,7 @@ type IAppendEntriesSender interface {
 	// shutdown the calling ConsensusModule.
 	//
 	// If the Log has discarded entries at or beyond the given PeerNextIndex AND the
-	// implementation does NOT support snapshots, it should return ErrIndexBeforeFirstEntry
+	// implementation does NOT support snapshots, it should return ErrIndexCompacted
 	// to indicate this. Note that this will currently shutdown the ConsensusModule.
 	//
 	SendAppendEntriesToPeerAsync(params SendAppendEntriesParams) error

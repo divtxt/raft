@@ -152,7 +152,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 			cm._commitIndex,
 		)
 	}
-	// FIXME: check against indexOfFirstEntry as well!
+	// FIXME: check against lastCompacted as well!
 	iole, err := cm.logRO.GetIndexOfLastEntry()
 	if err != nil {
 		return err
