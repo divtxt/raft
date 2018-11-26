@@ -33,6 +33,7 @@ import (
 	"github.com/divtxt/raft/committer"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
+	"github.com/divtxt/raft/logindex"
 	"github.com/divtxt/raft/util"
 )
 
@@ -103,9 +104,12 @@ func NewConsensusModule(
 
 	aes := aesender.NewLogOnlyAESender(raftLog, cm.SendOnlyRpcAppendEntriesAsync)
 
+	raftIndexes := logindex.NewRaftIndexes(committer.CommitAsync)
+
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		raftLog,
+		raftIndexes.CommitIndex,
 		committer,
 		cm.SendOnlyRpcRequestVoteAsync,
 		aes,

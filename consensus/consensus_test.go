@@ -38,6 +38,7 @@ func setupManagedConsensusModuleR2(
 		t.Fatal(err)
 	}
 
+	commitIndex := testhelpers.NewUnlockedWatchedIndex()
 	mc := newMockCommitter()
 	mrs := testhelpers.NewMockRpcSender()
 	aes := aesender.NewLogOnlyAESender(iml, mrs.SendOnlyRpcAppendEntriesAsync)
@@ -55,6 +56,7 @@ func setupManagedConsensusModuleR2(
 	cm, err := NewPassiveConsensusModule(
 		ps,
 		iml,
+		commitIndex,
 		mc,
 		mrs.SendOnlyRpcRequestVoteAsync,
 		aes,

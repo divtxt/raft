@@ -140,6 +140,7 @@ func (c *Committer) CommitAsync(commitIndex LogIndex) error {
 	if err != nil {
 		return err
 	}
+	// FIXME: move to RaftIndexes
 	if commitIndex > iole {
 		return fmt.Errorf(
 			"FATAL: commitIndex=%v is > current iole=%v", commitIndex, iole,
@@ -149,6 +150,7 @@ func (c *Committer) CommitAsync(commitIndex LogIndex) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	// FIXME: move to RaftIndexes?
 	// Check commitIndex is not going backward
 	if commitIndex < c.commitIndex {
 		return fmt.Errorf(

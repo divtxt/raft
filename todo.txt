@@ -1,0 +1,2 @@
+electiontimeouttimer is only for followers
+
