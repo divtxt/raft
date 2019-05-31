@@ -153,10 +153,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	// FIXME: check against lastCompacted as well!
-	iole, err := cm.logRO.GetIndexOfLastEntry()
-	if err != nil {
-		return err
-	}
+	iole := cm.logRO.GetIndexOfLastEntry()
 	if commitIndex > iole {
 		return fmt.Errorf(
 			"setCommitIndex to %v > current indexOfLastEntry %v",
@@ -165,7 +162,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 		)
 	}
 	cm._commitIndex = commitIndex
-	err = cm.committer.CommitAsync(commitIndex)
+	err := cm.committer.CommitAsync(commitIndex)
 	return err
 }
 
@@ -292,10 +289,8 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 }
 
 func (cm *PassiveConsensusModule) becomeLeader() error {
-	iole, err := cm.logRO.GetIndexOfLastEntry()
-	if err != nil {
-		return err
-	}
+	iole := cm.logRO.GetIndexOfLastEntry()
+	var err error
 	cm.LeaderVolatileState, err = leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm.aeSender)
 	if err != nil {
 		return err

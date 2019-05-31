@@ -239,10 +239,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 			t.Fatal(reply)
 		}
 
-		iole, err := mcm.pcm.logRO.GetIndexOfLastEntry()
-		if err != nil {
-			t.Fatal()
-		}
+		iole := mcm.pcm.logRO.GetIndexOfLastEntry()
 		if iole != 8 {
 			t.Fatal(iole)
 		}
@@ -347,10 +344,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 			t.Fatal(reply)
 		}
 
-		iole, err := mcm.pcm.logRO.GetIndexOfLastEntry()
-		if err != nil {
-			t.Fatal()
-		}
+		iole := mcm.pcm.logRO.GetIndexOfLastEntry()
 		if iole != 6 {
 			t.Fatal(iole)
 		}

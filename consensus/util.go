@@ -7,12 +7,10 @@ import (
 
 // Helper function
 func GetIndexAndTermOfLastEntry(log internal.LogTailOnlyRO) (LogIndex, TermNo, error) {
-	lastLogIndex, err := log.GetIndexOfLastEntry()
-	if err != nil {
-		return 0, 0, err
-	}
+	lastLogIndex := log.GetIndexOfLastEntry()
 	var lastLogTerm TermNo = 0
 	if lastLogIndex > 0 {
+		var err error
 		lastLogTerm, err = log.GetTermAtIndex(lastLogIndex)
 		if err != nil {
 			return 0, 0, err

@@ -74,10 +74,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 
 	// 2. Reply false if log doesn't contain an entry at prevLogIndex whose
 	// term matches prevLogTerm (#5.3)
-	iole, err := cm.logRO.GetIndexOfLastEntry()
-	if err != nil {
-		return nil, err
-	}
+	iole := cm.logRO.GetIndexOfLastEntry()
 	if iole < prevLogIndex {
 		return makeReply(false), nil
 	}
@@ -96,10 +93,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	leaderCommit := appendEntries.LeaderCommit
 	if leaderCommit > cm.GetCommitIndex() {
 		var indexOfLastNewEntry LogIndex
-		indexOfLastNewEntry, err = cm.logRO.GetIndexOfLastEntry()
-		if err != nil {
-			return nil, err
-		}
+		indexOfLastNewEntry = cm.logRO.GetIndexOfLastEntry()
 		if leaderCommit < indexOfLastNewEntry {
 			err = cm.setCommitIndex(leaderCommit)
 			if err != nil {

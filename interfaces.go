@@ -41,7 +41,10 @@ type Log interface {
 	// A value equal to indexOfLastEntry indicates no entries present.
 	//
 	// This should be 0 for the Log of a new server.
-	GetLastCompacted() (LogIndex, error)
+	//
+	// No errors are expected because the value is expected to always be available
+	// in-memory and up-to-date.
+	GetLastCompacted() LogIndex
 
 	// Get the index of the last entry in the log.
 	//
@@ -53,7 +56,10 @@ type Log interface {
 	// be present in the log. In this case, lastCompacted will be equal to this index.
 	//
 	// This should be 0 for the Log of a new server.
-	GetIndexOfLastEntry() (LogIndex, error)
+	//
+	// No errors are expected because the value is expected to always be available
+	// in-memory and up-to-date.
+	GetIndexOfLastEntry() LogIndex
 
 	// Get the term of the entry at the given index.
 	//
@@ -180,6 +186,9 @@ type StateMachine interface {
 	//
 	// The ConsensusModule does not cache this value and calls this method very often so it is
 	// recommended that implementations ensure that this method is fast.
+	//
+	// No errors are expected because the value is expected to always be available
+	// in-memory and up-to-date.
 	GetLastApplied() LogIndex
 
 	// ApplyCommand should apply the given command to the state machine.

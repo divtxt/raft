@@ -272,10 +272,7 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 	testConsensusModule_RpcReplyCallback_AndBecomeLeader(t, cm, mrs, log)
 
 	// pre check
-	iole, err := log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole := log.GetIndexOfLastEntry()
 	if iole != 10 {
 		t.Fatal()
 	}
@@ -293,10 +290,7 @@ func TestConsensusModule_AppendCommand_Leader(t *testing.T) {
 	}
 	testhelpers.AssertWillBlock(crc1101)
 
-	iole, err = log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole = log.GetIndexOfLastEntry()
 	if iole != 11 {
 		t.Fatal()
 	}
@@ -313,15 +307,12 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 	defer cm.Stop()
 
 	// pre check
-	iole, err := log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole := log.GetIndexOfLastEntry()
 	if iole != 10 {
 		t.Fatal()
 	}
 
-	_, err = cm.AppendCommand(testhelpers.DummyCommand(1101))
+	_, err := cm.AppendCommand(testhelpers.DummyCommand(1101))
 
 	if err != ErrNotLeader {
 		t.Fatal()
@@ -330,10 +321,7 @@ func TestConsensusModule_AppendCommand_Follower(t *testing.T) {
 		t.Error()
 	}
 
-	iole, err = log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole = log.GetIndexOfLastEntry()
 	if iole != 10 {
 		t.Fatal()
 	}

@@ -25,10 +25,7 @@ func TestCommandEquals(c Command, s string) bool {
 //
 func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	// Initial data tests
-	lastCompacted, err := log.GetLastCompacted()
-	if err != nil {
-		t.Fatal(err)
-	}
+	lastCompacted := log.GetLastCompacted()
 	if lastCompcatedIsFour {
 		if lastCompacted != 4 {
 			t.Fatal(lastCompacted)
@@ -38,10 +35,7 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 			t.Fatal(lastCompacted)
 		}
 	}
-	iole, err := log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole := log.GetIndexOfLastEntry()
 	if iole != 10 {
 		t.Fatal(iole)
 	}
@@ -107,10 +101,7 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	if err != nil {
 		t.Fatal()
 	}
-	iole, err = log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole = log.GetIndexOfLastEntry()
 	if iole != 12 {
 		t.Fatal()
 	}
@@ -125,10 +116,7 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	if err != nil {
 		t.Fatal()
 	}
-	iole, err = log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole = log.GetIndexOfLastEntry()
 	if iole != 13 {
 		t.Fatal()
 	}
@@ -146,10 +134,7 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	if ioleAE != 14 {
 		t.Fatal(ioleAE)
 	}
-	iole, err = log.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole = log.GetIndexOfLastEntry()
 	if iole != 14 {
 		t.Fatal()
 	}
@@ -164,9 +149,9 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	iole, err = log.GetIndexOfLastEntry()
-	if iole != 5 || err != nil {
-		t.Fatal(iole, err)
+	iole = log.GetIndexOfLastEntry()
+	if iole != 5 {
+		t.Fatal(iole)
 	}
 	le = TestHelper_GetLogEntryAtIndex(log, 5)
 	if !reflect.DeepEqual(le, LogEntry{4, Command("c5")}) {

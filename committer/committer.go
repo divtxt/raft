@@ -77,10 +77,7 @@ func (c *Committer) StopSync() {
 // ---- Implement ICommitter
 
 func (c *Committer) RegisterListener(logIndex LogIndex) (<-chan CommandResult, error) {
-	iole, err := c.log.GetIndexOfLastEntry()
-	if err != nil {
-		return nil, err
-	}
+	iole := c.log.GetIndexOfLastEntry()
 	if logIndex > iole {
 		return nil, fmt.Errorf(
 			"FATAL: logIndex=%v is > current iole=%v", logIndex, iole,
@@ -136,10 +133,7 @@ func (c *Committer) RemoveListenersAfterIndex(afterIndex LogIndex) error {
 //
 // Will return an error if commitIndex decreases or if StopSync has been called.
 func (c *Committer) CommitAsync(commitIndex LogIndex) error {
-	iole, err := c.log.GetIndexOfLastEntry()
-	if err != nil {
-		return err
-	}
+	iole := c.log.GetIndexOfLastEntry()
 	if commitIndex > iole {
 		return fmt.Errorf(
 			"FATAL: commitIndex=%v is > current iole=%v", commitIndex, iole,

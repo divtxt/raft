@@ -107,10 +107,7 @@ func (lvs *LeaderVolatileState) FindNewerCommitIndex(
 	currentTerm TermNo,
 	currentCommitIndex LogIndex,
 ) (LogIndex, error) {
-	indexOfLastEntry, err := log.GetIndexOfLastEntry()
-	if err != nil {
-		return 0, err
-	}
+	indexOfLastEntry := log.GetIndexOfLastEntry()
 	requiredMatches := ci.QuorumSizeForCluster()
 	var matchingN LogIndex = 0
 	// cover all N > currentCommitIndex

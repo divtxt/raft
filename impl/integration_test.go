@@ -236,7 +236,7 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 		t.Fatal()
 	}
 	testhelpers.AssertWillBlock(crc101)
-	if iole, err := diml1.GetIndexOfLastEntry(); err != nil || iole != 1 {
+	if iole := diml1.GetIndexOfLastEntry(); iole != 1 {
 		t.Fatal()
 	}
 
@@ -248,16 +248,16 @@ func TestCluster_CommandIsReplicatedVsMissingNode(t *testing.T) {
 		t.Fatal(le)
 	}
 	// but not yet in connected follower's
-	iole, err := diml2.GetIndexOfLastEntry()
-	if err != nil || iole != 0 {
+	iole := diml2.GetIndexOfLastEntry()
+	if iole != 0 {
 		t.Fatal()
 	}
 
 	// A tick allows command to be replicated to connected followers
 	time.Sleep(testdata.TickerDuration)
 
-	iole, err = diml2.GetIndexOfLastEntry()
-	if err != nil || iole != 1 {
+	iole = diml2.GetIndexOfLastEntry()
+	if iole != 1 {
 		t.Fatal(iole)
 	}
 	le = testhelpers.TestHelper_GetLogEntryAtIndex(diml2, 1)
@@ -336,7 +336,7 @@ func TestCluster_SOLO_Command_And_CommitIndexAdvance(t *testing.T) {
 	if crc101 == nil {
 		t.Fatal()
 	}
-	if iole, err := diml.GetIndexOfLastEntry(); err != nil || iole != 1 {
+	if iole := diml.GetIndexOfLastEntry(); iole != 1 {
 		t.Fatal()
 	}
 

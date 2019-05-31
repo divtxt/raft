@@ -815,11 +815,8 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(
 	}
 
 	// pretend peers caught up!
-	lastLogIndex, err := mcm.pcm.logRO.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
-	err = mcm.pcm.ClusterInfo.ForEachPeer(
+	lastLogIndex := mcm.pcm.logRO.GetIndexOfLastEntry()
+	err := mcm.pcm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
 			fm, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(serverId)
 			if err != nil {
@@ -856,10 +853,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 	mcm, _ := testSetupMCM_Leader_Figure7LeaderLine(t)
 
 	// pre check
-	iole, err := mcm.pcm.logRO.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole := mcm.pcm.logRO.GetIndexOfLastEntry()
 	if iole != 10 {
 		t.Fatal()
 	}
@@ -873,10 +867,7 @@ func TestCM_Leader_AppendCommand(t *testing.T) {
 		{"RegisterListener", 11, crc1101},
 	})
 
-	iole, err = mcm.pcm.logRO.GetIndexOfLastEntry()
-	if err != nil {
-		t.Fatal()
-	}
+	iole = mcm.pcm.logRO.GetIndexOfLastEntry()
 	if iole != 11 {
 		t.Fatal()
 	}
@@ -895,24 +886,18 @@ func TestCM_FollowerOrCandidate_AppendCommand(t *testing.T) {
 		mcm, _ := setup(t)
 
 		// pre check
-		iole, err := mcm.pcm.logRO.GetIndexOfLastEntry()
-		if err != nil {
-			t.Fatal()
-		}
+		iole := mcm.pcm.logRO.GetIndexOfLastEntry()
 		if iole != 10 {
 			t.Fatal()
 		}
 		mcm.mc.CheckCalls(nil)
 
-		_, err = mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
+		_, err := mcm.pcm.AppendCommand(testhelpers.DummyCommand(1101))
 		if err != ErrNotLeader {
 			t.Fatal()
 		}
 
-		iole, err = mcm.pcm.logRO.GetIndexOfLastEntry()
-		if err != nil {
-			t.Fatal()
-		}
+		iole = mcm.pcm.logRO.GetIndexOfLastEntry()
 		if iole != 10 {
 			t.Fatal()
 		}

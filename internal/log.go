@@ -6,8 +6,8 @@ import (
 
 // LogReadOnly is a read-only subset of the Log interface for internal use.
 type LogReadOnly interface {
-	GetLastCompacted() (LogIndex, error)
-	GetIndexOfLastEntry() (LogIndex, error)
+	GetLastCompacted() LogIndex
+	GetIndexOfLastEntry() LogIndex
 	GetTermAtIndex(LogIndex) (TermNo, error)
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 }
@@ -21,7 +21,7 @@ type LogReadOnly interface {
 // to GetLastCompacted(), and should never be returned an ErrIndexCompacted error.
 //
 type LogTailOnly interface {
-	GetIndexOfLastEntry() (LogIndex, error)
+	GetIndexOfLastEntry() LogIndex
 	GetTermAtIndex(LogIndex) (TermNo, error)
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 	SetEntriesAfterIndex(LogIndex, []LogEntry) error
@@ -30,7 +30,7 @@ type LogTailOnly interface {
 
 // LogTailOnlyRO is the read-only subset of LogTailOnly
 type LogTailOnlyRO interface {
-	GetIndexOfLastEntry() (LogIndex, error)
+	GetIndexOfLastEntry() LogIndex
 	GetTermAtIndex(LogIndex) (TermNo, error)
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 }

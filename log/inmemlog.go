@@ -27,12 +27,12 @@ func NewInMemoryLog(maxEntries uint64) (*InMemoryLog, error) {
 	return iml, nil
 }
 
-func (iml *InMemoryLog) GetLastCompacted() (LogIndex, error) {
-	return iml.lastCompacted, nil
+func (iml *InMemoryLog) GetLastCompacted() LogIndex {
+	return iml.lastCompacted
 }
 
-func (iml *InMemoryLog) GetIndexOfLastEntry() (LogIndex, error) {
-	return LogIndex(len(iml.entries)), nil
+func (iml *InMemoryLog) GetIndexOfLastEntry() LogIndex {
+	return LogIndex(len(iml.entries))
 }
 
 func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
@@ -52,10 +52,7 @@ func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry
 		return nil, ErrIndexCompacted
 	}
 
-	iole, err := iml.GetIndexOfLastEntry()
-	if err != nil {
-		return nil, err
-	}
+	iole := iml.GetIndexOfLastEntry()
 
 	if iole < afterLogIndex {
 		return nil, fmt.Errorf(
@@ -93,10 +90,7 @@ func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) er
 	if li < iml.lastCompacted {
 		return ErrIndexCompacted
 	}
-	iole, err := iml.GetIndexOfLastEntry()
-	if err != nil {
-		return err
-	}
+	iole := iml.GetIndexOfLastEntry()
 	if iole < li {
 		return fmt.Errorf("InMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", li, iole)
 	}
