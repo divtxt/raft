@@ -42,6 +42,27 @@ type LogEntry struct {
 // Log entry index. First index is 1.
 type LogIndex uint64
 
+type IndexChangeListener func(old, new LogIndex) error
+
+// A WatchableIndex is a LogIndex that notifies listeners when the value changes.
+//
+// When the underlying LogIndex value changes, all registered listeners are
+// called in registered order. If a listener returns an error, the error is
+// treated as fatal and will be returned to the code changing the underlying
+// value. In the case of an error, remaining listeners may not be called.
+// The listener is guaranteed that another change will not occur until it
+// has returned to this method.
+//
+// This is implemented by logindex.WatchedIndex.
+type WatchableIndex interface {
+	// Get the current value.
+	// This is NOT safe to call from the listener.
+	Get() LogIndex
+
+	// Add the given callback as a listener for changes.
+	AddListener(didChangeListener IndexChangeListener)
+}
+
 // An integer that uniquely identifies a server in a Raft cluster.
 //
 // Zero should not be used as a server id.

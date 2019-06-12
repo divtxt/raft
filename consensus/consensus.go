@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	. "github.com/divtxt/raft"
@@ -11,17 +12,19 @@ import (
 	"github.com/divtxt/raft/consensus/candidate"
 	"github.com/divtxt/raft/consensus/leader"
 	"github.com/divtxt/raft/internal"
+	"github.com/divtxt/raft/logindex"
 	"github.com/divtxt/raft/util"
 )
 
 type PassiveConsensusModule struct {
+	lock *sync.Mutex
+
 	// ===== the following fields meant to be immutable
 
 	// -- External components
 	RaftPersistentState         RaftPersistentState
 	logRO                       internal.LogTailOnlyRO
 	logWO                       internal.LogTailOnlyWO
-	committer                   internal.ICommitter
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync
 	aeSender                    internal.IAppendEntriesSender
 	logger                      *log.Logger
@@ -36,7 +39,7 @@ type PassiveConsensusModule struct {
 
 	// commitIndex is the index of highest log entry known to be committed
 	// (initialized to 0, increases monotonically)
-	_commitIndex           LogIndex
+	commitIndex            *logindex.WatchedIndex
 	electionTimeoutChooser *util.ElectionTimeoutChooser
 	ElectionTimeoutTimer   *util.Timer
 
@@ -50,7 +53,6 @@ type PassiveConsensusModule struct {
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
 	log internal.LogTailOnly,
-	committer internal.ICommitter,
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync,
 	aeSender internal.IAppendEntriesSender,
 	clusterInfo *config.ClusterInfo,
@@ -65,9 +67,6 @@ func NewPassiveConsensusModule(
 	if log == nil {
 		return nil, errors.New("'log' cannot be nil")
 	}
-	if committer == nil {
-		return nil, errors.New("'committer' cannot be nil")
-	}
 	if sendOnlyRpcRequestVoteAsync == nil {
 		return nil, errors.New("'sendOnlyRpcRequestVoteAsync' cannot be nil")
 	}
@@ -78,14 +77,16 @@ func NewPassiveConsensusModule(
 		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
 
+	lock := &sync.Mutex{}
 	electionTimeoutTimer := util.NewTimer(electionTimeoutLow, nowFunc)
 
 	pcm := &PassiveConsensusModule{
+		lock,
+
 		// -- External components
 		raftPersistentState,
 		log,
 		log,
-		committer,
 		sendOnlyRpcRequestVoteAsync,
 		aeSender,
 		logger,
@@ -100,7 +101,7 @@ func NewPassiveConsensusModule(
 		// -- State - for all servers
 		// commitIndex is the index of highest log entry known to be committed
 		// (initialized to 0, increases monotonically)
-		0,
+		logindex.NewWatchedIndex(lock),
 		util.NewElectionTimeoutChooser(electionTimeoutLow),
 		electionTimeoutTimer,
 
@@ -117,6 +118,9 @@ func NewPassiveConsensusModule(
 // Get the current server state.
 // Validates the server state before returning.
 func (cm *PassiveConsensusModule) GetServerState() ServerState {
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
 	return cm.serverState
 }
 
@@ -139,17 +143,26 @@ func (cm *PassiveConsensusModule) setServerState(serverState ServerState) {
 
 // Get the current commitIndex value.
 func (cm *PassiveConsensusModule) GetCommitIndex() LogIndex {
-	return cm._commitIndex
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
+	return cm.commitIndex.UnsafeGet()
+}
+
+// Get the commitIndex WatchableIndex.
+func (cm *PassiveConsensusModule) GetCommitIndexWatchable() WatchableIndex {
+	// No need to lock since this is an immutable field.
+	return cm.commitIndex
 }
 
 // Set the current commitIndex value.
 // Checks that it is does not reduce.
 func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
-	if commitIndex < cm._commitIndex {
+	if commitIndex < cm.commitIndex.UnsafeGet() {
 		return fmt.Errorf(
 			"setCommitIndex to %v < current commitIndex %v",
 			commitIndex,
-			cm._commitIndex,
+			cm.commitIndex.UnsafeGet(),
 		)
 	}
 	// FIXME: check against lastCompacted as well!
@@ -161,37 +174,31 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 			iole,
 		)
 	}
-	cm._commitIndex = commitIndex
-	err := cm.committer.CommitAsync(commitIndex)
+	err := cm.commitIndex.UnsafeSet(commitIndex)
 	return err
 }
 
-// AppendCommand appends the given serialized command to the Raft log and applies it
-// to the state machine once it is considered committed by the ConsensusModule.
-func (cm *PassiveConsensusModule) AppendCommand(command Command) (<-chan CommandResult, error) {
-	if cm.GetServerState() != LEADER {
-		return nil, ErrNotLeader
+// AppendCommand appends the given serialized command to the Raft log and returns
+// the index of the appended entry.
+func (cm *PassiveConsensusModule) AppendCommand(command Command) (LogIndex, error) {
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
+	if cm.serverState != LEADER {
+		return 0, ErrNotLeader
 	}
 
 	termNo := cm.RaftPersistentState.GetCurrentTerm()
 	logEntry := LogEntry{termNo, command}
-	iole, err := cm.logWO.AppendEntry(logEntry)
-	if err != nil {
-		return nil, err
-	}
-
-	crc, err := cm.committer.RegisterListener(iole)
-	if err != nil {
-		return nil, err
-	}
-
-	return crc, nil
+	return cm.logWO.AppendEntry(logEntry)
 }
 
 // Iterate
 func (cm *PassiveConsensusModule) Tick() error {
-	serverState := cm.GetServerState()
-	switch serverState {
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
+	switch cm.serverState {
 	case FOLLOWER:
 		// #RFS-F2: If election timeout elapses without receiving
 		// AppendEntries RPC from current leader or granting vote
@@ -295,7 +302,9 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	if err != nil {
 		return err
 	}
-	cm.logger.Println("[raft] becomeLeader: iole =", iole, ", commitIndex =", cm._commitIndex)
+	cm.logger.Println(
+		"[raft] becomeLeader: iole =", iole, ", commitIndex =", cm.commitIndex.UnsafeGet(),
+	)
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
@@ -308,7 +317,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 
 func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 	currentTerm := cm.RaftPersistentState.GetCurrentTerm()
-	if cm.GetServerState() == FOLLOWER && currentTerm == newTerm {
+	if cm.serverState == FOLLOWER && currentTerm == newTerm {
 		// Nothing to change!
 		return nil
 	}
@@ -325,7 +334,7 @@ func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 
 func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error {
 	currentTerm := cm.RaftPersistentState.GetCurrentTerm()
-	commitIndex := cm.GetCommitIndex()
+	commitIndex := cm.commitIndex.UnsafeGet()
 	//
 	return cm.ClusterInfo.ForEachPeer(
 		func(serverId ServerId) error {
@@ -346,16 +355,17 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error 
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
 func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
+	commitIndex := cm.commitIndex.UnsafeGet()
 	newerCommitIndex, err := cm.LeaderVolatileState.FindNewerCommitIndex(
 		cm.ClusterInfo,
 		cm.logRO,
 		cm.RaftPersistentState.GetCurrentTerm(),
-		cm.GetCommitIndex(),
+		commitIndex,
 	)
 	if err != nil {
 		return err
 	}
-	if newerCommitIndex != 0 && newerCommitIndex > cm.GetCommitIndex() {
+	if newerCommitIndex != 0 && newerCommitIndex > commitIndex {
 		err = cm.setCommitIndex(newerCommitIndex)
 		if err != nil {
 			return err
@@ -366,24 +376,21 @@ func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
 
 // Wrapper for the call to Log.SetEntriesAfterIndex()
 func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []LogEntry) error {
+	commitIndex := cm.commitIndex.UnsafeGet()
 	// Check that we're not trying to rewind past commitIndex
-	if li < cm._commitIndex {
+	if li < commitIndex {
 		return fmt.Errorf(
-			"FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, cm._commitIndex,
+			"FATAL: setEntriesAfterIndex(%d, ...) but commitIndex=%d", li, commitIndex,
 		)
 	}
 	newIole := li + LogIndex(len(entries))
-	if newIole < cm._commitIndex {
+	if newIole < commitIndex {
 		return fmt.Errorf(
 			"FATAL: setEntriesAfterIndex(%d, ...) would set iole=%d < commitIndex=%d",
 			li,
 			newIole,
-			cm._commitIndex,
+			commitIndex,
 		)
-	}
-	err := cm.committer.RemoveListenersAfterIndex(li)
-	if err != nil {
-		return nil
 	}
 	return cm.logWO.SetEntriesAfterIndex(li, entries)
 }

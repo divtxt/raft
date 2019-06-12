@@ -15,7 +15,9 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 	appendEntries *RpcAppendEntries,
 	appendEntriesReply *RpcAppendEntriesReply,
 ) error {
-	serverState := cm.GetServerState()
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
 	serverTerm := cm.RaftPersistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc
@@ -24,7 +26,7 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 	}
 
 	// Extra: raft violation - only leader should get AppendEntriesReply
-	if serverState != LEADER {
+	if cm.serverState != LEADER {
 		return fmt.Errorf(
 			"FATAL: non-leader got AppendEntriesReply from: %v with term: %v",
 			from,
@@ -76,7 +78,7 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 		err = fm.SendAppendEntriesToPeerAsync(
 			false,
 			serverTerm,
-			cm.GetCommitIndex(),
+			cm.commitIndex.UnsafeGet(),
 		)
 		if err != nil {
 			return err

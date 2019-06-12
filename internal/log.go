@@ -8,6 +8,7 @@ import (
 type LogReadOnly interface {
 	GetLastCompacted() LogIndex
 	GetIndexOfLastEntry() LogIndex
+	GetIndexOfLastEntryWatchable() WatchableIndex
 	GetTermAtIndex(LogIndex) (TermNo, error)
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 }
@@ -22,6 +23,7 @@ type LogReadOnly interface {
 //
 type LogTailOnly interface {
 	GetIndexOfLastEntry() LogIndex
+	GetIndexOfLastEntryWatchable() WatchableIndex
 	GetTermAtIndex(LogIndex) (TermNo, error)
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 	SetEntriesAfterIndex(LogIndex, []LogEntry) error
@@ -31,6 +33,7 @@ type LogTailOnly interface {
 // LogTailOnlyRO is the read-only subset of LogTailOnly
 type LogTailOnlyRO interface {
 	GetIndexOfLastEntry() LogIndex
+	GetIndexOfLastEntryWatchable() WatchableIndex
 	GetTermAtIndex(LogIndex) (TermNo, error)
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 }

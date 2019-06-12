@@ -12,7 +12,10 @@ func (cm *PassiveConsensusModule) RpcReply_RpcRequestVoteReply(
 	rpcRequestVote *RpcRequestVote,
 	rpcRequestVoteReply *RpcRequestVoteReply,
 ) error {
-	serverState := cm.GetServerState()
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
+	serverState := cm.serverState
 	serverTerm := cm.RaftPersistentState.GetCurrentTerm()
 
 	// Extra: ignore replies for previous term rpc
@@ -34,6 +37,7 @@ func (cm *PassiveConsensusModule) RpcReply_RpcRequestVoteReply(
 		}
 	}
 
+	// FIXME: is using the possibly stale serverState correct?
 	if serverState == CANDIDATE {
 		// #RFS-C2: If votes received from majority of servers: become leader
 		// #5.2-p3s1: A candidate wins an election if it receives votes from a

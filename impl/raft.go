@@ -96,17 +96,11 @@ func NewConsensusModule(
 		nil,
 	}
 
-	committer := committer.NewCommitter(raftLog, stateMachine, cm.safeShutdownAndPanic)
-
-	// We can only set the value here because it's a cyclic reference
-	cm.committer = committer
-
 	aes := aesender.NewLogOnlyAESender(raftLog, cm.SendOnlyRpcAppendEntriesAsync)
 
 	pcm, err := consensus.NewPassiveConsensusModule(
 		raftPersistentState,
 		raftLog,
-		committer,
 		cm.SendOnlyRpcRequestVoteAsync,
 		aes,
 		clusterInfo,
@@ -118,8 +112,16 @@ func NewConsensusModule(
 		return nil, err
 	}
 
-	// We can only set the value here because it's a cyclic reference
+	committer := committer.NewCommitter(
+		raftLog,
+		pcm.GetCommitIndexWatchable(),
+		stateMachine,
+		cm.safeShutdownAndPanic,
+	)
+
+	// We can only set these value here because of the cyclic dependencies
 	cm.passiveConsensusModule = pcm
+	cm.committer = committer
 
 	// Start the ticker goroutine
 	cm.ticker = util.NewTicker(cm.safeTick, cm.tickerDuration)
@@ -219,8 +221,16 @@ func (cm *ConsensusModule) AppendCommand(command Command) (<-chan CommandResult,
 		return nil, ErrStopped
 	}
 
-	crc, err := cm.passiveConsensusModule.AppendCommand(command)
-	if err != nil && err != ErrNotLeader {
+	logIndex, err := cm.passiveConsensusModule.AppendCommand(command)
+	if err != nil {
+		if err != ErrNotLeader {
+			cm.shutdownAndPanic(err)
+		}
+		return nil, err
+	}
+
+	crc, err := cm.committer.GetResultAsync(logIndex)
+	if err != nil {
 		cm.shutdownAndPanic(err)
 	}
 

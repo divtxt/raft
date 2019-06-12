@@ -61,6 +61,9 @@ type Log interface {
 	// in-memory and up-to-date.
 	GetIndexOfLastEntry() LogIndex
 
+	// Get the index of the last entry in the log as a WatchableIndex.
+	GetIndexOfLastEntryWatchable() WatchableIndex
+
 	// Get the term of the entry at the given index.
 	//
 	// It is an error if the given index is beyond the end of the log.

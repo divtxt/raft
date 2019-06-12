@@ -1,11 +1,12 @@
 package committer
 
 import (
+	"sync"
 	"testing"
 
 	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/log"
+	"github.com/divtxt/raft/logindex"
 	"github.com/divtxt/raft/testhelpers"
 )
 
@@ -22,18 +23,18 @@ func TestCommitter(t *testing.T) {
 	}
 
 	dsm := testhelpers.NewDummyStateMachine(3)
+	commitIndex := logindex.NewWatchedIndex(&sync.Mutex{})
 
-	committerImpl := NewCommitter(iml, dsm, nil)
-	var committer internal.ICommitter = committerImpl
+	committer := NewCommitter(iml, commitIndex, dsm, nil)
 
-	// CommitAsync should trigger run that drives commits
-	err = committer.CommitAsync(4)
+	// Increasing commitIndex should trigger run that drives commits
+	err = commitIndex.UnsafeSet(4)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Test StopSync() - this also waits for the first run to complete.
-	committerImpl.StopSync()
+	committer.StopSync()
 	if dsm.GetLastApplied() != 4 {
 		t.Fatal()
 	}
@@ -43,39 +44,39 @@ func TestCommitter(t *testing.T) {
 	}
 
 	// Enable TriggeredRunner test mode for the rest of the test.
-	committerImpl.commitApplier.TestHelperFakeRestart()
+	committer.commitApplier.TestHelperFakeRestart()
 
-	// Registering for committed index should be an error
-	_, err = committer.RegisterListener(4)
+	// GetResultAsync for committed index should be an error
+	_, err = committer.GetResultAsync(4)
 	if err.Error() != "FATAL: logIndex=4 is <= commitIndex=4" {
 		t.Fatal(err)
 	}
 
-	// Register for new notifications.
+	// GetResultAsync for new notifications.
 	// Intentionally not registering for some indexes to test that gaps are allowed.
 	// We're cheating a bit here in this test since these entries are already in the log.
-	crc6, err := committer.RegisterListener(6)
+	crc6, err := committer.GetResultAsync(6)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if crc6 == nil {
 		t.Fatal()
 	}
-	crc8, err := committer.RegisterListener(8)
+	crc8, err := committer.GetResultAsync(8)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if crc8 == nil {
 		t.Fatal()
 	}
-	crc9, err := committer.RegisterListener(9)
+	crc9, err := committer.GetResultAsync(9)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if crc9 == nil {
 		t.Fatal()
 	}
-	crc10, err := committer.RegisterListener(10)
+	crc10, err := committer.GetResultAsync(10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,19 +88,19 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc9)
 	testhelpers.AssertWillBlock(crc10)
 
-	// Trying to register for an older index should be an error
-	_, err = committer.RegisterListener(7)
+	// GetResultAsync for an older index should be an error
+	_, err = committer.GetResultAsync(7)
 	if err.Error() != "FATAL: logIndex=7 is <= highestRegisteredIndex=10" {
 		t.Fatal(err)
 	}
 
 	// Advancing commitIndex by multiple values should drive as many commits
 	// and notify relevant listeners with the results.
-	err = committer.CommitAsync(8)
+	err = commitIndex.UnsafeSet(8)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !committerImpl.commitApplier.TestHelperRunOnceIfTriggerPending() {
+	if !committer.commitApplier.TestHelperRunOnceIfTriggerPending() {
 		t.Fatal()
 	}
 	if dsm.GetLastApplied() != 8 {
@@ -118,8 +119,14 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc10)
 
 	// Regressing commitIndex should be an error
-	err = committer.CommitAsync(7)
-	if err.Error() != "FATAL: commitIndex=7 is < current commitIndex=8" {
+	err = commitIndex.UnsafeSet(7)
+	if err.Error() != "FATAL: newCi=7 is < oldCi=8" {
+		t.Fatal(err)
+	}
+	// reset for rest of tests :P
+	committer.cachedCommitIndex = 7
+	err = commitIndex.UnsafeSet(8)
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -140,8 +147,8 @@ func TestCommitter(t *testing.T) {
 		t.Fatal(ioleC13)
 	}
 
-	// Register a few more listeners.
-	crc12, err := committer.RegisterListener(12)
+	// GetResultAsync a few more entries.
+	crc12, err := committer.GetResultAsync(12)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,17 +157,8 @@ func TestCommitter(t *testing.T) {
 	}
 	testhelpers.AssertWillBlock(crc12)
 
-	// Remove index later than highestRegisteredIndex and indexOfLastEntry should be allowed
-	err = committer.RemoveListenersAfterIndex(14)
-	if err != nil {
-		t.Fatal(err)
-	}
-	testhelpers.AssertWillBlock(crc9)
-	testhelpers.AssertWillBlock(crc10)
-	testhelpers.AssertWillBlock(crc12)
-
-	// Remove with later index should not affect highestRegisteredIndex.
-	crc13, err := committer.RegisterListener(13)
+	// Discard with later index should not affect highestRegisteredIndex.
+	crc13, err := committer.GetResultAsync(13)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,13 +168,13 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc13)
 
 	// Allowed index for register should have moved up
-	_, err = committer.RegisterListener(12)
+	_, err = committer.GetResultAsync(12)
 	if err.Error() != "FATAL: logIndex=12 is <= highestRegisteredIndex=13" {
 		t.Fatal(err)
 	}
 
-	// Remove should close only relevant listeners
-	err = committer.RemoveListenersAfterIndex(9)
+	// Discard should close only relevant channels
+	err = iml.SetEntriesAfterIndex(9, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,33 +183,36 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertIsClosed(crc12)
 	testhelpers.AssertIsClosed(crc13)
 
-	// Should not be allowed to register listeners equal to the index sent to remove
-	_, err = committer.RegisterListener(9)
+	// GetResultAsync of indexOfLastEntry after discard is not allowed
+	_, err = committer.GetResultAsync(9)
 	if err.Error() != "FATAL: logIndex=9 is <= highestRegisteredIndex=9" {
 		t.Fatal(err)
 	}
-	// Should be allowed to register listener greater than the index sent to remove
-	crc10b, err := committer.RegisterListener(10)
-	if err != nil {
+	// GetResultAsync beyond indexOfLastEntry after discard is not allowed
+	_, err = committer.GetResultAsync(10)
+	if err.Error() != "FATAL: logIndex=10 is > indexOfLastEntry=9" {
 		t.Fatal(err)
-	}
-	if crc10b == nil {
-		t.Fatal()
 	}
 	testhelpers.AssertWillBlock(crc9)
-	testhelpers.AssertWillBlock(crc10b)
 
-	// Advancing commitIndex should drive new commits.
-	// We're cheating a bit here in this test since we never removed and re-added entry at 10.
-	err = committer.CommitAsync(9)
+	// Adding entries and advancing commitIndex should drive new commits.
+	ioleC10b, err := iml.AppendEntry(LogEntry{9, Command("c10")})
+	if ioleC10b != 10 || err != nil {
+		t.Fatal(10, err)
+	}
+	crc10b, err := committer.GetResultAsync(10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = committer.CommitAsync(10)
+	err = commitIndex.UnsafeSet(9)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !committerImpl.commitApplier.TestHelperRunOnceIfTriggerPending() {
+	err = commitIndex.UnsafeSet(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !committer.commitApplier.TestHelperRunOnceIfTriggerPending() {
 		t.Fatal()
 	}
 	if dsm.GetLastApplied() != 10 {
@@ -228,8 +229,8 @@ func TestCommitter(t *testing.T) {
 	}
 
 	// Committing past the end of the log should be an error
-	err = committer.CommitAsync(14)
-	if err.Error() != "FATAL: commitIndex=14 is > current iole=13" {
+	err = commitIndex.UnsafeSet(14)
+	if err.Error() != "FATAL: commitIndex=14 is > indexOfLastEntry=10" {
 		t.Fatal(err)
 	}
 }

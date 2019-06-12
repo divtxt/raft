@@ -16,6 +16,9 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	from ServerId,
 	appendEntries *RpcAppendEntries,
 ) (*RpcAppendEntriesReply, error) {
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
 	if from == cm.ClusterInfo.GetThisServerId() {
 		return nil, fmt.Errorf(
 			"FATAL: from server has same serverId: %v", cm.ClusterInfo.GetThisServerId(),
@@ -42,7 +45,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	}
 
 	// Extra: raft violation - two leaders with same term
-	if cm.GetServerState() == LEADER && leaderCurrentTerm == serverTerm {
+	if cm.serverState == LEADER && leaderCurrentTerm == serverTerm {
 		return nil, fmt.Errorf(
 			"FATAL: two leaders with same term - got AppendEntries from: %v with term: %v",
 			from,
@@ -91,7 +94,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit,
 	// index of last new entry)
 	leaderCommit := appendEntries.LeaderCommit
-	if leaderCommit > cm.GetCommitIndex() {
+	if leaderCommit > cm.commitIndex.UnsafeGet() {
 		var indexOfLastNewEntry LogIndex
 		indexOfLastNewEntry = cm.logRO.GetIndexOfLastEntry()
 		if leaderCommit < indexOfLastNewEntry {

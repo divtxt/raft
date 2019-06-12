@@ -14,6 +14,9 @@ func (cm *PassiveConsensusModule) Rpc_RpcRequestVote(
 	from ServerId,
 	rpcRequestVote *RpcRequestVote,
 ) (*RpcRequestVoteReply, error) {
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
 	if from == cm.ClusterInfo.GetThisServerId() {
 		return nil, fmt.Errorf(
 			"FATAL: from server has same serverId: %v", cm.ClusterInfo.GetThisServerId(),
