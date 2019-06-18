@@ -9,45 +9,53 @@ import (
 	"github.com/divtxt/raft/logindex"
 )
 
-// InMemoryLog is an in-memory raft Log.
+// InMemoryLog is an in-memory implementation of the raft Log.
 type InMemoryLog struct {
-	// TODO: see if we can use RWMutex
-	lock             *sync.Mutex
+	maxEntries uint64
+
+	lock             *sync.RWMutex
 	indexOfLastEntry *logindex.WatchedIndex
 	lastCompacted    LogIndex
 	entries          []LogEntry
-	maxEntries       uint64
 }
 
-// Test that InMemoryLog implements the Log interface
+// Check that InMemoryLog implements the Log interface
 var _ Log = (*InMemoryLog)(nil)
 
+// NewInMemoryLog creates a new InMemoryLog with the given parameters.
+//
+// maxEntries is the maximum number of log entries that GetEntriesAfterIndex
+// will return at a time.
+//
 func NewInMemoryLog(maxEntries uint64) (*InMemoryLog, error) {
 	if maxEntries <= 0 {
-		return nil, fmt.Errorf("maxEntries =%v must be greater than zero", maxEntries)
+		return nil, fmt.Errorf(
+			"maxEntries=%v must be greater than zero", maxEntries,
+		)
 	}
-	entries := []LogEntry{}
-	lock := &sync.Mutex{}
+	lock := &sync.RWMutex{}
 	iml := &InMemoryLog{
+		maxEntries,
 		lock,
 		logindex.NewWatchedIndex(lock),
 		0,
-		entries,
-		maxEntries,
+		[]LogEntry{},
 	}
 	return iml, nil
 }
 
 func (iml *InMemoryLog) GetLastCompacted() LogIndex {
-	iml.lock.Lock()
-	defer iml.lock.Unlock()
+	iml.lock.RLock()
+	defer iml.lock.RUnlock()
 
 	return iml.lastCompacted
 }
 
 func (iml *InMemoryLog) GetIndexOfLastEntry() LogIndex {
-	// Get() will lock the lock
-	return iml.indexOfLastEntry.Get()
+	iml.lock.RLock()
+	defer iml.lock.RUnlock()
+
+	return iml.indexOfLastEntry.UnsafeGet()
 }
 
 func (iml *InMemoryLog) GetIndexOfLastEntryWatchable() WatchableIndex {
@@ -55,8 +63,8 @@ func (iml *InMemoryLog) GetIndexOfLastEntryWatchable() WatchableIndex {
 }
 
 func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
-	iml.lock.Lock()
-	defer iml.lock.Unlock()
+	iml.lock.RLock()
+	defer iml.lock.RUnlock()
 
 	if li == 0 {
 		return 0, errors.New("GetTermAtIndex(): li=0")
@@ -71,8 +79,8 @@ func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 }
 
 func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry, error) {
-	iml.lock.Lock()
-	defer iml.lock.Unlock()
+	iml.lock.RLock()
+	defer iml.lock.RUnlock()
 
 	if afterLogIndex < iml.lastCompacted {
 		return nil, ErrIndexCompacted
