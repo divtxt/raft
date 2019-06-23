@@ -9,7 +9,6 @@ import (
 
 type indexWatcher struct {
 	changes []string
-	//changeErr error
 }
 
 func newIndexWatcher(wi WatchableIndex) *indexWatcher {

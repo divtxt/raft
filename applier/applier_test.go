@@ -1,4 +1,4 @@
-package committer
+package applier
 
 import (
 	"sync"
@@ -12,7 +12,7 @@ import (
 
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
 // log[lastApplied] to state machine (#5.3)
-func TestCommitter(t *testing.T) {
+func TestApplier(t *testing.T) {
 	iml, err := log.TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
 	if err != nil {
 		t.Fatal(err)
@@ -25,7 +25,7 @@ func TestCommitter(t *testing.T) {
 	dsm := testhelpers.NewDummyStateMachine(3)
 	commitIndex := logindex.NewWatchedIndex(&sync.Mutex{})
 
-	committer := NewCommitter(iml, commitIndex, dsm, nil)
+	applier := NewApplier(iml, commitIndex, dsm, nil)
 
 	// Increasing commitIndex should trigger run that drives commits
 	err = commitIndex.UnsafeSet(4)
@@ -34,7 +34,7 @@ func TestCommitter(t *testing.T) {
 	}
 
 	// Test StopSync() - this also waits for the first run to complete.
-	committer.StopSync()
+	applier.StopSync()
 	if dsm.GetLastApplied() != 4 {
 		t.Fatal()
 	}
@@ -44,10 +44,10 @@ func TestCommitter(t *testing.T) {
 	}
 
 	// Enable TriggeredRunner test mode for the rest of the test.
-	committer.commitApplier.TestHelperFakeRestart()
+	applier.runner.TestHelperFakeRestart()
 
 	// GetResultAsync for committed index should be an error
-	_, err = committer.GetResultAsync(4)
+	_, err = applier.GetResultAsync(4)
 	if err.Error() != "FATAL: logIndex=4 is <= commitIndex=4" {
 		t.Fatal(err)
 	}
@@ -55,28 +55,28 @@ func TestCommitter(t *testing.T) {
 	// GetResultAsync for new notifications.
 	// Intentionally not registering for some indexes to test that gaps are allowed.
 	// We're cheating a bit here in this test since these entries are already in the log.
-	crc6, err := committer.GetResultAsync(6)
+	crc6, err := applier.GetResultAsync(6)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if crc6 == nil {
 		t.Fatal()
 	}
-	crc8, err := committer.GetResultAsync(8)
+	crc8, err := applier.GetResultAsync(8)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if crc8 == nil {
 		t.Fatal()
 	}
-	crc9, err := committer.GetResultAsync(9)
+	crc9, err := applier.GetResultAsync(9)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if crc9 == nil {
 		t.Fatal()
 	}
-	crc10, err := committer.GetResultAsync(10)
+	crc10, err := applier.GetResultAsync(10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc10)
 
 	// GetResultAsync for an older index should be an error
-	_, err = committer.GetResultAsync(7)
+	_, err = applier.GetResultAsync(7)
 	if err.Error() != "FATAL: logIndex=7 is <= highestRegisteredIndex=10" {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestCommitter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !committer.commitApplier.TestHelperRunOnceIfTriggerPending() {
+	if !applier.runner.TestHelperRunOnceIfTriggerPending() {
 		t.Fatal()
 	}
 	if dsm.GetLastApplied() != 8 {
@@ -124,7 +124,7 @@ func TestCommitter(t *testing.T) {
 		t.Fatal(err)
 	}
 	// reset for rest of tests :P
-	committer.cachedCommitIndex = 7
+	applier.cachedCommitIndex = 7
 	err = commitIndex.UnsafeSet(8)
 	if err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestCommitter(t *testing.T) {
 	}
 
 	// GetResultAsync a few more entries.
-	crc12, err := committer.GetResultAsync(12)
+	crc12, err := applier.GetResultAsync(12)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc12)
 
 	// Discard with later index should not affect highestRegisteredIndex.
-	crc13, err := committer.GetResultAsync(13)
+	crc13, err := applier.GetResultAsync(13)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertWillBlock(crc13)
 
 	// Allowed index for register should have moved up
-	_, err = committer.GetResultAsync(12)
+	_, err = applier.GetResultAsync(12)
 	if err.Error() != "FATAL: logIndex=12 is <= highestRegisteredIndex=13" {
 		t.Fatal(err)
 	}
@@ -184,12 +184,12 @@ func TestCommitter(t *testing.T) {
 	testhelpers.AssertIsClosed(crc13)
 
 	// GetResultAsync of indexOfLastEntry after discard is not allowed
-	_, err = committer.GetResultAsync(9)
+	_, err = applier.GetResultAsync(9)
 	if err.Error() != "FATAL: logIndex=9 is <= highestRegisteredIndex=9" {
 		t.Fatal(err)
 	}
 	// GetResultAsync beyond indexOfLastEntry after discard is not allowed
-	_, err = committer.GetResultAsync(10)
+	_, err = applier.GetResultAsync(10)
 	if err.Error() != "FATAL: logIndex=10 is > indexOfLastEntry=9" {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func TestCommitter(t *testing.T) {
 	if ioleC10b != 10 || err != nil {
 		t.Fatal(10, err)
 	}
-	crc10b, err := committer.GetResultAsync(10)
+	crc10b, err := applier.GetResultAsync(10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestCommitter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !committer.commitApplier.TestHelperRunOnceIfTriggerPending() {
+	if !applier.runner.TestHelperRunOnceIfTriggerPending() {
 		t.Fatal()
 	}
 	if dsm.GetLastApplied() != 10 {

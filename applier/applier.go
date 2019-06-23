@@ -1,4 +1,4 @@
-package committer
+package applier
 
 import (
 	"fmt"
@@ -11,22 +11,22 @@ import (
 
 type FatalErrorHandler func(err error)
 
-// A Committer is a goroutine that applies committed log entries to the state
-// machine and notifies the commit listener for each entry.
+// An Applier is a goroutine that applies committed log entries to the state
+// machine and notifies the result listener for each entry.
 //
 // Specifically, the following responsibility is being delegated:
 //
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
 // log[lastApplied] to state machine (#5.3)
 //
-type Committer struct {
-	// -- Commit state
+type Applier struct {
+	// -- State
 	mutex                  sync.Mutex
 	cachedIndexOfLastEntry LogIndex
 	// commitIndex is the index of highest log entry known to be committed
 	// (initialized to 0, increases monotonically)
 	cachedCommitIndex      LogIndex
-	listeners              map[LogIndex]chan CommandResult // Commit listeners
+	listeners              map[LogIndex]chan CommandResult // Result listeners
 	highestRegisteredIndex LogIndex
 
 	// -- External components
@@ -35,10 +35,10 @@ type Committer struct {
 	feHandler    FatalErrorHandler
 
 	// -- Internal components
-	commitApplier *util.TriggeredRunner
+	runner *util.TriggeredRunner
 }
 
-// NewCommitter creates a new Committer with the given parameters.
+// NewApplier creates a new Applier with the given parameters.
 //
 // A goroutine is started that applies committed log entries to the state
 // machine. Note that this happens asynchronously to changes in commitIndex.
@@ -46,22 +46,23 @@ type Committer struct {
 // If the goroutine encounters an error (from the log or the state machine),
 // this is fatal for it. In this case, it will call feHandler with the
 // encountered error. The feHandler callback is expected to call the
-// Committer's StopSync() method before it returns. (or panics)
+// Applier's StopSync() method before it returns. (or panics)
+// FIXME: why can't it stop itself?!
 //
 // The value of highestRegisteredIndex will be initialized to commitIndex.
 // It will increase when GetResultAsync() is called. When the Log discards
 // entries, highestRegisteredIndex will be reset to indexOfLastEntry.
 //
-func NewCommitter(
+func NewApplier(
 	log internal.LogTailOnlyRO,
 	commitIndex WatchableIndex,
 	stateMachine StateMachine,
 	feHandler FatalErrorHandler,
-) *Committer {
+) *Applier {
 	// TODO: check that parameters are not nil?!
 	// TODO: error if lastApplied > commitIndex!
 
-	c := &Committer{
+	a := &Applier{
 		listeners:    make(map[LogIndex]chan CommandResult),
 		log:          log,
 		stateMachine: stateMachine,
@@ -69,30 +70,30 @@ func NewCommitter(
 	}
 
 	// Get lock so that we can ensure that initial cached values are correct.
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 
-	log.GetIndexOfLastEntryWatchable().AddListener(c.indexOfLastEntryChanged)
-	commitIndex.AddListener(c.commitIndexChanged)
+	log.GetIndexOfLastEntryWatchable().AddListener(a.indexOfLastEntryChanged)
+	commitIndex.AddListener(a.commitIndexChanged)
 
 	// Get initial cached values after setting up listeners to ensure we
 	// don't miss any updates during initialization.
-	c.cachedIndexOfLastEntry = log.GetIndexOfLastEntry()
+	a.cachedIndexOfLastEntry = log.GetIndexOfLastEntry()
 	cachedCommitIndex := commitIndex.Get()
-	c.cachedCommitIndex = cachedCommitIndex
-	c.highestRegisteredIndex = cachedCommitIndex
+	a.cachedCommitIndex = cachedCommitIndex
+	a.highestRegisteredIndex = cachedCommitIndex
 
-	c.commitApplier = util.NewTriggeredRunner(c.applyCommittedEntries)
+	a.runner = util.NewTriggeredRunner(a.applyCommittedEntries)
 
-	return c
+	return a
 }
 
-// StopSync will stop the Committer's goroutine.
+// StopSync will stop the Applier's goroutine.
 //
 // Will panic if called more than once.
-func (c *Committer) StopSync() {
+func (a *Applier) StopSync() {
 	// FIXME: should other methods be checking stopped state?
-	c.commitApplier.StopSync()
+	a.runner.StopSync()
 	// FIXME: close pending listeners under lock!?
 }
 
@@ -122,110 +123,110 @@ func (c *Committer) StopSync() {
 //
 // Note that this method does not have to be called for every log index.
 //
-func (c *Committer) GetResultAsync(logIndex LogIndex) (<-chan CommandResult, error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+func (a *Applier) GetResultAsync(logIndex LogIndex) (<-chan CommandResult, error) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 
-	if logIndex > c.cachedIndexOfLastEntry {
+	if logIndex > a.cachedIndexOfLastEntry {
 		return nil, fmt.Errorf(
 			"FATAL: logIndex=%v is > indexOfLastEntry=%v",
-			logIndex, c.cachedIndexOfLastEntry,
+			logIndex, a.cachedIndexOfLastEntry,
 		)
 	}
-	if logIndex <= c.cachedCommitIndex {
+	if logIndex <= a.cachedCommitIndex {
 		return nil, fmt.Errorf(
 			"FATAL: logIndex=%v is <= commitIndex=%v",
-			logIndex, c.cachedCommitIndex,
+			logIndex, a.cachedCommitIndex,
 		)
 	}
-	if logIndex <= c.highestRegisteredIndex {
+	if logIndex <= a.highestRegisteredIndex {
 		return nil, fmt.Errorf(
 			"FATAL: logIndex=%v is <= highestRegisteredIndex=%v",
 			logIndex,
-			c.highestRegisteredIndex,
+			a.highestRegisteredIndex,
 		)
 	}
 
 	crc := make(chan CommandResult, 1)
 
-	c.listeners[logIndex] = crc
-	c.highestRegisteredIndex = logIndex
+	a.listeners[logIndex] = crc
+	a.highestRegisteredIndex = logIndex
 
 	return crc, nil
 }
 
-func (c *Committer) indexOfLastEntryChanged(oldIole, newIole LogIndex) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+func (a *Applier) indexOfLastEntryChanged(oldIole, newIole LogIndex) error {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 
-	if oldIole != c.cachedIndexOfLastEntry {
+	if oldIole != a.cachedIndexOfLastEntry {
 		return fmt.Errorf(
 			"FATAL: oldIole=%v != cachedIndexOfLastEntry=%v",
-			oldIole, c.cachedIndexOfLastEntry,
+			oldIole, a.cachedIndexOfLastEntry,
 		)
 	}
 
-	c.cachedIndexOfLastEntry = newIole
+	a.cachedIndexOfLastEntry = newIole
 
 	// If there are registered listeners affected, close their channels
 	// and rewind highestRegisteredIndex
-	if newIole < c.highestRegisteredIndex {
-		for li := newIole + 1; li <= c.highestRegisteredIndex; li++ {
-			crc, ok := c.listeners[li]
+	if newIole < a.highestRegisteredIndex {
+		for li := newIole + 1; li <= a.highestRegisteredIndex; li++ {
+			crc, ok := a.listeners[li]
 			if ok {
-				delete(c.listeners, li)
+				delete(a.listeners, li)
 				close(crc)
 			}
 		}
-		c.highestRegisteredIndex = newIole
+		a.highestRegisteredIndex = newIole
 	}
 
 	return nil
 }
 
-func (c *Committer) commitIndexChanged(oldCi, newCi LogIndex) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+func (a *Applier) commitIndexChanged(oldCi, newCi LogIndex) error {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 
-	// FIXME: not Committer's responsibility to check this
-	if oldCi != c.cachedCommitIndex {
+	// FIXME: not Applier's responsibility to check this
+	if oldCi != a.cachedCommitIndex {
 		return fmt.Errorf(
 			"FATAL: oldCi=%v != cachedCommitIndex=%v",
-			oldCi, c.cachedCommitIndex,
+			oldCi, a.cachedCommitIndex,
 		)
 	}
-	// FIXME: not Committer's responsibility to check this
-	if newCi > c.cachedIndexOfLastEntry {
+	// FIXME: not Applier's responsibility to check this
+	if newCi > a.cachedIndexOfLastEntry {
 		return fmt.Errorf(
 			"FATAL: commitIndex=%v is > indexOfLastEntry=%v",
-			newCi, c.cachedIndexOfLastEntry,
+			newCi, a.cachedIndexOfLastEntry,
 		)
 	}
-	// FIXME: not Committer's responsibility to check this
+	// FIXME: not Applier's responsibility to check this
 	// Check commitIndex is not going backward
 	if newCi < oldCi {
 		return fmt.Errorf("FATAL: newCi=%v is < oldCi=%v", newCi, oldCi)
 	}
 
 	// Update commitIndex and then trigger a run of the applier goroutine
-	c.cachedCommitIndex = newCi
-	c.commitApplier.TriggerRun()
+	a.cachedCommitIndex = newCi
+	a.runner.TriggerRun()
 
 	return nil
 }
 
-func (c *Committer) applyCommittedEntries() {
+func (a *Applier) applyCommittedEntries() {
 	// Concurrency:
 	// - there is only one method to this call at a time
 	// - commitIndex can only increase, so we can snapshot it as a low value
 
 	for {
 		// safely get commitIndex
-		c.mutex.Lock()
-		commitIndexSnapshot := c.cachedCommitIndex
-		c.mutex.Unlock()
+		a.mutex.Lock()
+		commitIndexSnapshot := a.cachedCommitIndex
+		a.mutex.Unlock()
 
-		lastApplied := c.stateMachine.GetLastApplied()
+		lastApplied := a.stateMachine.GetLastApplied()
 
 		// Return if no more entries to apply at this time.
 		// (TriggeredRunner should call again if CommitAsync advanced commitIndex)
@@ -235,9 +236,9 @@ func (c *Committer) applyCommittedEntries() {
 		}
 
 		// Get a batch of entries from the raft log.
-		entries, err := c.log.GetEntriesAfterIndex(lastApplied)
+		entries, err := a.log.GetEntriesAfterIndex(lastApplied)
 		if err != nil {
-			c.feHandler(err)
+			a.feHandler(err)
 			return
 		}
 
@@ -253,16 +254,16 @@ func (c *Committer) applyCommittedEntries() {
 			}
 
 			// Get the commit listener for this index
-			c.mutex.Lock()
-			crc, haveCrc := c.listeners[indexToApply]
+			a.mutex.Lock()
+			crc, haveCrc := a.listeners[indexToApply]
 			if haveCrc {
-				delete(c.listeners, indexToApply)
+				delete(a.listeners, indexToApply)
 			}
 			// TODO: since we have the mutex, we could update our copy of commitIndex
-			c.mutex.Unlock()
+			a.mutex.Unlock()
 
 			// Apply the command to the state machine.
-			commandResult := c.stateMachine.ApplyCommand(indexToApply, entry.Command)
+			commandResult := a.stateMachine.ApplyCommand(indexToApply, entry.Command)
 
 			// Send the result to the commit listener.
 			if haveCrc {

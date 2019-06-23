@@ -30,7 +30,7 @@ import (
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/aesender"
-	"github.com/divtxt/raft/committer"
+	"github.com/divtxt/raft/applier"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus"
 	"github.com/divtxt/raft/util"
@@ -44,7 +44,7 @@ type ConsensusModule struct {
 	logger *log.Logger
 
 	//
-	committer              *committer.Committer
+	applier                *applier.Applier
 	passiveConsensusModule *consensus.PassiveConsensusModule
 
 	// -- External components - these fields meant to be immutable
@@ -82,7 +82,7 @@ func NewConsensusModule(
 
 		logger,
 
-		nil, // committer - temp value, to be replaced before goroutine start
+		nil, // applier - temp value, to be replaced before goroutine start
 		nil, // passiveConsensusModule - temp value, to be replaced before goroutine start
 
 		// -- External components
@@ -112,7 +112,7 @@ func NewConsensusModule(
 		return nil, err
 	}
 
-	committer := committer.NewCommitter(
+	applier := applier.NewApplier(
 		raftLog,
 		pcm.GetCommitIndexWatchable(),
 		stateMachine,
@@ -121,7 +121,7 @@ func NewConsensusModule(
 
 	// We can only set these value here because of the cyclic dependencies
 	cm.passiveConsensusModule = pcm
-	cm.committer = committer
+	cm.applier = applier
 
 	// Start the ticker goroutine
 	cm.ticker = util.NewTicker(cm.safeTick, cm.tickerDuration)
@@ -229,7 +229,7 @@ func (cm *ConsensusModule) AppendCommand(command Command) (<-chan CommandResult,
 		return nil, err
 	}
 
-	crc, err := cm.committer.GetResultAsync(logIndex)
+	crc, err := cm.applier.GetResultAsync(logIndex)
 	if err != nil {
 		cm.shutdownAndPanic(err)
 	}
@@ -338,12 +338,12 @@ func (cm *ConsensusModule) shutdownAndPanic(err error) {
 		// Tell the ticker to stop.
 		// This needs be async since this method could be running as part of a tick.
 		cm.ticker.StopAsync()
-		// Tell the committer to stop.
+		// Tell the applier to stop.
 		// No other calls will be serviced, so there's no need to worry about a race condition
 		// between this stop and a commitIndex change.
 		// (Even if this method is running as part of a tick, we should be past the actual tick code)
 		// where the actual tick code
-		cm.committer.StopSync()
+		cm.applier.StopSync()
 		// Panic for error
 		if err != nil {
 			e := fmt.Sprintf(
