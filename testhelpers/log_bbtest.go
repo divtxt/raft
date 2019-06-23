@@ -23,10 +23,10 @@ func TestCommandEquals(c Command, s string) bool {
 // To use the variant of this test with a compacted log (lastCompcatedIsFour=true), discard
 // log entries up to log index 4.
 //
-func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
+func BlackboxTest_Log(t *testing.T, log Log, lastCompactedIsFour bool) {
 	// Initial data tests
 	lastCompacted := log.GetLastCompacted()
-	if lastCompcatedIsFour {
+	if lastCompactedIsFour {
 		if lastCompacted != 4 {
 			t.Fatal(lastCompacted)
 		}
@@ -57,7 +57,7 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	}
 
 	// get multiple entries
-	if lastCompcatedIsFour {
+	if lastCompactedIsFour {
 		entries, err := log.GetEntriesAfterIndex(3)
 		if err != ErrIndexCompacted {
 			t.Fatal(entries, err)
@@ -83,7 +83,7 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	var logEntries []LogEntry
 
 	// set test - invalid index
-	if lastCompcatedIsFour {
+	if lastCompactedIsFour {
 		err = log.SetEntriesAfterIndex(3, logEntries)
 		if err != ErrIndexCompacted {
 			t.Fatal(err)
@@ -157,7 +157,7 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompcatedIsFour bool) {
 	if !reflect.DeepEqual(le, LogEntry{4, Command("c5")}) {
 		t.Fatal(le)
 	}
-	if lastCompcatedIsFour {
+	if lastCompactedIsFour {
 		entries, err = log.GetEntriesAfterIndex(3)
 		if err != ErrIndexCompacted {
 			t.Fatal(entries, err)
