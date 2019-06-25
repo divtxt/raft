@@ -74,6 +74,7 @@ type Log interface {
 	//
 	// An index of 0 is invalid for this call.
 	// There should be no entries for the Log of a new server.
+	// FIXME: should log remember term of lastCompacted?
 	GetTermAtIndex(LogIndex) (TermNo, error)
 
 	// Get multiple entries after the given index.

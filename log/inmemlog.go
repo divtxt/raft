@@ -69,6 +69,9 @@ func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 	if li == 0 {
 		return 0, errors.New("GetTermAtIndex(): li=0")
 	}
+	if li <= iml.lastCompacted {
+		return 0, ErrIndexCompacted
+	}
 
 	if li > iml.indexOfLastEntry.UnsafeGet() {
 		return 0, fmt.Errorf(

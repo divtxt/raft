@@ -56,13 +56,19 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompactedIsFour bool) {
 		t.Fatal(le.Command)
 	}
 
-	// get multiple entries
+	// get at or before lastCompacted
 	if lastCompactedIsFour {
 		entries, err := log.GetEntriesAfterIndex(3)
 		if err != ErrIndexCompacted {
 			t.Fatal(entries, err)
 		}
+		_, err = log.GetTermAtIndex(4)
+		if err != ErrIndexCompacted {
+			t.Fatal(err)
+		}
 	}
+
+	// get multiple entries
 	entries, err := log.GetEntriesAfterIndex(4)
 	if err != nil {
 		t.Fatal(err)
@@ -111,7 +117,11 @@ func BlackboxTest_Log(t *testing.T, log Log, lastCompactedIsFour bool) {
 	}
 
 	// set test - partial replacing
-	logEntries = []LogEntry{{7, Command("c11")}, {9, Command("c12")}, {9, Command("c13'")}}
+	logEntries = []LogEntry{
+		{7, Command("c11")},
+		{9, Command("c12")},
+		{9, Command("c13'")},
+	}
 	err = log.SetEntriesAfterIndex(10, logEntries)
 	if err != nil {
 		t.Fatal()
