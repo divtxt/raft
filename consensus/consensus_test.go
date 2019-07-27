@@ -169,10 +169,7 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 		t.Fatal()
 	}
 	// candidate state is fresh
-	expectedCvs, err := candidate.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
+	expectedCvs := candidate.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
 	if !reflect.DeepEqual(mcm.pcm.CandidateVolatileState, expectedCvs) {
 		t.Fatal()
 	}
@@ -240,10 +237,7 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 		t.Fatal()
 	}
 	// candidate state is fresh
-	expectedCvs, err := candidate.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
+	expectedCvs := candidate.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
 	if !reflect.DeepEqual(mcm.pcm.CandidateVolatileState, expectedCvs) {
 		t.Fatal()
 	}

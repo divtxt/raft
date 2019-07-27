@@ -18,10 +18,7 @@ func TestLeaderVolatileState(t *testing.T) {
 
 	maes := &mockAESender{}
 
-	lvs, err := NewLeaderVolatileState(ci, 42, maes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	lvs := NewLeaderVolatileState(ci, 42, maes)
 
 	// Initial state
 	// #5.3-p8s4: When a leader first comes to power, it initializes
@@ -139,10 +136,7 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	lvs := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
 		nci, err := lvs.FindNewerCommitIndex(ci, imle, currentTerm, commitIndex)
@@ -209,10 +203,7 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	lvs := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
 		nci, err := lvs.FindNewerCommitIndex(ci, imle, currentTerm, commitIndex)
@@ -331,10 +322,7 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	lvs := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
 		nci, err := lvs.FindNewerCommitIndex(ci, imle, currentTerm, commitIndex)
@@ -394,10 +382,7 @@ func TestFindNewerCommitIndex_SOLO(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lvs, err := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	lvs := NewLeaderVolatileState(ci, LogIndex(len(terms)), nil)
 
 	_findNewerCommitIndex := func(currentTerm TermNo, commitIndex LogIndex) LogIndex {
 		nci, err := lvs.FindNewerCommitIndex(ci, imle, currentTerm, commitIndex)

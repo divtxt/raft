@@ -267,10 +267,8 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	if err != nil {
 		return err
 	}
-	cm.CandidateVolatileState, err = candidate.NewCandidateVolatileState(cm.ClusterInfo)
-	if err != nil {
-		return err
-	}
+	cm.CandidateVolatileState = candidate.NewCandidateVolatileState(cm.ClusterInfo)
+
 	// FIXME: return newTerm to avoid logging here
 	cm.logger.Println("[raft] becomeCandidateAndBeginElection: newTerm =", newTerm)
 	cm.setServerState(CANDIDATE)
@@ -292,7 +290,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 		},
 	)
 	if err != nil {
-		return err
+		panic(err) // Should not happen!
 	}
 	// Reset election timeout!
 	cm.ElectionTimeoutTimer.RestartWithDuration(
@@ -303,18 +301,14 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 
 func (cm *PassiveConsensusModule) becomeLeader() error {
 	iole := cm.logRO.GetIndexOfLastEntry()
-	var err error
-	cm.LeaderVolatileState, err = leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm.aeSender)
-	if err != nil {
-		return err
-	}
+	cm.LeaderVolatileState = leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm.aeSender)
 	cm.logger.Println(
 		"[raft] becomeLeader: iole =", iole, ", commitIndex =", cm.commitIndex.UnsafeGet(),
 	)
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
-	err = cm.sendAppendEntriesToAllPeers(true)
+	err := cm.sendAppendEntriesToAllPeers(true)
 	if err != nil {
 		return err
 	}

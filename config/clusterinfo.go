@@ -79,6 +79,9 @@ func (ci *ClusterInfo) GetThisServerId() ServerId {
 // function with it's ServerId.
 //
 // "Peer" servers here means all servers except for "this" server.
+//
+// If the function returns an error for a peer, the error is returned
+// and no further peers are processed.
 func (ci *ClusterInfo) ForEachPeer(f func(serverId ServerId) error) error {
 	for _, serverId := range ci.peerServerIds {
 		err := f(serverId)

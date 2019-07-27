@@ -16,10 +16,7 @@ func TestCandidateVolatileState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := NewCandidateVolatileState(ci)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cvs := NewCandidateVolatileState(ci)
 
 	// Initial state
 	if cvs.receivedVotes != 1 {
@@ -71,10 +68,7 @@ func TestCandidateVolatileState_3nodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := NewCandidateVolatileState(ci)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cvs := NewCandidateVolatileState(ci)
 	if cvs.receivedVotes != 1 || cvs.requiredVotes != 2 {
 		t.Fatal()
 	}
@@ -100,10 +94,7 @@ func TestCandidateVolatileState_VoteFromNonMemberIsAnError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cvs, err := NewCandidateVolatileState(ci)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cvs := NewCandidateVolatileState(ci)
 
 	_, err = cvs.AddVoteFrom(504)
 	if err.Error() != "CandidateVolatileState.AddVoteFrom(): unknown peer: 504" {

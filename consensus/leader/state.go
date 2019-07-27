@@ -26,7 +26,7 @@ func NewLeaderVolatileState(
 	clusterInfo *config.ClusterInfo,
 	indexOfLastEntry LogIndex,
 	aeSender internal.IAppendEntriesSender,
-) (*LeaderVolatileState, error) {
+) *LeaderVolatileState {
 	lvs := &LeaderVolatileState{
 		make(map[ServerId]*FollowerManager),
 	}
@@ -48,10 +48,10 @@ func NewLeaderVolatileState(
 		},
 	)
 	if err != nil {
-		return nil, err
+		panic(err) // Should not happen!
 	}
 
-	return lvs, nil
+	return lvs
 }
 
 func (lvs *LeaderVolatileState) GetFollowerManager(peerId ServerId) (*FollowerManager, error) {
