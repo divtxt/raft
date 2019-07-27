@@ -76,6 +76,12 @@ func NewPassiveConsensusModule(
 	if electionTimeoutLow.Nanoseconds() <= 0 {
 		return nil, errors.New("electionTimeoutLow must be greater than zero")
 	}
+	if nowFunc == nil {
+		return nil, errors.New("'nowFunc' cannot be nil")
+	}
+	if logger == nil {
+		return nil, errors.New("'logger' cannot be nil")
+	}
 
 	lock := &sync.Mutex{}
 	electionTimeoutTimer := util.NewTimer(electionTimeoutLow, nowFunc)
