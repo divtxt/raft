@@ -31,8 +31,8 @@ func NewLeaderVolatileState(
 		make(map[ServerId]*FollowerManager),
 	}
 
-	err := clusterInfo.ForEachPeer(
-		func(peerId ServerId) error {
+	clusterInfo.ForEachPeer(
+		func(peerId ServerId) {
 			// #5.3-p8s4: When a leader first comes to power, it initializes
 			// all nextIndex values to the index just after the last one in
 			// its log (11 in Figure 7).
@@ -43,13 +43,8 @@ func NewLeaderVolatileState(
 				aeSender,
 			)
 			lvs.followerManagers[peerId] = fm
-
-			return nil
 		},
 	)
-	if err != nil {
-		panic(err) // Should not happen!
-	}
 
 	return lvs
 }

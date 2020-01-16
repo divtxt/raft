@@ -282,16 +282,12 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	if err != nil {
 		return err
 	}
-	err = cm.ClusterInfo.ForEachPeer(
-		func(serverId ServerId) error {
+	cm.ClusterInfo.ForEachPeer(
+		func(serverId ServerId) {
 			rpcRequestVote := &RpcRequestVote{newTerm, lastLogIndex, lastLogTerm}
 			cm.sendOnlyRpcRequestVoteAsync(serverId, rpcRequestVote)
-			return nil
 		},
 	)
-	if err != nil {
-		panic(err) // Should not happen!
-	}
 	// Reset election timeout!
 	cm.ElectionTimeoutTimer.RestartWithDuration(
 		cm.electionTimeoutChooser.ChooseRandomElectionTimeout(),
@@ -336,7 +332,7 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error 
 	currentTerm := cm.RaftPersistentState.GetCurrentTerm()
 	commitIndex := cm.commitIndex.UnsafeGet()
 	//
-	return cm.ClusterInfo.ForEachPeer(
+	return cm.ClusterInfo.ForEachPeerCheckErr(
 		func(serverId ServerId) error {
 			fm, err := cm.LeaderVolatileState.GetFollowerManager(serverId)
 			if err != nil {

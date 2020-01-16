@@ -79,10 +79,21 @@ func (ci *ClusterInfo) GetThisServerId() ServerId {
 // function with it's ServerId.
 //
 // "Peer" servers here means all servers except for "this" server.
+func (ci *ClusterInfo) ForEachPeer(f func(serverId ServerId)) {
+	for _, serverId := range ci.peerServerIds {
+		f(serverId)
+	}
+}
+
+// Iterate over the list of all peer servers in the cluster and call the given
+// function with it's ServerId.
+//
+// "Peer" servers here means all servers except for "this" server.
 //
 // If the function returns an error for a peer, the error is returned
 // and no further peers are processed.
-func (ci *ClusterInfo) ForEachPeer(f func(serverId ServerId) error) error {
+// TODO: see if we can get rid of this method
+func (ci *ClusterInfo) ForEachPeerCheckErr(f func(serverId ServerId) error) error {
 	for _, serverId := range ci.peerServerIds {
 		err := f(serverId)
 		if err != nil {

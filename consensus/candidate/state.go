@@ -24,15 +24,11 @@ func NewCandidateVolatileState(
 		make(map[ServerId]bool),
 	}
 
-	err := clusterInfo.ForEachPeer(
-		func(peerId ServerId) error {
+	clusterInfo.ForEachPeer(
+		func(peerId ServerId) {
 			cvs.votedPeers[peerId] = false
-			return nil
 		},
 	)
-	if err != nil {
-		panic(err) // Should not happen!
-	}
 
 	return cvs
 }

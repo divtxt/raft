@@ -98,19 +98,15 @@ func TestClusterInfo_ForEach(t *testing.T) {
 	}
 
 	seenIds := make([]ServerId, 0, 3)
-	err = ci.ForEachPeer(func(serverId ServerId) error {
+	ci.ForEachPeer(func(serverId ServerId) {
 		seenIds = append(seenIds, serverId)
-		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if !reflect.DeepEqual(seenIds, []ServerId{2, 3}) {
 		t.Fatal(seenIds)
 	}
 
 	seenIds = make([]ServerId, 0, 3)
-	err = ci.ForEachPeer(func(serverId ServerId) error {
+	err = ci.ForEachPeerCheckErr(func(serverId ServerId) error {
 		seenIds = append(seenIds, serverId)
 		return errors.New("foo!")
 	})

@@ -181,13 +181,9 @@ func testCM_FollowerOrCandidate_StartsElectionOnElectionTimeout_Part2(
 	}
 	expectedRpc := &RpcRequestVote{expectedNewTerm, lastLogIndex, lastLogTerm}
 	expectedRpcs := map[ServerId]interface{}{}
-	err = mcm.pcm.ClusterInfo.ForEachPeer(func(serverId ServerId) error {
+	mcm.pcm.ClusterInfo.ForEachPeer(func(serverId ServerId) {
 		expectedRpcs[serverId] = expectedRpc
-		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 	mrs.ClearSentRpcs()
 }
@@ -795,7 +791,7 @@ func testSetupMCM_Leader_Figure7LeaderLine_WithUpToDatePeers(
 
 	// pretend peers caught up!
 	lastLogIndex := mcm.pcm.logRO.GetIndexOfLastEntry()
-	err := mcm.pcm.ClusterInfo.ForEachPeer(
+	err := mcm.pcm.ClusterInfo.ForEachPeerCheckErr(
 		func(serverId ServerId) error {
 			fm, err := mcm.pcm.LeaderVolatileState.GetFollowerManager(serverId)
 			if err != nil {
