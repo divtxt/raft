@@ -9,12 +9,12 @@ import (
 // only construct RpcAppendEntries from the raft log.
 // It is unable to handle raft snapshots.
 type LogOnlyAESender struct {
-	logRO                         internal.LogTailOnlyRO
+	logRO                         internal.LogTailRO
 	sendOnlyRpcAppendEntriesAsync internal.SendOnlyRpcAppendEntriesAsync
 }
 
 func NewLogOnlyAESender(
-	logRO internal.LogTailOnlyRO,
+	logRO internal.LogTailRO,
 	sendOnlyRpcAppendEntriesAsync internal.SendOnlyRpcAppendEntriesAsync,
 ) internal.IAppendEntriesSender {
 	return &LogOnlyAESender{logRO, sendOnlyRpcAppendEntriesAsync}

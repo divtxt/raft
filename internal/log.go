@@ -13,7 +13,7 @@ type LogReadOnly interface {
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 }
 
-// LogTailOnly is the subset of the Log interface used by components that will only access the
+// LogTail is the subset of the Log interface used by components that will only access the
 // non-compacted tail of the raft log.
 //
 // FIXME: is this correct?! need to check all components & calls, and edge cases/values!
@@ -21,7 +21,7 @@ type LogReadOnly interface {
 // of lastApplied. This means that we don't need to worry about log compaction, don't expect calls
 // to GetLastCompacted(), and should never be returned an ErrIndexCompacted error.
 //
-type LogTailOnly interface {
+type LogTail interface {
 	GetIndexOfLastEntry() LogIndex
 	GetIndexOfLastEntryWatchable() WatchableIndex
 	GetTermAtIndex(LogIndex) (TermNo, error)
@@ -30,16 +30,16 @@ type LogTailOnly interface {
 	AppendEntry(LogEntry) (LogIndex, error)
 }
 
-// LogTailOnlyRO is the read-only subset of LogTailOnly
-type LogTailOnlyRO interface {
+// LogTailRO is the read-only subset of LogTail
+type LogTailRO interface {
 	GetIndexOfLastEntry() LogIndex
 	GetIndexOfLastEntryWatchable() WatchableIndex
 	GetTermAtIndex(LogIndex) (TermNo, error)
 	GetEntriesAfterIndex(LogIndex) ([]LogEntry, error)
 }
 
-// LogTailOnlyWO is the write-only subset of LogTailOnly
-type LogTailOnlyWO interface {
+// LogTailWO is the write-only subset of LogTail
+type LogTailWO interface {
 	SetEntriesAfterIndex(LogIndex, []LogEntry) error
 	AppendEntry(LogEntry) (LogIndex, error)
 }

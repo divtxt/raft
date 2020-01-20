@@ -30,7 +30,7 @@ type Applier struct {
 	highestRegisteredIndex LogIndex
 
 	// -- External components
-	log          internal.LogTailOnlyRO
+	log          internal.LogTailRO
 	stateMachine StateMachine
 	feHandler    FatalErrorHandler
 
@@ -54,7 +54,7 @@ type Applier struct {
 // entries, highestRegisteredIndex will be reset to indexOfLastEntry.
 //
 func NewApplier(
-	log internal.LogTailOnlyRO,
+	log internal.LogTailRO,
 	commitIndex WatchableIndex,
 	stateMachine StateMachine,
 	feHandler FatalErrorHandler,

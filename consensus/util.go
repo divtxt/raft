@@ -6,7 +6,7 @@ import (
 )
 
 // Helper function
-func GetIndexAndTermOfLastEntry(log internal.LogTailOnlyRO) (LogIndex, TermNo, error) {
+func GetIndexAndTermOfLastEntry(log internal.LogTailRO) (LogIndex, TermNo, error) {
 	lastLogIndex := log.GetIndexOfLastEntry()
 	var lastLogTerm TermNo = 0
 	if lastLogIndex > 0 {

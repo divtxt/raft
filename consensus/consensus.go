@@ -23,8 +23,8 @@ type PassiveConsensusModule struct {
 
 	// -- External components
 	RaftPersistentState         RaftPersistentState
-	logRO                       internal.LogTailOnlyRO
-	logWO                       internal.LogTailOnlyWO
+	logRO                       internal.LogTailRO
+	logWO                       internal.LogTailWO
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync
 	aeSender                    internal.IAppendEntriesSender
 	logger                      *log.Logger
@@ -52,7 +52,7 @@ type PassiveConsensusModule struct {
 
 func NewPassiveConsensusModule(
 	raftPersistentState RaftPersistentState,
-	log internal.LogTailOnly,
+	log internal.LogTail,
 	sendOnlyRpcRequestVoteAsync internal.SendOnlyRpcRequestVoteAsync,
 	aeSender internal.IAppendEntriesSender,
 	clusterInfo *config.ClusterInfo,
