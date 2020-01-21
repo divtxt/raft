@@ -79,7 +79,8 @@ type Log interface {
 
 	// Get multiple entries after the given index.
 	//
-	// The returned entries will be sent as is in an AppendEntries RPC to a follower.
+	// The returned entries will be sent as is in an AppendEntries RPC to a follower,
+	// or used to apply log entries to the state machine.
 	//
 	// This method is expected to decide how many entries to return based on some policy.
 	// This interface itself has no specific requirements on the policy, but it is expected

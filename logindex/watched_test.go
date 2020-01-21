@@ -3,10 +3,11 @@ package logindex_test
 import (
 	"errors"
 	"fmt"
-	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/logindex"
 	"reflect"
 	"testing"
+
+	. "github.com/divtxt/raft"
+	"github.com/divtxt/raft/logindex"
 )
 
 func TestWatchedIndex(t *testing.T) {
@@ -14,16 +15,18 @@ func TestWatchedIndex(t *testing.T) {
 	l := &mockLocker{ss}
 
 	var fErr = errors.New("fErr")
-	var icl1 IndexChangeListener = func(o, n LogIndex) error {
-		ss.append(fmt.Sprintf("icl1:%v->%v", o, n))
+	var icv logindex.IndexChangeVerifier = func(o, n LogIndex) error {
+		ss.append(fmt.Sprintf("icv:%v->%v", o, n))
 		if n == 10 {
 			return fErr
 		}
 		return nil
 	}
-	var icl2 IndexChangeListener = func(o, n LogIndex) error {
-		ss.append(fmt.Sprintf("icl2:%v->%v", o, n))
-		return nil
+	var icl1 IndexChangeListener = func(n LogIndex) {
+		ss.append(fmt.Sprintf("icl1:%v", n))
+	}
+	var icl2 IndexChangeListener = func(n LogIndex) {
+		ss.append(fmt.Sprintf("icl2:%v", n))
 	}
 
 	wi := logindex.NewWatchedIndex(l)
@@ -60,7 +63,19 @@ func TestWatchedIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ss.checkCalls(t, []string{"icl1:3->4"})
+	ss.checkCalls(t, []string{"icl1:4"})
+
+	// Add verifier
+	err = wi.SetVerifier(icv)
+	ss.checkCalls(t, []string{"Lock", "Unlock"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = wi.UnsafeSet(5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss.checkCalls(t, []string{"icv:4->5", "icl1:5"})
 
 	// Second listener
 	wi.AddListener(icl2)
@@ -69,14 +84,14 @@ func TestWatchedIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ss.checkCalls(t, []string{"icl1:4->8", "icl2:4->8"})
+	ss.checkCalls(t, []string{"icv:5->8", "icl1:8", "icl2:8"})
 
-	// UnsafeSet should return when first listener errors
+	// UnsafeSet should return if the verifier errors without calling listeners
 	err = wi.UnsafeSet(10)
 	if err != fErr {
 		t.Fatal(err)
 	}
-	ss.checkCalls(t, []string{"icl1:8->10"})
+	ss.checkCalls(t, []string{"icv:8->10"})
 
 	// New value should have been set regardless of the error
 	if wi.Get() != 10 {

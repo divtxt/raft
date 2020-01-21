@@ -191,7 +191,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		mcm.iw.CheckCalls("0->3")
+		mcm.iw.CheckCalls("->3")
 
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
@@ -227,7 +227,7 @@ func TestCM_RpcAE_AppendNewEntries(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		mcm.iw.CheckCalls("3->7")
+		mcm.iw.CheckCalls("->7")
 
 		expectedRpc := RpcAppendEntriesReply{senderTerm, true}
 		if *reply != expectedRpc {
@@ -292,7 +292,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		mcm.iw.CheckCalls("0->3")
+		mcm.iw.CheckCalls("->3")
 
 		serverTerm := mcm.pcm.RaftPersistentState.GetCurrentTerm()
 		electionTimeoutTime1 := mcm.pcm.ElectionTimeoutTimer.GetExpiryTime()
@@ -327,7 +327,7 @@ func TestCM_RpcAE_AppendNewEntriesB(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		mcm.iw.CheckCalls("3->6")
+		mcm.iw.CheckCalls("->6")
 
 		expectedRpc := RpcAppendEntriesReply{senderTerm, true}
 		if *reply != expectedRpc {
@@ -439,7 +439,7 @@ func TestCM_RpcAE_LessThanCommitIndex(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		mcm.iw.CheckCalls("0->6")
+		mcm.iw.CheckCalls("->6")
 
 		appendEntries := &RpcAppendEntries{
 			senderTerm,

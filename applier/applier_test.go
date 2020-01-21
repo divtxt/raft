@@ -48,7 +48,7 @@ func TestApplier(t *testing.T) {
 
 	// GetResultAsync for committed index should be an error
 	_, err = applier.GetResultAsync(4)
-	if err.Error() != "FATAL: logIndex=4 is <= commitIndex=4" {
+	if err.Error() != "FATAL: logIndex=4 is <= cachedCommitIndex=4" {
 		t.Fatal(err)
 	}
 
@@ -118,9 +118,9 @@ func TestApplier(t *testing.T) {
 	testhelpers.AssertWillBlock(crc9)
 	testhelpers.AssertWillBlock(crc10)
 
-	// Regressing commitIndex should be an error
+	// Regressing commitIndex is an error but not applier's responsibility!
 	err = commitIndex.UnsafeSet(7)
-	if err.Error() != "FATAL: newCi=7 is < oldCi=8" {
+	if err != nil {
 		t.Fatal(err)
 	}
 	// reset for rest of tests :P
@@ -228,9 +228,9 @@ func TestApplier(t *testing.T) {
 		t.Fatal(v)
 	}
 
-	// Committing past the end of the log should be an error
+	// Committing past the end of the log is an error but not applier's responsibility!
 	err = commitIndex.UnsafeSet(14)
-	if err.Error() != "FATAL: commitIndex=14 is > indexOfLastEntry=10" {
+	if err != nil {
 		t.Fatal(err)
 	}
 }

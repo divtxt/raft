@@ -17,9 +17,8 @@ func newIndexWatcher(wi WatchableIndex) *indexWatcher {
 	return iw
 }
 
-func (iw *indexWatcher) indexChanged(old, new LogIndex) error {
-	iw.changes = append(iw.changes, fmt.Sprintf("%v->%v", old, new))
-	return nil
+func (iw *indexWatcher) indexChanged(new LogIndex) {
+	iw.changes = append(iw.changes, fmt.Sprintf("->%v", new))
 }
 
 func (iw *indexWatcher) CheckCalls(expected ...string) {

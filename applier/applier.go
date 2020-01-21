@@ -101,7 +101,7 @@ func (a *Applier) StopSync() {
 // log index.
 //
 // When the command at the given log index is applied to the state machine, the
-// value returned by the state machine will be sent on the channel by this
+// value returned by the state machine will be sent on the channel returned by this
 // method. If the Log discards the entry at the given log index, the channel is
 // closed without a sent value.
 //
@@ -135,7 +135,7 @@ func (a *Applier) GetResultAsync(logIndex LogIndex) (<-chan CommandResult, error
 	}
 	if logIndex <= a.cachedCommitIndex {
 		return nil, fmt.Errorf(
-			"FATAL: logIndex=%v is <= commitIndex=%v",
+			"FATAL: logIndex=%v is <= cachedCommitIndex=%v",
 			logIndex, a.cachedCommitIndex,
 		)
 	}
@@ -155,16 +155,9 @@ func (a *Applier) GetResultAsync(logIndex LogIndex) (<-chan CommandResult, error
 	return crc, nil
 }
 
-func (a *Applier) indexOfLastEntryChanged(oldIole, newIole LogIndex) error {
+func (a *Applier) indexOfLastEntryChanged(newIole LogIndex) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-
-	if oldIole != a.cachedIndexOfLastEntry {
-		return fmt.Errorf(
-			"FATAL: oldIole=%v != cachedIndexOfLastEntry=%v",
-			oldIole, a.cachedIndexOfLastEntry,
-		)
-	}
 
 	a.cachedIndexOfLastEntry = newIole
 
@@ -180,39 +173,28 @@ func (a *Applier) indexOfLastEntryChanged(oldIole, newIole LogIndex) error {
 		}
 		a.highestRegisteredIndex = newIole
 	}
-
-	return nil
 }
 
-func (a *Applier) commitIndexChanged(oldCi, newCi LogIndex) error {
+func (a *Applier) commitIndexChanged(newCi LogIndex) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
 	// FIXME: not Applier's responsibility to check this
-	if oldCi != a.cachedCommitIndex {
-		return fmt.Errorf(
-			"FATAL: oldCi=%v != cachedCommitIndex=%v",
-			oldCi, a.cachedCommitIndex,
-		)
-	}
-	// FIXME: not Applier's responsibility to check this
-	if newCi > a.cachedIndexOfLastEntry {
-		return fmt.Errorf(
-			"FATAL: commitIndex=%v is > indexOfLastEntry=%v",
-			newCi, a.cachedIndexOfLastEntry,
-		)
-	}
+	//if newCi > a.cachedIndexOfLastEntry {
+	//	return fmt.Errorf(
+	//		"FATAL: commitIndex=%v is > indexOfLastEntry=%v",
+	//		newCi, a.cachedIndexOfLastEntry,
+	//	)
+	//}
 	// FIXME: not Applier's responsibility to check this
 	// Check commitIndex is not going backward
-	if newCi < oldCi {
-		return fmt.Errorf("FATAL: newCi=%v is < oldCi=%v", newCi, oldCi)
-	}
+	//if newCi < oldCi {
+	//	return fmt.Errorf("FATAL: newCi=%v is < oldCi=%v", newCi, oldCi)
+	//}
 
 	// Update commitIndex and then trigger a run of the applier goroutine
 	a.cachedCommitIndex = newCi
 	a.runner.TriggerRun()
-
-	return nil
 }
 
 func (a *Applier) applyCommittedEntries() {

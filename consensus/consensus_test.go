@@ -568,7 +568,7 @@ func TestCM_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 11 {
 		t.Fatal()
 	}
-	mcm.iw.CheckCalls("0->11")
+	mcm.iw.CheckCalls("->11")
 	expectedRpcs = map[ServerId]interface{}{
 		102: &RpcAppendEntries{serverTerm, 11, 8, []LogEntry{
 			{8, Command("c12")},
@@ -655,7 +655,7 @@ func TestCM_SOLO_Leader_TickAdvancesCommitIndexIfPossible(t *testing.T) {
 	if mcm.pcm.GetCommitIndex() != 12 {
 		t.Fatal(mcm.pcm.GetCommitIndex())
 	}
-	mcm.iw.CheckCalls("0->12")
+	mcm.iw.CheckCalls("->12")
 	mrs.CheckSentRpcs(t, map[ServerId]interface{}{})
 	mrs.ClearSentRpcs()
 }
@@ -672,13 +672,13 @@ func TestCM_SetCommitIndexNotifiesListener(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		mcm.iw.CheckCalls("0->2")
+		mcm.iw.CheckCalls("->2")
 
 		err = mcm.pcm.setCommitIndex(9)
 		if err != nil {
 			t.Fatal(err)
 		}
-		mcm.iw.CheckCalls("2->9")
+		mcm.iw.CheckCalls("->9")
 	}
 
 	f(testSetupMCM_Follower_Figure7LeaderLine)
