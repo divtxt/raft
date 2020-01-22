@@ -78,7 +78,7 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 		err = fm.SendAppendEntriesToPeerAsync(
 			false,
 			serverTerm,
-			cm.commitIndex.UnsafeGet(),
+			cm.commitIndex.Get(),
 		)
 		if err != nil {
 			return err

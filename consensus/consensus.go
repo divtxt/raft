@@ -107,7 +107,7 @@ func NewPassiveConsensusModule(
 		// -- State - for all servers
 		// commitIndex is the index of highest log entry known to be committed
 		// (initialized to 0, increases monotonically)
-		logindex.NewWatchedIndex(lock),
+		logindex.NewWatchedIndexWithVerifier(nil), // FIXME: verifier
 		util.NewElectionTimeoutChooser(electionTimeoutLow),
 		electionTimeoutTimer,
 
@@ -149,10 +149,7 @@ func (cm *PassiveConsensusModule) setServerState(serverState ServerState) {
 
 // Get the current commitIndex value.
 func (cm *PassiveConsensusModule) GetCommitIndex() LogIndex {
-	cm.lock.Lock()
-	defer cm.lock.Unlock()
-
-	return cm.commitIndex.UnsafeGet()
+	return cm.commitIndex.Get()
 }
 
 // Get the commitIndex WatchableIndex.
@@ -164,11 +161,11 @@ func (cm *PassiveConsensusModule) GetCommitIndexWatchable() WatchableIndex {
 // Set the current commitIndex value.
 // Checks that it is does not reduce.
 func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
-	if commitIndex < cm.commitIndex.UnsafeGet() {
+	if commitIndex < cm.commitIndex.Get() {
 		return fmt.Errorf(
 			"setCommitIndex to %v < current commitIndex %v",
 			commitIndex,
-			cm.commitIndex.UnsafeGet(),
+			cm.commitIndex.Get(),
 		)
 	}
 	// FIXME: check against lastCompacted as well!
@@ -180,7 +177,7 @@ func (cm *PassiveConsensusModule) setCommitIndex(commitIndex LogIndex) error {
 			iole,
 		)
 	}
-	err := cm.commitIndex.UnsafeSet(commitIndex)
+	err := cm.commitIndex.Set(commitIndex)
 	return err
 }
 
@@ -299,7 +296,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	iole := cm.logRO.GetIndexOfLastEntry()
 	cm.LeaderVolatileState = leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm.aeSender)
 	cm.logger.Println(
-		"[raft] becomeLeader: iole =", iole, ", commitIndex =", cm.commitIndex.UnsafeGet(),
+		"[raft] becomeLeader: iole =", iole, ", commitIndex =", cm.commitIndex.Get(),
 	)
 	cm.setServerState(LEADER)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
@@ -330,7 +327,7 @@ func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 
 func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error {
 	currentTerm := cm.RaftPersistentState.GetCurrentTerm()
-	commitIndex := cm.commitIndex.UnsafeGet()
+	commitIndex := cm.commitIndex.Get()
 	//
 	return cm.ClusterInfo.ForEachPeerCheckErr(
 		func(serverId ServerId) error {
@@ -351,7 +348,7 @@ func (cm *PassiveConsensusModule) sendAppendEntriesToAllPeers(empty bool) error 
 // of matchIndex[i] >= N, and log[N].term == currentTerm:
 // set commitIndex = N (#5.3, #5.4)
 func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
-	commitIndex := cm.commitIndex.UnsafeGet()
+	commitIndex := cm.commitIndex.Get()
 	newerCommitIndex, err := cm.LeaderVolatileState.FindNewerCommitIndex(
 		cm.ClusterInfo,
 		cm.logRO,
@@ -372,7 +369,7 @@ func (cm *PassiveConsensusModule) advanceCommitIndexIfPossible() error {
 
 // Wrapper for the call to Log.SetEntriesAfterIndex()
 func (cm *PassiveConsensusModule) setEntriesAfterIndex(li LogIndex, entries []LogEntry) error {
-	commitIndex := cm.commitIndex.UnsafeGet()
+	commitIndex := cm.commitIndex.Get()
 	// Check that we're not trying to rewind past commitIndex
 	if li < commitIndex {
 		return fmt.Errorf(

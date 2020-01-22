@@ -94,7 +94,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit,
 	// index of last new entry)
 	leaderCommit := appendEntries.LeaderCommit
-	if leaderCommit > cm.commitIndex.UnsafeGet() {
+	if leaderCommit > cm.commitIndex.Get() {
 		var indexOfLastNewEntry LogIndex
 		indexOfLastNewEntry = cm.logRO.GetIndexOfLastEntry()
 		if leaderCommit < indexOfLastNewEntry {

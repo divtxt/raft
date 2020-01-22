@@ -11,8 +11,52 @@ import (
 )
 
 func TestWatchedIndex(t *testing.T) {
+	wi := logindex.NewWatchedIndex()
+
 	ss := &someStrings{}
-	l := &mockLocker{ss}
+
+	// Initial value should be 0
+	if wi.Get() != 0 {
+		t.Fatal()
+	}
+
+	// Set - uses Locker
+	err := wi.Set(3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss.checkCalls(t, []string{})
+
+	// Get - does not use Locker
+	if wi.Get() != 3 {
+		t.Fatal()
+	}
+
+	// Add a listener & check that it is called on Set
+	var icl1 IndexChangeListener = func(n LogIndex) {
+		ss.append(fmt.Sprintf("icl1:%v", n))
+	}
+	wi.AddListener(icl1)
+	err = wi.Set(4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss.checkCalls(t, []string{"icl1:4"})
+
+	// Second listener
+	var icl2 IndexChangeListener = func(n LogIndex) {
+		ss.append(fmt.Sprintf("icl2:%v", n))
+	}
+	wi.AddListener(icl2)
+	err = wi.Set(8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss.checkCalls(t, []string{"icl1:8", "icl2:8"})
+}
+
+func TestWatchedIndex_With_Verifier(t *testing.T) {
+	ss := &someStrings{}
 
 	var fErr = errors.New("fErr")
 	var icv logindex.IndexChangeVerifier = func(o, n LogIndex) error {
@@ -22,79 +66,36 @@ func TestWatchedIndex(t *testing.T) {
 		}
 		return nil
 	}
-	var icl1 IndexChangeListener = func(n LogIndex) {
-		ss.append(fmt.Sprintf("icl1:%v", n))
-	}
-	var icl2 IndexChangeListener = func(n LogIndex) {
-		ss.append(fmt.Sprintf("icl2:%v", n))
-	}
 
-	wi := logindex.NewWatchedIndex(l)
-
-	ss.checkCalls(t, nil)
+	wi := logindex.NewWatchedIndexWithVerifier(icv)
 
 	// Initial value should be 0
 	if wi.Get() != 0 {
 		t.Fatal()
 	}
-	ss.checkCalls(t, []string{"Lock", "Unlock"})
-
-	// UnsafeSet
-	err := wi.UnsafeSet(3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ss.checkCalls(t, nil)
-	if wi.Get() != 3 {
-		t.Fatal()
-	}
-	ss.checkCalls(t, []string{"Lock", "Unlock"})
-
-	// UnsafeGet
-	if wi.UnsafeGet() != 3 {
-		t.Fatal()
-	}
-	ss.checkCalls(t, nil)
 
 	// Add a listener
+	var icl1 IndexChangeListener = func(n LogIndex) {
+		ss.append(fmt.Sprintf("icl1:%v", n))
+	}
 	wi.AddListener(icl1)
-	ss.checkCalls(t, []string{"Lock", "Unlock"})
-	err = wi.UnsafeSet(4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ss.checkCalls(t, []string{"icl1:4"})
 
-	// Add verifier
-	err = wi.SetVerifier(icv)
-	ss.checkCalls(t, []string{"Lock", "Unlock"})
+	// Set should call verifier and listener
+	err := wi.Set(5)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = wi.UnsafeSet(5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ss.checkCalls(t, []string{"icv:4->5", "icl1:5"})
+	ss.checkCalls(t, []string{"icv:0->5", "icl1:5"})
 
-	// Second listener
-	wi.AddListener(icl2)
-	ss.checkCalls(t, []string{"Lock", "Unlock"})
-	err = wi.UnsafeSet(8)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ss.checkCalls(t, []string{"icv:5->8", "icl1:8", "icl2:8"})
-
-	// UnsafeSet should return if the verifier errors without calling listeners
-	err = wi.UnsafeSet(10)
+	// Set should return error without calling listeners if the verifier errors
+	err = wi.Set(10)
 	if err != fErr {
 		t.Fatal(err)
 	}
-	ss.checkCalls(t, []string{"icv:8->10"})
+	ss.checkCalls(t, []string{"icv:5->10"})
 
-	// New value should have been set regardless of the error
-	if wi.Get() != 10 {
+	// New value should NOT have been set when the verifier returns an error
+	if wi.Get() != 5 {
 		t.Fatal()
 	}
 }
@@ -108,7 +109,11 @@ func (ss *someStrings) append(s string) {
 }
 
 func (ss *someStrings) checkCalls(t *testing.T, expected []string) {
-	if !reflect.DeepEqual(ss.l, expected) {
+	if ss.l == nil {
+		if len(expected) != 0 {
+			t.Fatal(ss.l, expected)
+		}
+	} else if !reflect.DeepEqual(ss.l, expected) {
 		t.Fatal(ss.l, expected)
 	}
 	ss.l = nil

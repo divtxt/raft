@@ -1,96 +1,88 @@
 package logindex
 
 import (
-	"errors"
 	"sync"
+	"sync/atomic"
 
 	. "github.com/divtxt/raft"
 )
 
 type IndexChangeVerifier func(old, new LogIndex) error
 
-// WatchedIndex is a LogIndex that implements WatchableIndex.
+// WatchedIndex is a LogIndex that is checked and notifies listeners when set.
 type WatchedIndex struct {
-	lock      sync.Locker
+	lock      sync.Mutex
 	value     LogIndex
 	verifier  IndexChangeVerifier
 	listeners []IndexChangeListener
 }
 
-// NewWatchedIndex creates a new WatchedIndex that uses the given Locker
-// to ensure safe concurrent access.
+// NewWatchedIndex creates a new WatchedIndex without a verifier.
 // The initial LogIndex value will be 0.
-func NewWatchedIndex(lock sync.Locker) *WatchedIndex {
+func NewWatchedIndex() *WatchedIndex {
+	return NewWatchedIndexWithVerifier(nil)
+}
+
+// NewWatchedIndex creates a new WatchedIndex with the given verifier.
+// The initial LogIndex value will be 0.
+func NewWatchedIndexWithVerifier(verifier IndexChangeVerifier) *WatchedIndex {
 	return &WatchedIndex{
-		lock:      lock,
 		value:     0,
-		verifier:  nil,
+		verifier:  verifier,
 		listeners: nil,
 	}
 }
 
 // Get the current value.
-// This will use the underlying Locker to ensure safe concurrent access.
+// This uses atomic.LoadUint64 to ensure safe concurrent access with Set().
+// It does NOT lock the Mutex.
 func (p *WatchedIndex) Get() LogIndex {
-	p.lock.Lock()
-	v := p.value
-	p.lock.Unlock()
-	return v
-}
-
-// UnsafeGet gets the current value WITHOUT locking the underlying Locker.
-// The caller MUST have locked the underlying Locker to ensure safe concurrent operation.
-func (p *WatchedIndex) UnsafeGet() LogIndex {
-	return p.value
-}
-
-// Set the verifier for changes.
-// Returns an error if a verifier has already been set.
-func (p *WatchedIndex) SetVerifier(verifier IndexChangeVerifier) error {
-	p.lock.Lock()
-	if p.verifier != nil {
-		return errors.New("verifier already set")
-	}
-	p.verifier = verifier
-	p.lock.Unlock()
-	return nil
+	return LogIndex(atomic.LoadUint64((*uint64)(&p.value)))
 }
 
 // Add the given callback as a listener for changes.
-// This will use the underlying Locker to ensure safe concurrent access.
 //
-// Whenever the underlying value changes, all listeners will be called in order.
-// Any listener can indicate an error in the change and this will be treated as fatal.
+// This will use the underlying Mutex to ensure safe concurrent modification of
+// the value or the list of listeners which means that it is NOT safe to call
+// from the verifier or a listener.
+//
+// Whenever the underlying value changes, the listener will be called.
 func (p *WatchedIndex) AddListener(didChangeListener IndexChangeListener) {
 	p.lock.Lock()
 	p.listeners = append(p.listeners, didChangeListener)
 	p.lock.Unlock()
 }
 
-// UnsafeSet sets the LogIndex to the given value WITHOUT locking the underlying Locker.
+// Set the LogIndex to the given value.
 //
-// The caller MUST have locked the underlying Locker to ensure safe concurrent operation.
+// This will use the underlying Mutex to ensure safe concurrent modification of the
+// value list of listeners which means that it is NOT safe to call from a listener.
 //
-// If a verifier is set, the value change is then checked with the verifier.
-// If the verifier returns an error this error is returned.
+// If a verifier is set, the value change is first checked with the verifier.
+// If the verifier returns an error, that error is returned.
 // This is expected to be fatal for the caller.
 //
-// If the value is accepted by the verifier, all registered listeners are called in order.
+// If the value is accepted by the verifier, the value is changed using
+// atomic.StoreUint64 to ensure safe concurrent access with Get().
 //
-// Since the underlying lock should be held during this call, the verifier and listeners
+// After the value is changed, all listeners are called in registered order.
+//
+// Since the underlying lock is held during the call, the verifier and listeners
 // are guaranteed that another change will not occur until they have returned to this method.
-// However, this also means that the verifier or listeners will block all other callers
-// to this WatchedIndex until they return.
-func (p *WatchedIndex) UnsafeSet(new LogIndex) error {
-	old := p.value
-	p.value = new
+// However, this also means that the verifier or listeners will block calls to Set()
+// or AddListener() until they return.
+func (p *WatchedIndex) Set(new LogIndex) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 
 	if p.verifier != nil {
-		err := p.verifier(old, new)
+		err := p.verifier(p.value, new)
 		if err != nil {
 			return err
 		}
 	}
+
+	atomic.StoreUint64((*uint64)(&p.value), uint64(new))
 
 	for _, f := range p.listeners {
 		f(new)

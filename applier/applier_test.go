@@ -1,7 +1,6 @@
 package applier
 
 import (
-	"sync"
 	"testing"
 
 	. "github.com/divtxt/raft"
@@ -23,12 +22,12 @@ func TestApplier(t *testing.T) {
 	}
 
 	dsm := testhelpers.NewDummyStateMachine(3)
-	commitIndex := logindex.NewWatchedIndex(&sync.Mutex{})
+	commitIndex := logindex.NewWatchedIndex()
 
 	applier := NewApplier(iml, commitIndex, dsm, nil)
 
 	// Increasing commitIndex should trigger run that drives commits
-	err = commitIndex.UnsafeSet(4)
+	err = commitIndex.Set(4)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +95,7 @@ func TestApplier(t *testing.T) {
 
 	// Advancing commitIndex by multiple values should drive as many commits
 	// and notify relevant listeners with the results.
-	err = commitIndex.UnsafeSet(8)
+	err = commitIndex.Set(8)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,13 +118,13 @@ func TestApplier(t *testing.T) {
 	testhelpers.AssertWillBlock(crc10)
 
 	// Regressing commitIndex is an error but not applier's responsibility!
-	err = commitIndex.UnsafeSet(7)
+	err = commitIndex.Set(7)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// reset for rest of tests :P
 	applier.cachedCommitIndex = 7
-	err = commitIndex.UnsafeSet(8)
+	err = commitIndex.Set(8)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,11 +203,11 @@ func TestApplier(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = commitIndex.UnsafeSet(9)
+	err = commitIndex.Set(9)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = commitIndex.UnsafeSet(10)
+	err = commitIndex.Set(10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +228,7 @@ func TestApplier(t *testing.T) {
 	}
 
 	// Committing past the end of the log is an error but not applier's responsibility!
-	err = commitIndex.UnsafeSet(14)
+	err = commitIndex.Set(14)
 	if err != nil {
 		t.Fatal(err)
 	}

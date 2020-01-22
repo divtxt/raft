@@ -37,8 +37,8 @@ func NewInMemoryLog(maxEntries uint64) (*InMemoryLog, error) {
 	iml := &InMemoryLog{
 		maxEntries,
 		lock,
-		logindex.NewWatchedIndex(lock),
-		0,
+		logindex.NewWatchedIndexWithVerifier(nil), // FIXME: verifier
+		0, // FIXME: NewWatchedIndexWithVerifier & verifier
 		[]LogEntry{},
 	}
 	return iml, nil
@@ -52,10 +52,7 @@ func (iml *InMemoryLog) GetLastCompacted() LogIndex {
 }
 
 func (iml *InMemoryLog) GetIndexOfLastEntry() LogIndex {
-	iml.lock.RLock()
-	defer iml.lock.RUnlock()
-
-	return iml.indexOfLastEntry.UnsafeGet()
+	return iml.indexOfLastEntry.Get()
 }
 
 func (iml *InMemoryLog) GetIndexOfLastEntryWatchable() WatchableIndex {
@@ -73,7 +70,7 @@ func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 		return 0, ErrIndexCompacted
 	}
 
-	if li > iml.indexOfLastEntry.UnsafeGet() {
+	if li > iml.indexOfLastEntry.Get() {
 		return 0, fmt.Errorf(
 			"GetTermAtIndex(): li=%v > iole=%v", li, len(iml.entries),
 		)
@@ -89,7 +86,7 @@ func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry
 		return nil, ErrIndexCompacted
 	}
 
-	iole := iml.indexOfLastEntry.UnsafeGet()
+	iole := iml.indexOfLastEntry.Get()
 
 	if afterLogIndex > iole {
 		return nil, fmt.Errorf(
@@ -130,7 +127,7 @@ func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) er
 	if li < iml.lastCompacted {
 		return ErrIndexCompacted
 	}
-	iole := iml.indexOfLastEntry.UnsafeGet()
+	iole := iml.indexOfLastEntry.Get()
 	if iole < li {
 		return fmt.Errorf("InMemoryLog: setEntriesAfterIndex(%d, ...) but iole=%d", li, iole)
 	}
@@ -143,7 +140,7 @@ func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) er
 
 	// update iole
 	newIole := LogIndex(len(iml.entries))
-	return iml.indexOfLastEntry.UnsafeSet(newIole)
+	return iml.indexOfLastEntry.Set(newIole)
 }
 
 func (iml *InMemoryLog) DiscardEntriesBeforeIndex(li LogIndex) error {
@@ -168,7 +165,7 @@ func (iml *InMemoryLog) AppendEntry(logEntry LogEntry) (LogIndex, error) {
 
 	// update iole
 	newIole := LogIndex(len(iml.entries))
-	err := iml.indexOfLastEntry.UnsafeSet(newIole)
+	err := iml.indexOfLastEntry.Set(newIole)
 	if err != nil {
 		return 0, err
 	}

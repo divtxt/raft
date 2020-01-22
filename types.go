@@ -46,7 +46,7 @@ type IndexChangeListener func(new LogIndex)
 
 // A WatchableIndex is a LogIndex that notifies listeners when the value changes.
 //
-// When the underlying LogIndex value changes, all registered listeners are
+// When the underlying LogIndex value is changed, all registered listeners are
 // called in registered order.
 // The listener is guaranteed that another change will not occur until it
 // has returned to this method.
@@ -54,7 +54,6 @@ type IndexChangeListener func(new LogIndex)
 // This is implemented by logindex.WatchedIndex.
 type WatchableIndex interface {
 	// Get the current value.
-	// This is NOT safe to call from a listener.
 	Get() LogIndex
 
 	// Add the given callback as a listener for changes.
