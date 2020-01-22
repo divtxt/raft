@@ -15,7 +15,7 @@ type InMemoryLog struct {
 
 	lock             *sync.RWMutex
 	indexOfLastEntry *logindex.WatchedIndex
-	lastCompacted    LogIndex
+	lastCompacted    *logindex.WatchedIndex
 	entries          []LogEntry
 }
 
@@ -38,17 +38,14 @@ func NewInMemoryLog(maxEntries uint64) (*InMemoryLog, error) {
 		maxEntries,
 		lock,
 		logindex.NewWatchedIndexWithVerifier(nil), // FIXME: verifier
-		0, // FIXME: NewWatchedIndexWithVerifier & verifier
+		logindex.NewWatchedIndexWithVerifier(nil), // FIXME: verifier
 		[]LogEntry{},
 	}
 	return iml, nil
 }
 
 func (iml *InMemoryLog) GetLastCompacted() LogIndex {
-	iml.lock.RLock()
-	defer iml.lock.RUnlock()
-
-	return iml.lastCompacted
+	return iml.lastCompacted.Get()
 }
 
 func (iml *InMemoryLog) GetIndexOfLastEntry() LogIndex {
@@ -66,7 +63,7 @@ func (iml *InMemoryLog) GetTermAtIndex(li LogIndex) (TermNo, error) {
 	if li == 0 {
 		return 0, errors.New("GetTermAtIndex(): li=0")
 	}
-	if li <= iml.lastCompacted {
+	if li <= iml.lastCompacted.Get() {
 		return 0, ErrIndexCompacted
 	}
 
@@ -82,7 +79,7 @@ func (iml *InMemoryLog) GetEntriesAfterIndex(afterLogIndex LogIndex) ([]LogEntry
 	iml.lock.RLock()
 	defer iml.lock.RUnlock()
 
-	if afterLogIndex < iml.lastCompacted {
+	if afterLogIndex < iml.lastCompacted.Get() {
 		return nil, ErrIndexCompacted
 	}
 
@@ -124,7 +121,7 @@ func (iml *InMemoryLog) SetEntriesAfterIndex(li LogIndex, entries []LogEntry) er
 	iml.lock.Lock()
 	defer iml.lock.Unlock()
 
-	if li < iml.lastCompacted {
+	if li < iml.lastCompacted.Get() {
 		return ErrIndexCompacted
 	}
 	iole := iml.indexOfLastEntry.Get()
@@ -147,12 +144,12 @@ func (iml *InMemoryLog) DiscardEntriesBeforeIndex(li LogIndex) error {
 	iml.lock.Lock()
 	defer iml.lock.Unlock()
 
-	if li <= iml.lastCompacted {
+	if li <= iml.lastCompacted.Get() {
 		return ErrIndexCompacted
 	}
-	iml.lastCompacted = li - 1
+	err := iml.lastCompacted.Set(li - 1)
 	// FIXME: actually throw away entries!
-	return nil
+	return err
 }
 
 func (iml *InMemoryLog) AppendEntry(logEntry LogEntry) (LogIndex, error) {
