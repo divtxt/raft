@@ -135,15 +135,29 @@ func TestCluster_ElectsLeader(t *testing.T) {
 	}
 
 	// -- Election timeout results in a leader being elected
-	// (note: this test has a low probability race condition where two nodes
-	// can become candidates at the same time and no leader is elected)
-	time.Sleep(
-		testdata.SleepToLetGoroutineRun + testdata.ElectionTimeoutLow + testdata.SleepJustMoreThanATick,
-	)
+	// Because there is a non-trivial probability that two nodes become candidates
+	// at the same time and no leader is elected, we will try a few times if needed.
+	leaderElected := false
+	for i := 0; i < 5; i++ {
+		time.Sleep(
+			testdata.SleepToLetGoroutineRun + testdata.ElectionTimeoutLow + testdata.SleepJustMoreThanATick,
+		)
 
-	totalState = cm1.GetServerState()*100 + cm2.GetServerState()*10 + cm3.GetServerState()
-	if totalState != 2 && totalState != 20 && totalState != 200 {
-		t.Fatal(totalState)
+		totalState = cm1.GetServerState()*100 + cm2.GetServerState()*10 + cm3.GetServerState()
+
+		if totalState == 111 {
+			continue
+		}
+
+		if totalState != 2 && totalState != 20 && totalState != 200 {
+			t.Fatal(totalState)
+		}
+
+		leaderElected = true
+		break
+	}
+	if !leaderElected {
+		t.Fatal()
 	}
 }
 
