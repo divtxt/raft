@@ -325,13 +325,13 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	return nil
 }
 
-func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
+func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo, rpcFrom ServerId, leader ServerId) error {
 	currentTerm := cm.RaftPersistentState.GetCurrentTerm()
 	if cm.serverState == FOLLOWER && currentTerm == newTerm {
 		// Nothing to change!
 		return nil
 	}
-	cm.logger.Println("[raft] becomeFollowerWithTerm: newTerm =", newTerm)
+	cm.logger.Println("[raft] becomeFollowerWithTerm: newTerm =", newTerm, ", rpcFrom =", rpcFrom, ", leader = ", leader)
 	cm.setServerStateFollower()
 	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {

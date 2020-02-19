@@ -70,7 +70,7 @@ func (cm *PassiveConsensusModule) Rpc_RpcAppendEntries(
 	// #5.2-p4s2: If the leader’s term (included in its RPC) is at least as
 	// large as the candidate’s current term, then the candidate recognizes
 	// the leader as legitimate and returns to follower state.
-	err := cm.becomeFollowerWithTerm(leaderCurrentTerm)
+	err := cm.becomeFollowerWithTerm(leaderCurrentTerm, from, from)
 	if err != nil {
 		return nil, err
 	}

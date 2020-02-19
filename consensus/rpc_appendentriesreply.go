@@ -59,7 +59,7 @@ func (cm *PassiveConsensusModule) RpcReply_RpcAppendEntriesReply(
 	// date, it immediately reverts to follower state.
 	senderCurrentTerm := appendEntriesReply.Term
 	if senderCurrentTerm > serverTerm {
-		err := cm.becomeFollowerWithTerm(senderCurrentTerm)
+		err := cm.becomeFollowerWithTerm(senderCurrentTerm, from, 0) // TODO: get leader in AEReply?!
 		if err != nil {
 			return err
 		}
