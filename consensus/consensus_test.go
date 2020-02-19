@@ -93,7 +93,7 @@ func TestCM_SetServerState_BadServerStatePanics(t *testing.T) {
 	testing2.AssertPanicsWith(
 		t,
 		func() {
-			mcm.pcm.setServerState(42)
+			mcm.pcm._setServerState(42)
 		},
 		"FATAL: unknown ServerState: 42",
 	)
@@ -230,11 +230,6 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 	}
 	// a new election timeout was chosen
 	if mcm.pcm.ElectionTimeoutTimer.GetCurrentDuration() == timeout1 {
-		t.Fatal()
-	}
-	// candidate state is fresh
-	expectedCvs := candidate.NewCandidateVolatileState(mcm.pcm.ClusterInfo)
-	if !reflect.DeepEqual(mcm.pcm.CandidateVolatileState, expectedCvs) {
 		t.Fatal()
 	}
 

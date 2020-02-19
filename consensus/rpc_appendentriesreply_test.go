@@ -110,6 +110,9 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 	if mcm.pcm.GetServerState() != FOLLOWER {
 		t.Fatal()
 	}
+	if mcm.pcm.LeaderVolatileState != nil {
+		t.Fatal()
+	}
 	if mcm.pcm.RaftPersistentState.GetCurrentTerm() != serverTerm+1 {
 		t.Fatal()
 	}
@@ -117,13 +120,6 @@ func TestCM_RpcAER_Leader_NewerTerm(t *testing.T) {
 		t.Fatal()
 	}
 
-	// no other changes
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.NextIndexes(), expectedNextIndex) {
-		t.Fatal()
-	}
-	if !reflect.DeepEqual(mcm.pcm.LeaderVolatileState.MatchIndexes(), expectedMatchIndex) {
-		t.Fatal()
-	}
 	expectedRpcs := map[ServerId]interface{}{}
 	mrs.CheckSentRpcs(t, expectedRpcs)
 }

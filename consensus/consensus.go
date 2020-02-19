@@ -132,7 +132,22 @@ func (cm *PassiveConsensusModule) GetServerState() ServerState {
 
 // Set the current server state.
 // Validates the server state before setting.
-func (cm *PassiveConsensusModule) setServerState(serverState ServerState) {
+func (cm *PassiveConsensusModule) setServerStateFollower() {
+	cm._setServerState(FOLLOWER)
+	cm.CandidateVolatileState = nil
+	cm.LeaderVolatileState = nil
+}
+func (cm *PassiveConsensusModule) setServerStateCandidate(cvs *candidate.CandidateVolatileState) {
+	cm._setServerState(CANDIDATE)
+	cm.CandidateVolatileState = cvs
+	cm.LeaderVolatileState = nil
+}
+func (cm *PassiveConsensusModule) setServerStateLeader(lvs *leader.LeaderVolatileState) {
+	cm._setServerState(LEADER)
+	cm.CandidateVolatileState = nil
+	cm.LeaderVolatileState = lvs
+}
+func (cm *PassiveConsensusModule) _setServerState(serverState ServerState) {
 	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
 		panic(fmt.Sprintf("FATAL: unknown ServerState: %v", serverState))
 	}
@@ -264,11 +279,12 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 	if err != nil {
 		return err
 	}
-	cm.CandidateVolatileState = candidate.NewCandidateVolatileState(cm.ClusterInfo)
 
 	// FIXME: return newTerm to avoid logging here
 	cm.logger.Println("[raft] becomeCandidateAndBeginElection: newTerm =", newTerm)
-	cm.setServerState(CANDIDATE)
+	cm.setServerStateCandidate(
+		candidate.NewCandidateVolatileState(cm.ClusterInfo),
+	)
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
 	err = cm.RaftPersistentState.SetVotedFor(cm.ClusterInfo.GetThisServerId())
@@ -294,11 +310,12 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 
 func (cm *PassiveConsensusModule) becomeLeader() error {
 	iole := cm.logRO.GetIndexOfLastEntry()
-	cm.LeaderVolatileState = leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm.aeSender)
 	cm.logger.Println(
 		"[raft] becomeLeader: iole =", iole, ", commitIndex =", cm.commitIndex.Get(),
 	)
-	cm.setServerState(LEADER)
+	cm.setServerStateLeader(
+		leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm.aeSender),
+	)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
 	err := cm.sendAppendEntriesToAllPeers(true)
@@ -315,7 +332,7 @@ func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo) error {
 		return nil
 	}
 	cm.logger.Println("[raft] becomeFollowerWithTerm: newTerm =", newTerm)
-	cm.setServerState(FOLLOWER)
+	cm.setServerStateFollower()
 	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {
 		return err
