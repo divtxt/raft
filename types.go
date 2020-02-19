@@ -63,7 +63,7 @@ type WatchableIndex interface {
 
 // An integer that uniquely identifies a server in a Raft cluster.
 //
-// Zero should not be used as a server id.
+// Zero is reserved for "unknown" and should not be used as a server id.
 //
 // See config.ClusterInfo for how this is used in this package.
 // The number value does not have a meaning to this package.

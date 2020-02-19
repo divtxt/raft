@@ -10,6 +10,17 @@ import (
 	"github.com/divtxt/raft/internal"
 )
 
+func setMatchIndexAndNextIndex(
+	lvs *LeaderVolatileState, peerId ServerId, matchIndex LogIndex,
+) error {
+	fm, err := lvs.GetFollowerManager(peerId)
+	if err != nil {
+		return err
+	}
+	fm.SetMatchIndexAndNextIndex(matchIndex)
+	return nil
+}
+
 func TestLeaderVolatileState(t *testing.T) {
 	ci, err := config.NewClusterInfo([]ServerId{101, 102, 103}, 103)
 	if err != nil {
@@ -78,7 +89,7 @@ func TestLeaderVolatileState(t *testing.T) {
 	}
 
 	// setMatchIndexAndNextIndex
-	err = lvs.setMatchIndexAndNextIndex(102, 24)
+	err = setMatchIndexAndNextIndex(lvs, 102, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +101,7 @@ func TestLeaderVolatileState(t *testing.T) {
 	if !reflect.DeepEqual(lvs.MatchIndexes(), expectedMatchIndex) {
 		t.Fatal(lvs.MatchIndexes())
 	}
-	err = lvs.setMatchIndexAndNextIndex(102, 0)
+	err = setMatchIndexAndNextIndex(lvs, 102, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,19 +169,19 @@ func TestFindNewerCommitIndex_Figure8_CaseA(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (a)
-	err = lvs.setMatchIndexAndNextIndex(102, 2)
+	err = setMatchIndexAndNextIndex(lvs, 102, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(103, 1)
+	err = setMatchIndexAndNextIndex(lvs, 103, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(104, 1)
+	err = setMatchIndexAndNextIndex(lvs, 104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(105, 1)
+	err = setMatchIndexAndNextIndex(lvs, 105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,19 +236,19 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (c)
-	err = lvs.setMatchIndexAndNextIndex(102, 2)
+	err = setMatchIndexAndNextIndex(lvs, 102, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(103, 2)
+	err = setMatchIndexAndNextIndex(lvs, 103, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(104, 1)
+	err = setMatchIndexAndNextIndex(lvs, 104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(105, 1)
+	err = setMatchIndexAndNextIndex(lvs, 105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,19 +289,19 @@ func TestFindNewerCommitIndex_Figure8_CaseCAndE(t *testing.T) {
 	}
 
 	// match peers for Figure 8, case (e)
-	err = lvs.setMatchIndexAndNextIndex(102, 3)
+	err = setMatchIndexAndNextIndex(lvs, 102, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(103, 3)
+	err = setMatchIndexAndNextIndex(lvs, 103, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(104, 1)
+	err = setMatchIndexAndNextIndex(lvs, 104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(105, 1)
+	err = setMatchIndexAndNextIndex(lvs, 105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,19 +344,19 @@ func TestFindNewerCommitIndex_Figure8_CaseEextended(t *testing.T) {
 	}
 
 	// match peers
-	err = lvs.setMatchIndexAndNextIndex(102, 4)
+	err = setMatchIndexAndNextIndex(lvs, 102, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(103, 4)
+	err = setMatchIndexAndNextIndex(lvs, 103, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(104, 1)
+	err = setMatchIndexAndNextIndex(lvs, 104, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lvs.setMatchIndexAndNextIndex(105, 1)
+	err = setMatchIndexAndNextIndex(lvs, 105, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

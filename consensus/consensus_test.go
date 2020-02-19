@@ -11,6 +11,7 @@ import (
 	"github.com/divtxt/raft/aesender"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus/candidate"
+	"github.com/divtxt/raft/consensus/follower"
 	"github.com/divtxt/raft/inmemlog"
 	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/rps"
@@ -79,6 +80,9 @@ func TestCM_InitialState(t *testing.T) {
 	mcm := setupManagedConsensusModule(t, nil)
 
 	if mcm.pcm.GetServerState() != FOLLOWER {
+		t.Fatal()
+	}
+	if !reflect.DeepEqual(mcm.pcm.FollowerVolatileState, follower.NewFollowerVolatileState(0)) {
 		t.Fatal()
 	}
 
@@ -194,6 +198,9 @@ func testCM_SOLO_Follower_ElectsSelfOnElectionTimeout(
 	mrs *testhelpers.MockRpcSender,
 ) {
 	if mcm.pcm.GetServerState() != FOLLOWER {
+		t.Fatal()
+	}
+	if !reflect.DeepEqual(mcm.pcm.FollowerVolatileState, follower.NewFollowerVolatileState(0)) {
 		t.Fatal()
 	}
 	if mcm.pcm.RaftPersistentState.GetVotedFor() != 0 {

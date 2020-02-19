@@ -10,6 +10,7 @@ import (
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus/candidate"
+	"github.com/divtxt/raft/consensus/follower"
 	"github.com/divtxt/raft/consensus/leader"
 	"github.com/divtxt/raft/internal"
 	"github.com/divtxt/raft/logindex"
@@ -43,11 +44,10 @@ type PassiveConsensusModule struct {
 	electionTimeoutChooser *util.ElectionTimeoutChooser
 	ElectionTimeoutTimer   *util.Timer
 
-	// -- State - for candidates only
+	// -- State-specific state - only one of these should be set at any given time
+	FollowerVolatileState  *follower.FollowerVolatileState // TODO: use for checks!
 	CandidateVolatileState *candidate.CandidateVolatileState
-
-	// -- State - for leaders only
-	LeaderVolatileState *leader.LeaderVolatileState
+	LeaderVolatileState    *leader.LeaderVolatileState
 }
 
 func NewPassiveConsensusModule(
@@ -111,10 +111,9 @@ func NewPassiveConsensusModule(
 		util.NewElectionTimeoutChooser(electionTimeoutLow),
 		electionTimeoutTimer,
 
-		// -- State - for candidates only
+		// -- State-specific state
+		follower.NewFollowerVolatileState(0),
 		nil,
-
-		// -- State - for leaders only
 		nil,
 	}
 
@@ -132,20 +131,23 @@ func (cm *PassiveConsensusModule) GetServerState() ServerState {
 
 // Set the current server state.
 // Validates the server state before setting.
-func (cm *PassiveConsensusModule) setServerStateFollower() {
+func (cm *PassiveConsensusModule) setServerStateFollower(leader ServerId) {
 	cm._setServerState(FOLLOWER)
+	cm.FollowerVolatileState = follower.NewFollowerVolatileState(leader)
 	cm.CandidateVolatileState = nil
 	cm.LeaderVolatileState = nil
 }
-func (cm *PassiveConsensusModule) setServerStateCandidate(cvs *candidate.CandidateVolatileState) {
+func (cm *PassiveConsensusModule) setServerStateCandidate() {
 	cm._setServerState(CANDIDATE)
-	cm.CandidateVolatileState = cvs
+	cm.FollowerVolatileState = nil
+	cm.CandidateVolatileState = candidate.NewCandidateVolatileState(cm.ClusterInfo)
 	cm.LeaderVolatileState = nil
 }
-func (cm *PassiveConsensusModule) setServerStateLeader(lvs *leader.LeaderVolatileState) {
+func (cm *PassiveConsensusModule) setServerStateLeader(indexOfLastEntry LogIndex) {
 	cm._setServerState(LEADER)
+	cm.FollowerVolatileState = nil
 	cm.CandidateVolatileState = nil
-	cm.LeaderVolatileState = lvs
+	cm.LeaderVolatileState = leader.NewLeaderVolatileState(cm.ClusterInfo, indexOfLastEntry, cm.aeSender)
 }
 func (cm *PassiveConsensusModule) _setServerState(serverState ServerState) {
 	if serverState != FOLLOWER && serverState != CANDIDATE && serverState != LEADER {
@@ -282,9 +284,7 @@ func (cm *PassiveConsensusModule) becomeCandidateAndBeginElection() error {
 
 	// FIXME: return newTerm to avoid logging here
 	cm.logger.Println("[raft] becomeCandidateAndBeginElection: newTerm =", newTerm)
-	cm.setServerStateCandidate(
-		candidate.NewCandidateVolatileState(cm.ClusterInfo),
-	)
+	cm.setServerStateCandidate()
 	// #5.2-p2s2: It then votes for itself and issues RequestVote RPCs
 	// in parallel to each of the other servers in the cluster.
 	err = cm.RaftPersistentState.SetVotedFor(cm.ClusterInfo.GetThisServerId())
@@ -313,9 +313,7 @@ func (cm *PassiveConsensusModule) becomeLeader() error {
 	cm.logger.Println(
 		"[raft] becomeLeader: iole =", iole, ", commitIndex =", cm.commitIndex.Get(),
 	)
-	cm.setServerStateLeader(
-		leader.NewLeaderVolatileState(cm.ClusterInfo, iole, cm.aeSender),
-	)
+	cm.setServerStateLeader(iole)
 	// #RFS-L1a: Upon election: send initial empty AppendEntries RPCs (heartbeat)
 	// to each server;
 	err := cm.sendAppendEntriesToAllPeers(true)
@@ -332,7 +330,7 @@ func (cm *PassiveConsensusModule) becomeFollowerWithTerm(newTerm TermNo, rpcFrom
 		return nil
 	}
 	cm.logger.Println("[raft] becomeFollowerWithTerm: newTerm =", newTerm, ", rpcFrom =", rpcFrom, ", leader = ", leader)
-	cm.setServerStateFollower()
+	cm.setServerStateFollower(leader)
 	err := cm.RaftPersistentState.SetCurrentTerm(newTerm)
 	if err != nil {
 		return err
