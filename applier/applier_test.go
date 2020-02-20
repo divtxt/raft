@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/log"
+	"github.com/divtxt/raft/inmemlog"
 	"github.com/divtxt/raft/logindex"
 	"github.com/divtxt/raft/testhelpers"
 )
@@ -12,7 +12,7 @@ import (
 // #RFS-A1: If commitIndex > lastApplied: increment lastApplied, apply
 // log[lastApplied] to state machine (#5.3)
 func TestApplier(t *testing.T) {
-	iml, err := log.TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
+	iml, err := inmemlog.TestUtil_NewInMemoryLog_WithFigure7LeaderLine(3)
 	if err != nil {
 		t.Fatal(err)
 	}

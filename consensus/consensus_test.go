@@ -11,8 +11,8 @@ import (
 	"github.com/divtxt/raft/aesender"
 	"github.com/divtxt/raft/config"
 	"github.com/divtxt/raft/consensus/candidate"
+	"github.com/divtxt/raft/inmemlog"
 	"github.com/divtxt/raft/internal"
-	raft_log "github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
@@ -31,7 +31,7 @@ func setupManagedConsensusModuleR2(
 ) (*managedConsensusModule, *testhelpers.MockRpcSender) {
 	ps := rps.NewIMPSWithCurrentTerm(testdata.CurrentTerm)
 
-	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
+	iml, err := inmemlog.TestUtil_NewInMemoryLog_WithTerms(
 		logTerms, testdata.MaxEntriesPerAppendEntry,
 	)
 	if err != nil {

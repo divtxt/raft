@@ -9,7 +9,7 @@ import (
 
 	. "github.com/divtxt/raft"
 	"github.com/divtxt/raft/config"
-	raft_log "github.com/divtxt/raft/log"
+	"github.com/divtxt/raft/inmemlog"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
@@ -24,10 +24,10 @@ func setupConsensusModuleR3(
 	logTerms []TermNo,
 	discardEntriesBeforeIndex LogIndex,
 	imrsc *inMemoryRpcServiceConnector,
-) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *inmemlog.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 
-	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
+	iml, err := inmemlog.TestUtil_NewInMemoryLog_WithTerms(
 		logTerms, testdata.MaxEntriesPerAppendEntry,
 	)
 	if err != nil {
@@ -63,10 +63,10 @@ func setupConsensusModuleR3_SOLO(
 	logTerms []TermNo,
 	discardEntriesBeforeIndex LogIndex,
 	imrsc *inMemoryRpcServiceConnector,
-) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *inmemlog.InMemoryLog, *testhelpers.DummyStateMachine) {
 	ps := rps.NewIMPSWithCurrentTerm(0)
 
-	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
+	iml, err := inmemlog.TestUtil_NewInMemoryLog_WithTerms(
 		logTerms, testdata.MaxEntriesPerAppendEntry,
 	)
 	if err != nil {
@@ -165,14 +165,14 @@ func testSetupClusterWithLeader(
 	t *testing.T,
 ) (
 	*inMemoryRpcServiceHub,
-	IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine,
-	IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine,
-	IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *inmemlog.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *inmemlog.InMemoryLog, *testhelpers.DummyStateMachine,
+	IConsensusModule, *inmemlog.InMemoryLog, *testhelpers.DummyStateMachine,
 ) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	setupCMR3 := func(
 		thisServerId ServerId, electionTimeoutLow time.Duration,
-	) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
+	) (IConsensusModule, *inmemlog.InMemoryLog, *testhelpers.DummyStateMachine) {
 		return setupConsensusModuleR3(
 			t,
 			thisServerId,
@@ -206,7 +206,7 @@ func testSetupClusterWithLeader(
 
 func testSetup_SOLO_Leader(
 	t *testing.T,
-) (IConsensusModule, *raft_log.InMemoryLog, *testhelpers.DummyStateMachine) {
+) (IConsensusModule, *inmemlog.InMemoryLog, *testhelpers.DummyStateMachine) {
 	imrsh := &inMemoryRpcServiceHub{nil}
 	cm, diml, dsm := setupConsensusModuleR3_SOLO(
 		t,

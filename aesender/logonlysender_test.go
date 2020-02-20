@@ -6,14 +6,14 @@ import (
 	. "github.com/divtxt/raft"
 
 	"github.com/divtxt/raft/aesender"
+	"github.com/divtxt/raft/inmemlog"
 	"github.com/divtxt/raft/internal"
-	raft_log "github.com/divtxt/raft/log"
 	"github.com/divtxt/raft/testdata"
 	"github.com/divtxt/raft/testhelpers"
 )
 
 func TestLogOnlyAESender(t *testing.T) {
-	iml, err := raft_log.TestUtil_NewInMemoryLog_WithTerms(
+	iml, err := inmemlog.TestUtil_NewInMemoryLog_WithTerms(
 		testdata.TestUtil_MakeFigure7LeaderLineTerms(),
 		testdata.MaxEntriesPerAppendEntry,
 	)
