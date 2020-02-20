@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	. "github.com/divtxt/raft"
-	util "github.com/divtxt/raft/util"
+	"github.com/divtxt/raft/util/fileutil"
 )
 
 type rps struct {
@@ -33,7 +33,7 @@ func NewJsonFileRaftPersistentState(filename string) (RaftPersistentState, error
 		&sync.Mutex{}, filename, rps{0, 0},
 	}
 
-	err := util.ReadJsonFromFile(filename, &jfrps.rps)
+	err := fileutil.ReadJson(filename, &jfrps.rps)
 	if err != nil {
 		if os.IsNotExist(err) {
 			jfrps.rps.CurrentTerm = 0
@@ -47,7 +47,7 @@ func NewJsonFileRaftPersistentState(filename string) (RaftPersistentState, error
 }
 
 func (jfrps *JsonFileRaftPersistentState) writeToJsonFile() error {
-	return util.SafeWriteJsonToFile(&jfrps.rps, jfrps.filename)
+	return fileutil.WriteJsonAtomic(&jfrps.rps, jfrps.filename)
 }
 
 func (jfrps *JsonFileRaftPersistentState) GetCurrentTerm() TermNo {

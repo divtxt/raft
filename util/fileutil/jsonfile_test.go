@@ -1,12 +1,13 @@
-package util_test
+package fileutil_test
 
 import (
 	"bytes"
-	util "github.com/divtxt/raft/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/divtxt/raft/util/fileutil"
 )
 
 const (
@@ -17,7 +18,7 @@ type fooStruct struct {
 	BarBaz int `json:"barBaz"`
 }
 
-func TestJsonFileSafeWrite(t *testing.T) {
+func TestWriteJsonAtomic(t *testing.T) {
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -26,7 +27,7 @@ func TestJsonFileSafeWrite(t *testing.T) {
 
 	foo := fooStruct{101}
 
-	err = util.SafeWriteJsonToFile(&foo, filename)
+	err = fileutil.WriteJsonAtomic(&foo, filename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +54,7 @@ func TestJsonFileRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	var foo fooStruct = fooStruct{60}
-	err = util.ReadJsonFromFile(filename, &foo)
+	err = fileutil.ReadJson(filename, &foo)
 	if !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
@@ -67,7 +68,7 @@ func TestJsonFileRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = util.ReadJsonFromFile(filename, &foo)
+	err = fileutil.ReadJson(filename, &foo)
 	if err.Error() != "invalid character 'B' looking for beginning of value" {
 		t.Fatal(err)
 	}
@@ -81,7 +82,7 @@ func TestJsonFileRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = util.ReadJsonFromFile(filename, &foo)
+	err = fileutil.ReadJson(filename, &foo)
 	if err != nil {
 		t.Fatal(err)
 	}
