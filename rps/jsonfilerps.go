@@ -16,24 +16,32 @@ type rps struct {
 }
 
 type JsonFileRaftPersistentState struct {
-	mutex    *sync.Mutex
-	filename string
+	mutex *sync.Mutex
+	ajf   fileutil.AtomicJsonFile
 	rps
 }
 
 // Json file implementation of RaftPersistentState.
 //
+// The state is initialized by reading the current values in the given AtomicJsonFile.
+// If the file does not exist, the values are initialized to default values.
+// However, the file is not actually written until a setter call.
+//
+// Every setter will synchronously write to the underlying json file.
+//
+// The writes are done without reading the current values and the file is never read
+// after initialization. This means that concurrent writes by another instance, method
+// or process is unsafe while this returned instance is in use.
+// The caller is responsible for ensuring safe/exclusive access to the underlying file.
+//
 // The returned instance is safe for access from multiple goroutines.
 //
-// The file access is NOT concurrency safe (from this or from another process).
-//
-// Writes to "filename" and also "filename.bak" using SafeWriteJsonToFile().
-func NewJsonFileRaftPersistentState(filename string) (RaftPersistentState, error) {
+func NewJsonFileRaftPersistentState(ajf fileutil.AtomicJsonFile) (*JsonFileRaftPersistentState, error) {
 	jfrps := &JsonFileRaftPersistentState{
-		&sync.Mutex{}, filename, rps{0, 0},
+		&sync.Mutex{}, ajf, rps{0, 0},
 	}
 
-	err := fileutil.ReadJson(filename, &jfrps.rps)
+	err := ajf.Read(&jfrps.rps)
 	if err != nil {
 		if os.IsNotExist(err) {
 			jfrps.rps.CurrentTerm = 0
@@ -47,7 +55,7 @@ func NewJsonFileRaftPersistentState(filename string) (RaftPersistentState, error
 }
 
 func (jfrps *JsonFileRaftPersistentState) writeToJsonFile() error {
-	return fileutil.WriteJsonAtomic(&jfrps.rps, jfrps.filename)
+	return jfrps.ajf.Write(&jfrps.rps)
 }
 
 func (jfrps *JsonFileRaftPersistentState) GetCurrentTerm() TermNo {

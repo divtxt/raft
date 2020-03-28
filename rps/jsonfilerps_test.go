@@ -4,27 +4,28 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
+
+	"github.com/divtxt/raft/util/fileutil"
 
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testhelpers"
 )
 
+const (
+	test_jsonfilerps = "test_jsonfilerps.json"
+)
+
 // Run the blackbox test on JsonFileRaftpersistentState
 func TestNewJsonFileRaftpersistentState_Blackbox(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	filename := filepath.Join(wd, "test_jsonfilerps.json")
+	ajf := fileutil.NewAtomicJsonFile(test_jsonfilerps)
 
-	err = os.Remove(filename)
+	err := os.Remove(test_jsonfilerps)
 	if err != nil && !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
 
-	jfrps, err := rps.NewJsonFileRaftPersistentState(filename)
+	jfrps, err := rps.NewJsonFileRaftPersistentState(ajf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,19 +42,15 @@ func TestNewJsonFileRaftpersistentState_Blackbox(t *testing.T) {
 
 // Run whitebox tests on JsonFileRaftpersistentState
 func TestNewJsonFileRaftpersistentState_Whitebox(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	filename := filepath.Join(wd, "test_jsonfilerps.json")
+	ajf := fileutil.NewAtomicJsonFile(test_jsonfilerps)
 
-	err = os.Remove(filename)
+	err := os.Remove(test_jsonfilerps)
 	if err != nil && !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
 
 	// Non-existent file is initialization
-	jfrps, err := rps.NewJsonFileRaftPersistentState(filename)
+	jfrps, err := rps.NewJsonFileRaftPersistentState(ajf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +61,7 @@ func TestNewJsonFileRaftpersistentState_Whitebox(t *testing.T) {
 		t.Fatal()
 	}
 	// no file written for no changes
-	data, err := ioutil.ReadFile(filename)
+	data, err := ioutil.ReadFile(test_jsonfilerps)
 	if !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
@@ -75,7 +72,7 @@ func TestNewJsonFileRaftpersistentState_Whitebox(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err = ioutil.ReadFile(filename)
+	data, err = ioutil.ReadFile(test_jsonfilerps)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +86,7 @@ func TestNewJsonFileRaftpersistentState_Whitebox(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err = ioutil.ReadFile(filename)
+	data, err = ioutil.ReadFile(test_jsonfilerps)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/divtxt/raft/util/fileutil"
@@ -18,16 +17,12 @@ type fooStruct struct {
 	BarBaz int `json:"barBaz"`
 }
 
-func TestWriteJsonAtomic(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	filename := filepath.Join(wd, test_jsonfile)
+func TestAtomicJsonFile_Write(t *testing.T) {
+	ajf := fileutil.NewAtomicJsonFile(test_jsonfile)
 
 	foo := fooStruct{101}
 
-	err = fileutil.WriteJsonAtomic(&foo, filename)
+	err := ajf.Write(&foo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,20 +36,16 @@ func TestWriteJsonAtomic(t *testing.T) {
 	}
 }
 
-func TestJsonFileRead(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	filename := filepath.Join(wd, test_jsonfile)
+func TestAtomicJsonFile_Read(t *testing.T) {
+	ajf := fileutil.NewAtomicJsonFile(test_jsonfile)
 
 	// Read non-existent file
-	err = os.Remove(filename)
+	err := os.Remove(test_jsonfile)
 	if err != nil && !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
 	var foo fooStruct = fooStruct{60}
-	err = fileutil.ReadJson(filename, &foo)
+	err = ajf.Read(&foo)
 	if !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
@@ -64,11 +55,11 @@ func TestJsonFileRead(t *testing.T) {
 
 	// Read bad file
 	var data []byte = []byte("BAD-JSON")
-	err = ioutil.WriteFile(filename, data, 0666)
+	err = ioutil.WriteFile(test_jsonfile, data, 0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = fileutil.ReadJson(filename, &foo)
+	err = ajf.Read(&foo)
 	if err.Error() != "invalid character 'B' looking for beginning of value" {
 		t.Fatal(err)
 	}
@@ -78,11 +69,11 @@ func TestJsonFileRead(t *testing.T) {
 
 	// Read good file
 	data = []byte("{\"barBaz\": 201}")
-	err = ioutil.WriteFile(filename, data, 0666)
+	err = ioutil.WriteFile(test_jsonfile, data, 0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = fileutil.ReadJson(filename, &foo)
+	err = ajf.Read(&foo)
 	if err != nil {
 		t.Fatal(err)
 	}
