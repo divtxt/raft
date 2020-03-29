@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	. "github.com/divtxt/raft"
-	"github.com/divtxt/raft/util/fileutil"
+	"github.com/divtxt/raft/fileutil"
 )
 
 type rps struct {

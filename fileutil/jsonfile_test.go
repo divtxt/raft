@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/divtxt/raft/util/fileutil"
+	"github.com/divtxt/raft/fileutil"
 )
 
 const (

@@ -6,8 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/divtxt/raft/util/fileutil"
-
+	"github.com/divtxt/raft/fileutil"
 	"github.com/divtxt/raft/rps"
 	"github.com/divtxt/raft/testhelpers"
 )

@@ -1,4 +1,3 @@
 /coverage.out
-/.idea
-/util/fileutil/test_jsonfile.json
+/fileutil/test_jsonfile.json
 /rps/test_jsonfilerps.json
