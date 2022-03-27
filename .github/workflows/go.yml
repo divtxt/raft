@@ -1,0 +1,29 @@
+name: Build and test Go
+on: [push, pull_request]
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.18
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.18
+
+      - name: Check out source code
+        uses: actions/checkout@v1
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Install Errcheck
+        run: go install github.com/kisielk/errcheck@latest
+
+      - name: Run Errcheck
+        run: errcheck ./...
