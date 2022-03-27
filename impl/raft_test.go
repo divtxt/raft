@@ -188,6 +188,8 @@ func testConsensusModule_RpcReplyCallback_AndBecomeLeader(
 		t.Fatal()
 	}
 
+	time.Sleep(testdata.SleepToLetGoroutineRun) // allow rpc goroutines time to run
+
 	// candidate has issued RequestVote RPCs to all other servers.
 	lastLogIndex, lastLogTerm, err := consensus.GetIndexAndTermOfLastEntry(log)
 	if err != nil {
