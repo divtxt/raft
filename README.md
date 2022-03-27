@@ -1,6 +1,6 @@
 # A Raft Consensus Implementation in Go
 
-[![Build Status](https://travis-ci.org/divtxt/raft.svg?branch=master)](https://travis-ci.org/divtxt/raft)
+![go](https://github.com/divtxt/raft/actions/workflows/go.yml/badge.svg)
 
 An implementation of the Raft consensus protocol.
 (<http://ramcloud.stanford.edu/raft.pdf>)
